@@ -1,0 +1,95 @@
+"""Configuration models + loader for robotsix-cost-monitor.
+
+A single YAML file (``config/projects.yaml``) lists the Langfuse projects to
+monitor plus optional global settings. Real keys live only in that file (it is
+gitignored); ``config/projects.example.yaml`` is the committed template.
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+import yaml
+from pydantic import BaseModel, Field
+
+
+class ProjectConfig(BaseModel):
+    """One Langfuse project to monitor."""
+
+    name: str
+    public_key: str
+    secret_key: str
+    base_url: str = "https://cloud.langfuse.com"
+    # Optional OpenRouter API/management key for reconciliation of this project.
+    openrouter_key: str | None = None
+
+    @property
+    def slug(self) -> str:
+        """URL-safe identifier derived from the display name."""
+        return self.name.strip().lower().replace(" ", "-").replace("/", "-")
+
+
+class AnalystConfig(BaseModel):
+    """LLM cost-analyst settings (optional — disabled when ``model`` is None)."""
+
+    model: str | None = None
+    base_url: str | None = None
+    api_key: str | None = None
+    window_hours: int = 24
+    top_stages: int = 8
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.model)
+
+
+class Settings(BaseModel):
+    """Global dashboard settings."""
+
+    default_window_hours: int = 168
+    cache_ttl_seconds: int = 60
+    reconcile_tolerance_usd: float = 1.0
+    analyst: AnalystConfig = Field(default_factory=AnalystConfig)
+
+
+class Config(BaseModel):
+    """Top-level config: the projects to monitor + global settings."""
+
+    projects: list[ProjectConfig] = Field(default_factory=list)
+    settings: Settings = Field(default_factory=Settings)
+
+    def project(self, slug: str) -> ProjectConfig | None:
+        for p in self.projects:
+            if p.slug == slug:
+                return p
+        return None
+
+
+def _config_path() -> Path:
+    """Resolve the config path.
+
+    Honors ``COST_MONITOR_CONFIG``; otherwise ``config/projects.yaml`` relative
+    to the repo root (two parents up from this file's package).
+    """
+    env = os.environ.get("COST_MONITOR_CONFIG")
+    if env:
+        return Path(env)
+    return Path(__file__).resolve().parents[2] / "config" / "projects.yaml"
+
+
+def load_config(path: Path | None = None) -> Config:
+    """Load and validate the configuration.
+
+    Raises ``FileNotFoundError`` with a helpful message when the config is
+    missing (the example template is committed; the real file is not).
+    """
+    p = path or _config_path()
+    if not p.exists():
+        raise FileNotFoundError(
+            f"config not found at {p} — copy config/projects.example.yaml to "
+            f"config/projects.yaml and fill in your Langfuse keys "
+            f"(or set COST_MONITOR_CONFIG)."
+        )
+    raw = yaml.safe_load(p.read_text()) or {}
+    return Config.model_validate(raw)

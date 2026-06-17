@@ -1,0 +1,36 @@
+# robotsix-cost-monitor configuration.
+#
+# Copy to config/projects.yaml (gitignored) and fill in real keys.
+# Each entry is one Langfuse project to monitor. Costs are read from each
+# project's public API and shown per-project + aggregated in the dashboard.
+
+projects:
+  - name: robotsix-mill          # display label in the UI
+    public_key: pk-lf-xxxxxxxx
+    secret_key: sk-lf-xxxxxxxx
+    base_url: https://langfuse.robotsix.net
+    # Optional: an OpenRouter API/management key for this project, used by the
+    # reconciliation view to compare provider-billed spend vs traced cost.
+    openrouter_key: null
+
+  # - name: another-project
+  #   public_key: pk-lf-yyyyyyyy
+  #   secret_key: sk-lf-yyyyyyyy
+  #   base_url: https://cloud.langfuse.com
+  #   openrouter_key: null
+
+# Optional global settings.
+settings:
+  # Default time window (hours) for the dashboard trend/aggregations.
+  default_window_hours: 168
+  # Per-trace cost cache TTL (seconds).
+  cache_ttl_seconds: 60
+  # Reconciliation tolerance ($): drift below this is considered clean.
+  reconcile_tolerance_usd: 1.0
+  # LLM cost-analyst (optional). Leave model null to disable.
+  analyst:
+    model: null                 # e.g. "anthropic/claude-..." via an OpenAI-compatible base_url
+    base_url: null
+    api_key: null
+    window_hours: 24
+    top_stages: 8

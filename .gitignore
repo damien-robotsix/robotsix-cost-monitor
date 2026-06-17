@@ -1,0 +1,18 @@
+__pycache__/
+*.py[cod]
+.venv/
+.uv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+# Local secrets — never commit real Langfuse / OpenRouter keys.
+config/projects.yaml
+config/secrets.yaml
+*.local.yaml
+# Runtime state (cost-analyst memory, reconciliation snapshots).
+.data/
