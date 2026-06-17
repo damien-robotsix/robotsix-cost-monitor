@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .config import Config
+from .config import Config, data_dir
 from .service import CostService
 
 _SYSTEM = (
@@ -28,7 +28,7 @@ _SYSTEM = (
 
 
 def _store_path() -> Path:
-    d = Path(__file__).resolve().parents[2] / ".data" / "analyst"
+    d = data_dir() / "analyst"
     d.mkdir(parents=True, exist_ok=True)
     return d / "proposals.json"
 

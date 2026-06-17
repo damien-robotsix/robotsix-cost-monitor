@@ -78,6 +78,20 @@ def _config_path() -> Path:
     return Path(__file__).resolve().parents[2] / "config" / "projects.yaml"
 
 
+def data_dir() -> Path:
+    """Resolve the runtime-state directory (reconciliation snapshots, analyst
+    proposals).
+
+    Honors ``COST_MONITOR_DATA``; otherwise ``.data`` relative to the repo root
+    (two parents up from this file's package). In a container the package lives
+    in site-packages, so the env var must point at a writable/persisted path.
+    """
+    env = os.environ.get("COST_MONITOR_DATA")
+    if env:
+        return Path(env)
+    return Path(__file__).resolve().parents[2] / ".data"
+
+
 def load_config(path: Path | None = None) -> Config:
     """Load and validate the configuration.
 
