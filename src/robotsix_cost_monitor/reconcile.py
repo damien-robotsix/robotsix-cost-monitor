@@ -13,13 +13,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .config import ProjectConfig, Settings
+from .config import ProjectConfig, Settings, data_dir
 from .langfuse import LangfuseClient, total_cost
 from .openrouter import OpenRouterClient
 
 
 def _state_dir() -> Path:
-    d = Path(__file__).resolve().parents[2] / ".data" / "reconcile"
+    d = data_dir() / "reconcile"
     d.mkdir(parents=True, exist_ok=True)
     return d
 

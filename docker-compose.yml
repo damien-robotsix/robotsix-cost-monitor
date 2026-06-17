@@ -1,0 +1,34 @@
+# -------------------------------------------------------------------------
+# robotsix-cost-monitor — local development Compose file.
+#
+# `docker compose up -d --build` builds the image and runs the dashboard at
+# http://localhost:${MONITOR_PORT:-8099}.
+#
+# One-shot CLI commands override the default `serve` command:
+#
+#     docker compose run --rm cost-monitor summary --hours 24
+#     docker compose run --rm cost-monitor reconcile
+#
+# Configuration is delivered via a YAML file bind-mounted from ./config; real
+# Langfuse / OpenRouter keys live only in config/projects.yaml (gitignored).
+# -------------------------------------------------------------------------
+
+services:
+  cost-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+
+    # Default: serve the dashboard on 8080 inside the container.
+    command: serve --host 0.0.0.0 --port 8080
+
+    ports:
+      - "${MONITOR_PORT:-8099}:8080"
+
+    volumes:
+      # Config bind-mount — projects.yaml available without an image rebuild.
+      - ./config:/home/appuser/config
+      # Runtime state — reconciliation snapshots + analyst proposals persist
+      # across restarts (git-ignored ./.data on the host).
+      - ./.data:/home/appuser/.data

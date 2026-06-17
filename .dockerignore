@@ -1,0 +1,44 @@
+# Version control
+.git/
+.github/
+.gitignore
+
+# Python caches and bytecode
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+.uv/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Local config / secrets (never enter the image)
+config/projects.yaml
+config/secrets.yaml
+*.local.yaml
+.env
+.env.*
+
+# Runtime state (must not be baked into the image)
+.data/
+
+# Docs and tests (not needed at runtime)
+docs/
+tests/
+mkdocs.yml
+# NOTE: README.md is intentionally NOT ignored — pyproject declares it as the
+# project readme, so hatchling needs it to build the wheel.
+
+# Container files
+Dockerfile
+.dockerignore
+docker-compose.yml
+deploy/
