@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import logging
+from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any
 
@@ -15,12 +19,40 @@ from .reconcile import reconcile_project
 from .service import CostService
 
 _WEB = Path(__file__).resolve().parent / "web"
+logger = logging.getLogger(__name__)
+
+
+async def _analyst_loop(cfg: Config, service: CostService, hours: float) -> None:
+    """Run the analyst every *hours* hours until cancelled."""
+    interval = max(1.0, hours) * 3600
+    while True:
+        await asyncio.sleep(interval)
+        try:
+            await run_analyst(cfg, service)
+        except Exception:  # noqa: BLE001 — a failed run must not kill the loop
+            logger.exception("scheduled analyst run failed")
 
 
 def create_app(config: Config | None = None) -> FastAPI:
     cfg = config or load_config()
     service = CostService(cfg)
-    app = FastAPI(title="robotsix-cost-monitor", version="0.1.0")
+
+    @contextlib.asynccontextmanager
+    async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        task: asyncio.Task[None] | None = None
+        a = cfg.settings.analyst
+        if a.enabled and a.schedule_hours > 0:
+            logger.info("starting analyst scheduler (every %sh)", a.schedule_hours)
+            task = asyncio.create_task(_analyst_loop(cfg, service, a.schedule_hours))
+        try:
+            yield
+        finally:
+            if task is not None:
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+
+    app = FastAPI(title="robotsix-cost-monitor", version="0.1.0", lifespan=lifespan)
     app.state.config = cfg
     app.state.service = service
 

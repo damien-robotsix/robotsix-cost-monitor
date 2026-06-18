@@ -64,6 +64,36 @@ class CostService:
                 out.append((p, []))
         return out
 
+    async def candidate_traces(
+        self, slug: str | None, hours: int, limit: int
+    ) -> list[dict[str, Any]]:
+        """Return the *limit* most expensive traces in the window, each tagged
+        with its project slug — the cost-analyst's drill-in candidates."""
+        gathered = await self._gather(slug, hours)
+        rows: list[dict[str, Any]] = []
+        for p, traces in gathered:
+            for t in traces:
+                tid = t.get("id")
+                if not tid:
+                    continue
+                rows.append(
+                    {
+                        "trace_id": tid,
+                        "project": p.slug,
+                        "name": t.get("name") or "(unnamed)",
+                        "cost": round(lf._trace_cost(t), 6),
+                    }
+                )
+        rows.sort(key=lambda r: r["cost"], reverse=True)
+        return rows[:limit]
+
+    async def trace_detail(self, project_slug: str, trace_id: str) -> dict[str, Any]:
+        """Fetch a single trace's full detail (observations) from its project."""
+        client = self._clients.get(project_slug)
+        if client is None:
+            return {}
+        return await client.fetch_trace_detail(trace_id)
+
     async def summary(self, slug: str | None, hours: int) -> dict[str, Any]:
         """Per-project totals + the aggregate, for the window.
 

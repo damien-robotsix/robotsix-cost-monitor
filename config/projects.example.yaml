@@ -27,10 +27,27 @@ settings:
   cache_ttl_seconds: 60
   # Reconciliation tolerance ($): drift below this is considered clean.
   reconcile_tolerance_usd: 1.0
-  # LLM cost-analyst (optional). Leave model null to disable.
+  # LLM cost-analyst (optional). Disabled until openrouter_key is set.
+  # Runs a level-2 (robotsix-llmio tier-2) agent over the cost digest with a
+  # level-3 sub-agent that drills into the most expensive traces, and — when a
+  # broker is configured — files a board ticket via agent-comm when warranted.
   analyst:
-    model: null                 # e.g. "anthropic/claude-..." via an OpenAI-compatible base_url
-    base_url: null
-    api_key: null
+    openrouter_key: null        # OpenRouter key for the analyst's own LLM calls
+    global_model: null          # level-2 model (null → llmio tier-2 default)
+    trace_model: null           # level-3 model (null → llmio tier-3 default)
     window_hours: 24
     top_stages: 8
+    max_trace_analyses: 5       # how many top-cost traces the L3 agent may open
+    schedule_hours: 0           # >0 → run automatically on this cadence
+    # Ticket filing through the central agent-comm broker (optional).
+    broker_host: null           # e.g. ai-broker.robotsix.net
+    broker_port: 443
+    broker_scheme: https
+    broker_token: null          # the cost-analyst's broker bearer token
+    board_agent_id: board-robotsix-mill
+    board_repo_id: robotsix-cost-monitor
+    # The analyst's own Langfuse project, so its L2/L3 runs are themselves traced.
+    langfuse_public_key: null
+    langfuse_secret_key: null
+    langfuse_base_url: null
+    langfuse_project_id: null
