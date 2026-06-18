@@ -138,10 +138,57 @@ class LangfuseClient:
                 break
         return _model_rows(acc)
 
+    async def fetch_daily_backend_cost(self, hours: int) -> dict[str, dict[str, float]]:
+        """``{date -> {backend -> cost}}`` over the window (day-granular).
+
+        Same daily-metrics source as :meth:`fetch_daily_model_usage`, but the
+        per-model rows are folded into their backend (see
+        :func:`backend_for_model`) so the dashboard can show a per-backend cost
+        trend and filter totals by backend.
+        """
+        since = _utc_now() - timedelta(hours=hours)
+        from_ts = since.isoformat().replace("+00:00", "Z")
+        out: dict[str, dict[str, float]] = {}
+        for page in range(1, _MAX_PAGES + 1):
+            data = await self._get(
+                "/api/public/metrics/daily",
+                {"fromTimestamp": from_ts, "limit": _PAGE_LIMIT, "page": page},
+            )
+            rows = data.get("data") or []
+            if not rows:
+                break
+            for day in rows:
+                slot = out.setdefault(str(day.get("date")), {})
+                for usage in day.get("usage") or []:
+                    model = usage.get("model")
+                    if not model:
+                        continue
+                    backend = backend_for_model(model)
+                    slot[backend] = slot.get(backend, 0.0) + float(
+                        usage.get("totalCost") or 0.0
+                    )
+            meta = data.get("meta") or {}
+            total_pages = meta.get("totalPages")
+            if total_pages is not None and page >= total_pages:
+                break
+            if len(rows) < _PAGE_LIMIT:
+                break
+        return out
+
 
 # ---------------------------------------------------------------------------
 # Pure aggregations over a list of trace dicts (no I/O).
 # ---------------------------------------------------------------------------
+
+
+def backend_for_model(model: str) -> str:
+    """Map a model name to its serving backend (transport).
+
+    Keys on the model-ID *shape*, not specific names, so it survives model
+    version bumps: OpenRouter model IDs are always ``vendor/model`` (contain a
+    ``/``); the Claude SDK uses bare aliases (``opus``/``haiku``/``sonnet``).
+    """
+    return "openrouter" if "/" in model else "claude-sdk"
 
 
 def _empty_model_slot() -> dict[str, float]:
@@ -160,6 +207,7 @@ def _model_rows(acc: dict[str, dict[str, float]]) -> list[dict[str, Any]]:
     return [
         {
             "model": model,
+            "backend": backend_for_model(model),
             "cost": round(v["cost"], 6),
             "input_tokens": int(v["input_tokens"]),
             "output_tokens": int(v["output_tokens"]),
@@ -168,6 +216,30 @@ def _model_rows(acc: dict[str, dict[str, float]]) -> list[dict[str, Any]]:
         }
         for model, v in ordered
     ]
+
+
+def backend_cost_series(
+    parts: list[dict[str, dict[str, float]]], backend: str
+) -> list[dict[str, Any]]:
+    """Merge per-project ``{date -> {backend -> cost}}`` maps into a daily cost
+    series ``[{bucket_start, cost}]`` for *backend* (or the all-backends total
+    when *backend* is ``"all"``), sorted by date."""
+    merged: dict[str, dict[str, float]] = {}
+    for part in parts:
+        for date, by_backend in part.items():
+            slot = merged.setdefault(date, {})
+            for b, cost in by_backend.items():
+                slot[b] = slot.get(b, 0.0) + cost
+    series: list[dict[str, Any]] = []
+    for date in sorted(merged):
+        by_backend = merged[date]
+        cost = (
+            sum(by_backend.values())
+            if backend == "all"
+            else by_backend.get(backend, 0.0)
+        )
+        series.append({"bucket_start": date, "cost": round(cost, 6)})
+    return series
 
 
 def merge_model_costs(parts: list[list[dict[str, Any]]]) -> list[dict[str, Any]]:

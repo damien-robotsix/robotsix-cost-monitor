@@ -66,6 +66,7 @@ def test_merge_model_costs_sums_by_model_sorted_desc():
     rows = lf.merge_model_costs([project_a, project_b])
     assert rows[0] == {
         "model": "opus",
+        "backend": "claude-sdk",
         "cost": 3.0,
         "input_tokens": 140,
         "output_tokens": 60,
@@ -74,6 +75,33 @@ def test_merge_model_costs_sums_by_model_sorted_desc():
     }
     assert rows[1]["model"] == "haiku"
     assert lf.merge_model_costs([]) == []
+
+
+def test_backend_for_model():
+    assert lf.backend_for_model("deepseek/deepseek-v4-pro-20260423") == "openrouter"
+    assert lf.backend_for_model("anthropic/claude-x") == "openrouter"
+    assert lf.backend_for_model("opus") == "claude-sdk"
+    assert lf.backend_for_model("haiku") == "claude-sdk"
+
+
+def test_backend_cost_series_merges_filters_and_sorts():
+    project_a = {
+        "2026-06-17": {"openrouter": 1.0, "claude-sdk": 4.0},
+        "2026-06-18": {"openrouter": 2.0},
+    }
+    project_b = {"2026-06-18": {"openrouter": 0.5, "claude-sdk": 1.0}}
+    parts = [project_a, project_b]
+    # all backends → daily totals, sorted by date
+    assert lf.backend_cost_series(parts, "all") == [
+        {"bucket_start": "2026-06-17", "cost": 5.0},
+        {"bucket_start": "2026-06-18", "cost": 3.5},
+    ]
+    # single backend → only that backend's cost (missing day-entry → 0)
+    assert lf.backend_cost_series(parts, "claude-sdk") == [
+        {"bucket_start": "2026-06-17", "cost": 4.0},
+        {"bucket_start": "2026-06-18", "cost": 1.0},
+    ]
+    assert lf.backend_cost_series([], "openrouter") == []
 
 
 def test_aggregate_by_session():

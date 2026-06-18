@@ -25,15 +25,38 @@ async function loadProjects() {
   }
 }
 
-function renderSummary(s) {
-  const cards = [
-    { label: "total cost", value: fmt(s.total_cost), sub: `${s.window_hours}h window` },
-    ...s.projects.map((p) => ({
-      label: p.name,
-      value: fmt(p.cost),
-      sub: `${p.trace_count} traces`,
-    })),
-  ];
+function populateBackends(modelRows) {
+  const sel = $("backend");
+  const cur = sel.value;
+  const set = new Set(modelRows.map((r) => r.backend).filter(Boolean));
+  if (cur !== "all") set.add(cur); // keep the current selection selectable
+  const backends = [...set].sort();
+  sel.innerHTML =
+    '<option value="all">all backends</option>' +
+    backends
+      .map((b) => `<option value="${b}"${b === cur ? " selected" : ""}>${b}</option>`)
+      .join("");
+  sel.value = cur;
+}
+
+function renderSummary(s, backend, modelRows) {
+  let cards;
+  if (backend && backend !== "all") {
+    // Day-granular backend total from the per-model metrics (see by-model).
+    const total = modelRows.reduce((a, r) => a + (Number(r.cost) || 0), 0);
+    cards = [
+      { label: `total · ${backend}`, value: fmt(total), sub: `${s.window_hours}h window` },
+    ];
+  } else {
+    cards = [
+      { label: "total cost", value: fmt(s.total_cost), sub: `${s.window_hours}h window` },
+      ...s.projects.map((p) => ({
+        label: p.name,
+        value: fmt(p.cost),
+        sub: `${p.trace_count} traces`,
+      })),
+    ];
+  }
   $("summary-cards").innerHTML = cards
     .map(
       (c) =>
@@ -150,17 +173,27 @@ function renderReconcile(rows) {
 async function refresh() {
   setStatus("loading…");
   try {
+    const backend = $("backend").value;
+    // The fine-grained (trace-based) trend can't be split by backend; when a
+    // backend is selected, use the day-granular per-backend trend instead.
+    const trendPath =
+      backend === "all"
+        ? "/api/trend" + qs()
+        : "/api/backend-trend" + qs() + "&backend=" + encodeURIComponent(backend);
     const [s, trend, agents, models, hi] = await Promise.all([
       getJSON("/api/summary" + qs()),
-      getJSON("/api/trend" + qs()),
+      getJSON(trendPath),
       getJSON("/api/by-agent" + qs()),
       getJSON("/api/by-model" + qs()),
       getJSON("/api/highlights" + qs()),
     ]);
-    renderSummary(s);
+    populateBackends(models);
+    const modelRows =
+      backend === "all" ? models : models.filter((m) => m.backend === backend);
+    renderSummary(s, backend, modelRows);
     renderTrend(trend);
     renderByAgent(agents);
-    renderByModel(models);
+    renderByModel(modelRows);
     renderHighlights(hi);
     setStatus("updated " + new Date().toLocaleTimeString());
   } catch (e) {
@@ -181,6 +214,7 @@ async function runReconcile() {
 
 $("refresh").onclick = refresh;
 $("project").onchange = refresh;
+$("backend").onchange = refresh;
 $("window").onchange = refresh;
 $("reconcile-btn").onclick = runReconcile;
 

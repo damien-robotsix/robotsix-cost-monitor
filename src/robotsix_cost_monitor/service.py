@@ -32,6 +32,10 @@ class CostService:
         self._model_cache: dict[
             tuple[str, int], tuple[list[dict[str, Any]], float]
         ] = {}
+        # cache: (slug, hours) -> ({date -> {backend -> cost}}, monotonic_deadline)
+        self._backend_cache: dict[
+            tuple[str, int], tuple[dict[str, dict[str, float]], float]
+        ] = {}
 
     def _projects(self, slug: str | None) -> list[ProjectConfig]:
         if slug and slug != "all":
@@ -112,6 +116,31 @@ class CostService:
             except Exception:  # noqa: BLE001 — a dead project must not 500 the page
                 parts.append([])
         return lf.merge_model_costs(parts)
+
+    async def _backend_cost(
+        self, project: ProjectConfig, hours: int
+    ) -> dict[str, dict[str, float]]:
+        key = (project.slug, hours)
+        hit = self._backend_cache.get(key)
+        if hit and hit[1] > time.monotonic():
+            return hit[0]
+        data = await self._clients[project.slug].fetch_daily_backend_cost(hours)
+        ttl = self.config.settings.cache_ttl_seconds
+        self._backend_cache[key] = (data, time.monotonic() + ttl)
+        return data
+
+    async def backend_trend(
+        self, slug: str | None, hours: int, backend: str
+    ) -> list[dict[str, Any]]:
+        """Daily cost trend for *backend* (or all-backends total when ``all``),
+        merged across selected projects. Day-granular."""
+        parts: list[dict[str, dict[str, float]]] = []
+        for p in self._projects(slug):
+            try:
+                parts.append(await self._backend_cost(p, hours))
+            except Exception:  # noqa: BLE001 — a dead project must not 500 the page
+                parts.append({})
+        return lf.backend_cost_series(parts, backend)
 
     async def trend(
         self, slug: str | None, hours: int, buckets: int = 48
