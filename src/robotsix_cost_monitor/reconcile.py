@@ -8,6 +8,7 @@ interval. Drift above the tolerance is flagged.
 
 from __future__ import annotations
 
+import contextlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -71,14 +72,19 @@ async def reconcile_project(
         return result
 
     orc = OpenRouterClient(project.openrouter_key)
+    # Per-KEY cumulative usage is the reconciliation basis (isolates this
+    # consumer even when several keys share one OpenRouter account).
     try:
-        credits = await orc.fetch_credits()
+        cumulative = await orc.fetch_key_usage()
     except Exception as exc:  # noqa: BLE001 — surface as status, not a crash
         result["error"] = f"OpenRouter fetch failed: {exc}"
         return result
 
-    result["balance"] = credits
-    cumulative = credits["total_usage"]
+    # Account-level remaining balance — informational only (shared balance pool).
+    # Optional: a balance fetch failure must not fail the reconcile.
+    with contextlib.suppress(Exception):
+        result["balance"] = await orc.fetch_credits()
+
     prior = _load_snapshot(project.slug)
     _save_snapshot(project.slug, cumulative, now)
 
