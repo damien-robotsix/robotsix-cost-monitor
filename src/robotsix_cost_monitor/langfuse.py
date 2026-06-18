@@ -37,6 +37,7 @@ from .aggregations import (  # re-exported for backward compatibility
 
 __all__ = [
     "LangfuseClient",
+    "_trace_cost",
     "total_cost",
     "aggregate_by_name",
     "aggregate_by_session",
