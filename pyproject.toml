@@ -29,6 +29,10 @@ dev = [
     "mypy>=1.13",
     "types-pyyaml>=6.0",
 ]
+docs = [
+    "mkdocs-material>=9",
+    "mkdocstrings[python]>=0.28",
+]
 
 [build-system]
 requires = ["hatchling"]
