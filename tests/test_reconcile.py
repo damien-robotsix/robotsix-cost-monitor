@@ -138,11 +138,7 @@ async def test_second_call_within_tolerance(tmp_path, monkeypatch):
         )
 
         mock_lf = lf_cls.return_value
-        mock_lf.fetch_traces_window = AsyncMock(
-            return_value=[
-                {"id": "t1", "name": "explore", "totalCost": 5.0},
-            ]
-        )
+        mock_lf.fetch_cost_by_backend = AsyncMock(return_value={"openrouter": 5.0})
 
         result = await reconcile_project(proj, _settings(tolerance=1.0))
 
@@ -176,11 +172,7 @@ async def test_drift_exceeds_tolerance(tmp_path, monkeypatch):
         mock_orc.fetch_credits = AsyncMock(return_value={})
 
         mock_lf = lf_cls.return_value
-        mock_lf.fetch_traces_window = AsyncMock(
-            return_value=[
-                {"id": "t1", "name": "explore", "totalCost": 3.0},
-            ]
-        )
+        mock_lf.fetch_cost_by_backend = AsyncMock(return_value={"openrouter": 3.0})
 
         result = await reconcile_project(proj, _settings(tolerance=0.5))
 
@@ -215,7 +207,7 @@ async def test_negative_interval_treated_as_zero(tmp_path, monkeypatch):
         mock_orc.fetch_credits = AsyncMock(return_value={})
 
         mock_lf = lf_cls.return_value
-        mock_lf.fetch_traces_window = AsyncMock(return_value=[])
+        mock_lf.fetch_cost_by_backend = AsyncMock(return_value={})
 
         result = await reconcile_project(proj, _settings())
 
