@@ -94,14 +94,6 @@ class LangfuseClient:
         """Return a single trace's full detail (including its observations)."""
         return await self._get(f"/api/public/traces/{trace_id}", {})
 
-    async def session_traces(self, session_id: str) -> list[dict[str, Any]]:
-        """Return all traces for a session (ticket)."""
-        data = await self._get(
-            "/api/public/traces",
-            {"sessionId": session_id, "limit": _PAGE_LIMIT},
-        )
-        return list(data.get("data") or [])
-
     async def _metrics(
         self,
         hours: int,
