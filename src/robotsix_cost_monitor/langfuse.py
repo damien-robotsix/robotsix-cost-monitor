@@ -117,7 +117,7 @@ class LangfuseClient:
 
     async def _metrics(
         self,
-        hours: int,
+        hours: float,
         *,
         metrics: list[dict[str, str]],
         time_dimension: dict[str, str] | None = None,
@@ -173,6 +173,28 @@ class LangfuseClient:
             slot["total_tokens"] += float(row.get("sum_totalTokens") or 0.0)
             slot["observations"] += float(row.get("count_count") or 0.0)
         return _model_rows(acc)
+
+    async def fetch_cost_by_backend(self, hours: float) -> dict[str, float]:
+        """Total cost per serving backend over the exact last *hours*.
+
+        ``{backend -> cost}`` (e.g. ``{"openrouter": .., "claude-sdk": ..}``).
+        Used by reconciliation to compare like-for-like: OpenRouter's per-key
+        spend only reconciles against the *openrouter*-backend traced cost —
+        Claude-SDK traffic is traced here but billed by Anthropic, not OpenRouter.
+        """
+        rows = await self._metrics(
+            hours, metrics=[{"measure": "totalCost", "aggregation": "sum"}]
+        )
+        out: dict[str, float] = {}
+        for row in rows:
+            model = row.get("providedModelName")
+            if not model:
+                continue
+            backend = backend_for_model(model)
+            out[backend] = out.get(backend, 0.0) + float(
+                row.get("sum_totalCost") or 0.0
+            )
+        return out
 
     async def fetch_backend_cost_window(
         self, hours: int

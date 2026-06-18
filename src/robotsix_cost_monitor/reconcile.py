@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import ProjectConfig, Settings, data_dir
-from .langfuse import LangfuseClient, total_cost
+from .langfuse import LangfuseClient
 from .openrouter import OpenRouterClient
 
 
@@ -105,15 +105,25 @@ async def reconcile_project(
     # prior snapshot), so the two sides are comparable. Using a rounded ≥1h
     # window here made short intervals nonsensical (provider over minutes vs
     # traced over an hour).
-    traces = await lf.fetch_traces_window(interval_h)
-    logged = total_cost(traces)
+    #
+    # Compare like-for-like: OpenRouter's per-key spend only reconciles against
+    # the *openrouter*-backend traced cost. Claude-SDK (level-3) traffic is
+    # traced in Langfuse but billed by Anthropic, not OpenRouter — including it
+    # made "traced" exceed "provider" by the Claude portion.
+    by_backend = await lf.fetch_cost_by_backend(interval_h)
+    logged = round(by_backend.get("openrouter", 0.0), 6)
+    total_traced = round(sum(by_backend.values()), 6)
 
     drift = round(provider_delta - logged, 6)
     result.update(
         {
             "interval_hours": round(interval_h, 2),
             "provider_delta_usd": provider_delta,
+            # OpenRouter-backend only — the value comparable to the provider side.
             "langfuse_cost_usd": logged,
+            # All backends (incl. claude-sdk), for transparency.
+            "langfuse_total_cost_usd": total_traced,
+            "langfuse_cost_by_backend": {k: round(v, 6) for k, v in by_backend.items()},
             "drift_usd": drift,
             "within_tolerance": abs(drift) <= settings.reconcile_tolerance_usd,
             "tolerance_usd": settings.reconcile_tolerance_usd,
