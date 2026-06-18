@@ -9,6 +9,12 @@ FROM python:3.13-slim AS builder
 # Bring in the uv static binary (pinned to a released version for reproducibility).
 COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /usr/local/bin/uv
 
+# git is needed to install the `analyst` extra's git dependencies
+# (robotsix-llmio / robotsix-agent-comm) during the uv pip install below.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=0
 
