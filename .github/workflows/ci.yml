@@ -29,3 +29,10 @@ jobs:
         run: uv run mypy src/
       - name: pytest
         run: uv run pytest -q
+
+  security:
+    uses: damien-robotsix/robotsix-mill/.github/workflows/python-security.yml@a063c729739539138db80ce72c82a35e38eb76f9
+    with:
+      install-extras: ""
+      trufflehog-pr-diff: true
+      trufflehog-extra-args: "--results=verified,unknown"
