@@ -126,7 +126,7 @@ def create_app(config: Config | None = None) -> FastAPI:
     @app.get("/api/analyst/digest")
     async def analyst_digest(hours: int = Query(0, ge=0)) -> dict[str, Any]:
         h = hours or cfg.settings.analyst.window_hours
-        return await build_digest(service, h)
+        return await build_digest(service, h, cfg)
 
     @app.get("/api/analyst/proposals")
     def analyst_proposals() -> dict[str, Any]:

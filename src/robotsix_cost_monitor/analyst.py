@@ -81,7 +81,9 @@ def _store_path() -> Path:
     return d / "proposals.json"
 
 
-async def build_digest(service: CostService, hours: int) -> dict[str, Any]:
+async def build_digest(
+    service: CostService, hours: int, config: Config
+) -> dict[str, Any]:
     """Deterministic cost digest across all projects for the window."""
     summary = await service.summary("all", hours)
     by_agent = await service.by_agent("all", hours)
@@ -94,7 +96,7 @@ async def build_digest(service: CostService, hours: int) -> dict[str, Any]:
             "avg_per_trace": round(row["cost"] / max(1, row["count"]), 6),
         }
         for row in by_agent
-    ]
+    ][: config.settings.analyst.top_stages]
     return {
         "window_hours": hours,
         "total_cost": summary["total_cost"],
@@ -243,7 +245,7 @@ async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
     if not a.enabled:
         return {"enabled": False, "detail": "analyst.openrouter_key not configured"}
 
-    digest = await build_digest(service, a.window_hours)
+    digest = await build_digest(service, a.window_hours, config)
 
     # Pre-fetch the top-cost traces' details (async) so the L3 tool is in-memory.
     candidates = await service.candidate_traces(
