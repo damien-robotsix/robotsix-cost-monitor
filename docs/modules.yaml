@@ -1,0 +1,39 @@
+# Module taxonomy for robotsix-cost-monitor
+# Each entry lists the dotted Python module name, its file path, and a one-line
+# description of its role.
+
+robotsix_cost_monitor:
+  path: src/robotsix_cost_monitor/__init__.py
+  role: Package root (version + re-exports)
+
+robotsix_cost_monitor.app:
+  path: src/robotsix_cost_monitor/app.py
+  role: FastAPI app factory, server-rendered UI, static files
+
+robotsix_cost_monitor.cli:
+  path: src/robotsix_cost_monitor/cli.py
+  role: CLI entrypoint (serve, summary, reconcile)
+
+robotsix_cost_monitor.config:
+  path: src/robotsix_cost_monitor/config.py
+  role: YAML config models + loader (config/projects.yaml)
+
+robotsix_cost_monitor.service:
+  path: src/robotsix_cost_monitor/service.py
+  role: Cross-project cost aggregation with TTL cache
+
+robotsix_cost_monitor.reconcile:
+  path: src/robotsix_cost_monitor/reconcile.py
+  role: OpenRouter ↔ Langfuse cost reconciliation via snapshots
+
+robotsix_cost_monitor.analyst:
+  path: src/robotsix_cost_monitor/analyst.py
+  role: Deterministic cost digest + optional LLM proposal pass
+
+robotsix_cost_monitor.langfuse:
+  path: src/robotsix_cost_monitor/langfuse.py
+  role: Self-contained async Langfuse REST client
+
+robotsix_cost_monitor.openrouter:
+  path: src/robotsix_cost_monitor/openrouter.py
+  role: Self-contained async OpenRouter cost/credit client
