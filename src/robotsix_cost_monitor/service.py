@@ -28,6 +28,10 @@ class CostService:
         }
         # cache: (slug, hours) -> (traces, monotonic_deadline)
         self._cache: dict[tuple[str, int], tuple[list[dict[str, Any]], float]] = {}
+        # cache: (slug, hours) -> (per-model usage rows, monotonic_deadline)
+        self._model_cache: dict[
+            tuple[str, int], tuple[list[dict[str, Any]], float]
+        ] = {}
 
     def _projects(self, slug: str | None) -> list[ProjectConfig]:
         if slug and slug != "all":
@@ -84,6 +88,30 @@ class CostService:
         gathered = await self._gather(slug, hours)
         all_traces = [t for _, traces in gathered for t in traces]
         return lf.aggregate_by_name(all_traces)
+
+    async def _model_usage(
+        self, project: ProjectConfig, hours: int
+    ) -> list[dict[str, Any]]:
+        key = (project.slug, hours)
+        hit = self._model_cache.get(key)
+        if hit and hit[1] > time.monotonic():
+            return hit[0]
+        rows = await self._clients[project.slug].fetch_daily_model_usage(hours)
+        ttl = self.config.settings.cache_ttl_seconds
+        self._model_cache[key] = (rows, time.monotonic() + ttl)
+        return rows
+
+    async def by_model(self, slug: str | None, hours: int) -> list[dict[str, Any]]:
+        """Cost + token usage by model, merged across selected projects.
+
+        Day-granular (see :meth:`LangfuseClient.fetch_daily_model_usage`)."""
+        parts: list[list[dict[str, Any]]] = []
+        for p in self._projects(slug):
+            try:
+                parts.append(await self._model_usage(p, hours))
+            except Exception:  # noqa: BLE001 — a dead project must not 500 the page
+                parts.append([])
+        return lf.merge_model_costs(parts)
 
     async def trend(
         self, slug: str | None, hours: int, buckets: int = 48

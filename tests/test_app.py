@@ -36,6 +36,12 @@ def test_by_agent_and_trend_empty():
     assert len(c.get("/api/trend?hours=24&buckets=12").json()) == 12
 
 
+def test_by_model_empty():
+    r = _empty_app().get("/api/by-model?hours=24")
+    assert r.status_code == 200
+    assert r.json() == []
+
+
 def test_index_served():
     r = _empty_app().get("/")
     assert r.status_code == 200

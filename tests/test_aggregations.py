@@ -34,6 +34,48 @@ def test_aggregate_by_name_sorted_desc():
     assert rows[1] == {"name": "review", "cost": 1.0, "count": 1}
 
 
+def test_merge_model_costs_sums_by_model_sorted_desc():
+    project_a = [
+        {
+            "model": "opus",
+            "cost": 2.0,
+            "input_tokens": 100,
+            "output_tokens": 50,
+            "total_tokens": 150,
+            "observations": 3,
+        },
+        {
+            "model": "haiku",
+            "cost": 0.5,
+            "input_tokens": 80,
+            "output_tokens": 20,
+            "total_tokens": 100,
+            "observations": 2,
+        },
+    ]
+    project_b = [
+        {
+            "model": "opus",
+            "cost": 1.0,
+            "input_tokens": 40,
+            "output_tokens": 10,
+            "total_tokens": 50,
+            "observations": 1,
+        },
+    ]
+    rows = lf.merge_model_costs([project_a, project_b])
+    assert rows[0] == {
+        "model": "opus",
+        "cost": 3.0,
+        "input_tokens": 140,
+        "output_tokens": 60,
+        "total_tokens": 200,
+        "observations": 4,
+    }
+    assert rows[1]["model"] == "haiku"
+    assert lf.merge_model_costs([]) == []
+
+
 def test_aggregate_by_session():
     rows = lf.aggregate_by_session(
         [_trace(1, session="a"), _trace(4, session="b"), _trace(2, session="a")]

@@ -90,6 +90,22 @@ function renderByAgent(rows) {
       .join("") || '<div class="muted">no data</div>';
 }
 
+function renderByModel(rows) {
+  const max = Math.max(...rows.map((r) => r.cost), 1e-9);
+  $("by-model").innerHTML =
+    rows
+      .slice(0, 15)
+      .map((r) => {
+        const tok = `${(r.total_tokens || 0).toLocaleString()} tokens · ${r.observations} obs`;
+        return (
+          `<div class="bar-row"><span class="name" title="${r.model}">${r.model}</span>` +
+          `<span class="bar-track"><span class="bar-fill" style="width:${(r.cost / max) * 100}%"></span></span>` +
+          `<span class="cost" title="${tok}">${fmt(r.cost)}</span></div>`
+        );
+      })
+      .join("") || '<div class="muted">no data</div>';
+}
+
 function renderHighlights(h) {
   const t = h.most_expensive_trace;
   const s = h.most_expensive_session;
@@ -134,15 +150,17 @@ function renderReconcile(rows) {
 async function refresh() {
   setStatus("loading…");
   try {
-    const [s, trend, agents, hi] = await Promise.all([
+    const [s, trend, agents, models, hi] = await Promise.all([
       getJSON("/api/summary" + qs()),
       getJSON("/api/trend" + qs()),
       getJSON("/api/by-agent" + qs()),
+      getJSON("/api/by-model" + qs()),
       getJSON("/api/highlights" + qs()),
     ]);
     renderSummary(s);
     renderTrend(trend);
     renderByAgent(agents);
+    renderByModel(models);
     renderHighlights(hi);
     setStatus("updated " + new Date().toLocaleTimeString());
   } catch (e) {
