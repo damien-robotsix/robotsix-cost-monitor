@@ -9,6 +9,7 @@ Cost is read from each trace's ``totalCost`` (Langfuse's span-derived cost).
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -98,81 +99,91 @@ class LangfuseClient:
         )
         return list(data.get("data") or [])
 
-    async def fetch_daily_model_usage(self, hours: int) -> list[dict[str, Any]]:
-        """Per-model cost + token usage over the last *hours*.
+    async def _metrics(
+        self,
+        hours: int,
+        *,
+        metrics: list[dict[str, str]],
+        time_dimension: dict[str, str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Run a Langfuse metrics query over the *observations* view for the
+        exact last *hours*, grouped by model. Returns the raw ``data`` rows.
 
-        Uses Langfuse's daily-metrics endpoint (``/api/public/metrics/daily``),
-        which already aggregates cost and token usage per model server-side, and
-        sums each model's daily rows across the window. This is day-granular —
-        the window is effectively rounded out to whole days — but far cheaper
-        than paging every generation observation. Observations with no model
+        ``/api/public/metrics`` aggregates server-side and, unlike the
+        daily-metrics endpoint, honors the exact ``from``/``to`` window (the
+        daily endpoint returns whole calendar days and badly over-counts sub-day
+        windows). One request per query — no pagination needed.
+        """
+        now = _utc_now()
+        query: dict[str, Any] = {
+            "view": "observations",
+            "metrics": metrics,
+            "dimensions": [{"field": "providedModelName"}],
+            "fromTimestamp": (now - timedelta(hours=hours))
+            .isoformat()
+            .replace("+00:00", "Z"),
+            "toTimestamp": now.isoformat().replace("+00:00", "Z"),
+        }
+        if time_dimension is not None:
+            query["timeDimension"] = time_dimension
+        data = await self._get("/api/public/metrics", {"query": json.dumps(query)})
+        return list(data.get("data") or [])
+
+    async def fetch_model_usage_window(self, hours: int) -> list[dict[str, Any]]:
+        """Per-model cost + token usage over the exact last *hours*.
+
+        Window-accurate (see :meth:`_metrics`). Observations with no model
         (non-generation spans) are skipped; they carry no cost.
         """
-        since = _utc_now() - timedelta(hours=hours)
-        from_ts = since.isoformat().replace("+00:00", "Z")
+        rows = await self._metrics(
+            hours,
+            metrics=[
+                {"measure": "totalCost", "aggregation": "sum"},
+                {"measure": "inputTokens", "aggregation": "sum"},
+                {"measure": "outputTokens", "aggregation": "sum"},
+                {"measure": "totalTokens", "aggregation": "sum"},
+                {"measure": "count", "aggregation": "count"},
+            ],
+        )
         acc: dict[str, dict[str, float]] = {}
-        for page in range(1, _MAX_PAGES + 1):
-            data = await self._get(
-                "/api/public/metrics/daily",
-                {"fromTimestamp": from_ts, "limit": _PAGE_LIMIT, "page": page},
-            )
-            rows = data.get("data") or []
-            if not rows:
-                break
-            for day in rows:
-                for usage in day.get("usage") or []:
-                    model = usage.get("model")
-                    if not model:
-                        continue
-                    slot = acc.setdefault(model, _empty_model_slot())
-                    slot["cost"] += float(usage.get("totalCost") or 0.0)
-                    slot["input_tokens"] += float(usage.get("inputUsage") or 0.0)
-                    slot["output_tokens"] += float(usage.get("outputUsage") or 0.0)
-                    slot["total_tokens"] += float(usage.get("totalUsage") or 0.0)
-                    slot["observations"] += float(usage.get("countObservations") or 0.0)
-            meta = data.get("meta") or {}
-            total_pages = meta.get("totalPages")
-            if total_pages is not None and page >= total_pages:
-                break
-            if len(rows) < _PAGE_LIMIT:
-                break
+        for row in rows:
+            model = row.get("providedModelName")
+            if not model:
+                continue
+            slot = acc.setdefault(model, _empty_model_slot())
+            slot["cost"] += float(row.get("sum_totalCost") or 0.0)
+            slot["input_tokens"] += float(row.get("sum_inputTokens") or 0.0)
+            slot["output_tokens"] += float(row.get("sum_outputTokens") or 0.0)
+            slot["total_tokens"] += float(row.get("sum_totalTokens") or 0.0)
+            slot["observations"] += float(row.get("count_count") or 0.0)
         return _model_rows(acc)
 
-    async def fetch_daily_backend_cost(self, hours: int) -> dict[str, dict[str, float]]:
-        """``{date -> {backend -> cost}}`` over the window (day-granular).
+    async def fetch_backend_cost_window(
+        self, hours: int
+    ) -> dict[str, dict[str, float]]:
+        """``{time_bucket -> {backend -> cost}}`` over the exact last *hours*.
 
-        Same daily-metrics source as :meth:`fetch_daily_model_usage`, but the
-        per-model rows are folded into their backend (see
-        :func:`backend_for_model`) so the dashboard can show a per-backend cost
-        trend and filter totals by backend.
+        Same metrics source as :meth:`fetch_model_usage_window`, bucketed over
+        time (granularity scaled to the window) and folded per backend (see
+        :func:`backend_for_model`) for the per-backend cost trend.
         """
-        since = _utc_now() - timedelta(hours=hours)
-        from_ts = since.isoformat().replace("+00:00", "Z")
+        granularity = "minute" if hours <= 1 else "hour" if hours <= 72 else "day"
+        rows = await self._metrics(
+            hours,
+            metrics=[{"measure": "totalCost", "aggregation": "sum"}],
+            time_dimension={"granularity": granularity},
+        )
         out: dict[str, dict[str, float]] = {}
-        for page in range(1, _MAX_PAGES + 1):
-            data = await self._get(
-                "/api/public/metrics/daily",
-                {"fromTimestamp": from_ts, "limit": _PAGE_LIMIT, "page": page},
+        for row in rows:
+            model = row.get("providedModelName")
+            if not model:
+                continue
+            bucket = str(row.get("time_dimension"))
+            backend = backend_for_model(model)
+            slot = out.setdefault(bucket, {})
+            slot[backend] = slot.get(backend, 0.0) + float(
+                row.get("sum_totalCost") or 0.0
             )
-            rows = data.get("data") or []
-            if not rows:
-                break
-            for day in rows:
-                slot = out.setdefault(str(day.get("date")), {})
-                for usage in day.get("usage") or []:
-                    model = usage.get("model")
-                    if not model:
-                        continue
-                    backend = backend_for_model(model)
-                    slot[backend] = slot.get(backend, 0.0) + float(
-                        usage.get("totalCost") or 0.0
-                    )
-            meta = data.get("meta") or {}
-            total_pages = meta.get("totalPages")
-            if total_pages is not None and page >= total_pages:
-                break
-            if len(rows) < _PAGE_LIMIT:
-                break
         return out
 
 
@@ -221,9 +232,9 @@ def _model_rows(acc: dict[str, dict[str, float]]) -> list[dict[str, Any]]:
 def backend_cost_series(
     parts: list[dict[str, dict[str, float]]], backend: str
 ) -> list[dict[str, Any]]:
-    """Merge per-project ``{date -> {backend -> cost}}`` maps into a daily cost
+    """Merge per-project ``{time_bucket -> {backend -> cost}}`` maps into a cost
     series ``[{bucket_start, cost}]`` for *backend* (or the all-backends total
-    when *backend* is ``"all"``), sorted by date."""
+    when *backend* is ``"all"``), sorted by time bucket."""
     merged: dict[str, dict[str, float]] = {}
     for part in parts:
         for date, by_backend in part.items():

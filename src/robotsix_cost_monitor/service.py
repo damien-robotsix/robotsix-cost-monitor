@@ -32,7 +32,7 @@ class CostService:
         self._model_cache: dict[
             tuple[str, int], tuple[list[dict[str, Any]], float]
         ] = {}
-        # cache: (slug, hours) -> ({date -> {backend -> cost}}, monotonic_deadline)
+        # cache: (slug, hours) -> ({time_bucket -> {backend -> cost}}, deadline)
         self._backend_cache: dict[
             tuple[str, int], tuple[dict[str, dict[str, float]], float]
         ] = {}
@@ -65,19 +65,32 @@ class CostService:
         return out
 
     async def summary(self, slug: str | None, hours: int) -> dict[str, Any]:
-        """Per-project totals + the aggregate, for the window."""
-        gathered = await self._gather(slug, hours)
+        """Per-project totals + the aggregate, for the window.
+
+        Cost is observation-based (the same window-accurate metrics source as the
+        by-model / by-backend breakdowns), so the headline total, the per-model
+        rows, and the per-backend totals all reconcile — a backend can never
+        exceed the total. ``trace_count`` still comes from the trace list.
+        """
         per_project: list[dict[str, Any]] = []
         total = 0.0
-        for p, traces in gathered:
-            cost = lf.total_cost(traces)
+        for p in self._projects(slug):
+            try:
+                models = await self._model_usage(p, hours)
+            except Exception:  # noqa: BLE001 — a dead project must not 500 the page
+                models = []
+            try:
+                trace_count = len(await self._traces(p, hours))
+            except Exception:  # noqa: BLE001
+                trace_count = 0
+            cost = round(sum(m["cost"] for m in models), 6)
             total += cost
             per_project.append(
                 {
                     "name": p.name,
                     "slug": p.slug,
                     "cost": cost,
-                    "trace_count": len(traces),
+                    "trace_count": trace_count,
                 }
             )
         total = round(total, 6)
@@ -100,7 +113,7 @@ class CostService:
         hit = self._model_cache.get(key)
         if hit and hit[1] > time.monotonic():
             return hit[0]
-        rows = await self._clients[project.slug].fetch_daily_model_usage(hours)
+        rows = await self._clients[project.slug].fetch_model_usage_window(hours)
         ttl = self.config.settings.cache_ttl_seconds
         self._model_cache[key] = (rows, time.monotonic() + ttl)
         return rows
@@ -108,7 +121,7 @@ class CostService:
     async def by_model(self, slug: str | None, hours: int) -> list[dict[str, Any]]:
         """Cost + token usage by model, merged across selected projects.
 
-        Day-granular (see :meth:`LangfuseClient.fetch_daily_model_usage`)."""
+        Window-accurate (see :meth:`LangfuseClient.fetch_model_usage_window`)."""
         parts: list[list[dict[str, Any]]] = []
         for p in self._projects(slug):
             try:
@@ -124,7 +137,7 @@ class CostService:
         hit = self._backend_cache.get(key)
         if hit and hit[1] > time.monotonic():
             return hit[0]
-        data = await self._clients[project.slug].fetch_daily_backend_cost(hours)
+        data = await self._clients[project.slug].fetch_backend_cost_window(hours)
         ttl = self.config.settings.cache_ttl_seconds
         self._backend_cache[key] = (data, time.monotonic() + ttl)
         return data
@@ -132,8 +145,9 @@ class CostService:
     async def backend_trend(
         self, slug: str | None, hours: int, backend: str
     ) -> list[dict[str, Any]]:
-        """Daily cost trend for *backend* (or all-backends total when ``all``),
-        merged across selected projects. Day-granular."""
+        """Cost trend for *backend* (or all-backends total when ``all``),
+        merged across selected projects. Window-accurate; time-bucket
+        granularity scales with the window."""
         parts: list[dict[str, dict[str, float]]] = []
         for p in self._projects(slug):
             try:
