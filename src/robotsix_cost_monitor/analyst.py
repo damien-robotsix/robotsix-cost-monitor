@@ -201,12 +201,14 @@ def _file_ticket(a: AnalystConfig, ticket: TicketRequest) -> dict[str, Any]:
     from robotsix_agent_comm.sdk.agent import Agent
     from robotsix_agent_comm.transport.brokered import create_transport_pair
 
+    # Only reached when can_file_tickets is True (host + token are set); the
+    # ``or ""`` just narrows str | None → str for the type checker.
     registry, transport = create_transport_pair(
         "brokered",
-        broker_host=a.broker_host,
+        broker_host=a.broker_host or "",
         broker_port=a.broker_port,
         broker_scheme=a.broker_scheme,
-        broker_token=a.broker_token,
+        broker_token=a.broker_token or "",
     )
     agent = Agent(
         "cost-analyst", registry, transport=transport, pull=True, timeout=30.0
