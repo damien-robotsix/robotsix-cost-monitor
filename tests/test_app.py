@@ -42,6 +42,12 @@ def test_by_model_empty():
     assert r.json() == []
 
 
+def test_backend_trend_empty():
+    r = _empty_app().get("/api/backend-trend?hours=24&backend=openrouter")
+    assert r.status_code == 200
+    assert r.json() == []
+
+
 def test_index_served():
     r = _empty_app().get("/")
     assert r.status_code == 200

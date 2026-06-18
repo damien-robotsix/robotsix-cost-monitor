@@ -56,6 +56,15 @@ def create_app(config: Config | None = None) -> FastAPI:
         h = hours or cfg.settings.default_window_hours
         return await service.by_model(project, h)
 
+    @app.get("/api/backend-trend")
+    async def backend_trend(
+        project: str = Query("all"),
+        hours: int = Query(0, ge=0),
+        backend: str = Query("all"),
+    ) -> list[dict[str, Any]]:
+        h = hours or cfg.settings.default_window_hours
+        return await service.backend_trend(project, h, backend)
+
     @app.get("/api/trend")
     async def trend(
         project: str = Query("all"),
