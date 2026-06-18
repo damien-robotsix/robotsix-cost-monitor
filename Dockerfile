@@ -27,8 +27,9 @@ COPY src ./src
 
 # Export the EXACT revisions pinned in uv.lock (no fresh resolution), install
 # them, then install the project itself with --no-deps so they are not
-# re-resolved. The `analyst` extra (openai) is included so the optional LLM
-# cost-analyst works when configured; the dashboard runs fine without it.
+# re-resolved. The `analyst` extra (robotsix-llmio + robotsix-agent-comm) is
+# included so the optional LLM cost-analyst + broker ticket filing work when
+# configured; the dashboard runs fine without it.
 RUN uv export --frozen --no-emit-project --no-hashes --extra analyst > requirements.txt \
     && uv pip install --python /opt/venv/bin/python -r requirements.txt \
     && uv pip install --python /opt/venv/bin/python --no-deps .

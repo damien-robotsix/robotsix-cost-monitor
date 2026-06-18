@@ -31,17 +31,44 @@ class ProjectConfig(BaseModel):
 
 
 class AnalystConfig(BaseModel):
-    """LLM cost-analyst settings (optional — disabled when ``model`` is None)."""
+    """LLM cost-analyst settings (optional — disabled without an OpenRouter key).
 
-    model: str | None = None
-    base_url: str | None = None
-    api_key: str | None = None
+    The analyst runs a level-2 (llmio tier-2) agent over the deterministic cost
+    digest, with a level-3 sub-agent that drills into the most expensive traces,
+    and — when configured with a broker — files a board ticket via agent-comm
+    when a cost problem warrants it.
+    """
+
+    # -- LLM (robotsix-llmio over OpenRouter) --
+    openrouter_key: str | None = None
+    global_model: str | None = None  # level-2 model; None → llmio tier-2 default
+    trace_model: str | None = None  # level-3 model; None → llmio tier-3 default
     window_hours: int = 24
     top_stages: int = 8
+    max_trace_analyses: int = 5  # how many top-cost traces the L3 agent may open
+    schedule_hours: float = 0.0  # >0 → run automatically on this cadence
+
+    # -- Ticket filing via the agent-comm broker (optional) --
+    broker_host: str | None = None
+    broker_port: int = 443
+    broker_scheme: str = "https"
+    broker_token: str | None = None
+    board_agent_id: str = "board-robotsix-mill"
+    board_repo_id: str = "robotsix-cost-monitor"
+
+    # -- The analyst's own Langfuse project (so its L2/L3 runs are traced) --
+    langfuse_public_key: str | None = None
+    langfuse_secret_key: str | None = None
+    langfuse_base_url: str | None = None
+    langfuse_project_id: str | None = None
 
     @property
     def enabled(self) -> bool:
-        return bool(self.model)
+        return bool(self.openrouter_key)
+
+    @property
+    def can_file_tickets(self) -> bool:
+        return bool(self.broker_host and self.broker_token)
 
 
 class Settings(BaseModel):
