@@ -77,6 +77,20 @@ def test_merge_model_costs_sums_by_model_sorted_desc():
     assert lf.merge_model_costs([]) == []
 
 
+def test_aggregate_by_name_unnamed_falls_back_to_session():
+    rows = lf.aggregate_by_name(
+        [
+            {"name": "", "sessionId": "robotsix-mill · ticket-1", "totalCost": 2.0},
+            {"name": None, "totalCost": 1.0},  # no name, no session
+            {"name": "implement", "totalCost": 0.5},
+        ]
+    )
+    by = {r["name"]: r for r in rows}
+    assert by["(unnamed) robotsix-mill · ticket-1"]["cost"] == 2.0
+    assert by["(unnamed)"]["cost"] == 1.0
+    assert by["implement"]["cost"] == 0.5
+
+
 def test_backend_for_model():
     assert lf.backend_for_model("deepseek/deepseek-v4-pro-20260423") == "openrouter"
     assert lf.backend_for_model("anthropic/claude-x") == "openrouter"

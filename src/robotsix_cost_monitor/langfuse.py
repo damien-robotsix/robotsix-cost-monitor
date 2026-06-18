@@ -260,11 +260,27 @@ def total_cost(traces: list[dict[str, Any]]) -> float:
     return round(sum(_trace_cost(t) for t in traces), 6)
 
 
+def _trace_label(trace: dict[str, Any]) -> str:
+    """Display label for a trace in the by-agent view.
+
+    Prefers the trace name (the stage/agent). Some traces reach Langfuse
+    without a name (a pydantic-ai/claude_sdk span became the trace root in a
+    context where the session was lost — see robotsix-llmio's trace-name
+    handling); rather than dumping their cost into one opaque "(unnamed)"
+    bucket, attribute it to the session/ticket so it's still actionable.
+    """
+    name = trace.get("name")
+    if name:
+        return str(name)
+    sid = trace.get("sessionId") or trace.get("session_id")
+    return f"(unnamed) {sid}" if sid else "(unnamed)"
+
+
 def aggregate_by_name(traces: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Cost + count grouped by trace name (the pipeline stage/agent)."""
     acc: dict[str, dict[str, float]] = {}
     for t in traces:
-        name = t.get("name") or "(unnamed)"
+        name = _trace_label(t)
         slot = acc.setdefault(name, {"cost": 0.0, "count": 0.0})
         slot["cost"] += _trace_cost(t)
         slot["count"] += 1
