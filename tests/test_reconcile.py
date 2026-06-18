@@ -1,0 +1,305 @@
+"""Unit tests for reconcile_project + snapshot load/save (no network)."""
+
+from __future__ import annotations
+
+import json
+from datetime import UTC, datetime, timedelta
+from typing import Any
+from unittest.mock import AsyncMock, patch
+
+from robotsix_cost_monitor.config import ProjectConfig, Settings
+from robotsix_cost_monitor.reconcile import (
+    _load_snapshot,
+    _save_snapshot,
+    reconcile_project,
+)
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _proj(
+    name: str = "demo", *, openrouter_key: str | None = "sk-demo"
+) -> ProjectConfig:
+    return ProjectConfig(
+        name=name,
+        public_key=f"pk-{name}",
+        secret_key=f"sk-{name}",
+        base_url="http://localhost",
+        openrouter_key=openrouter_key,
+    )
+
+
+def _settings(tolerance: float = 1.0) -> Settings:
+    return Settings(reconcile_tolerance_usd=tolerance)
+
+
+class _FrozenNow:
+    """Replaces ``datetime`` in the reconcile module to freeze ``.now()``."""
+
+    def __init__(self, now: datetime) -> None:
+        self._now = now
+
+    def now(self, tz: Any = None) -> datetime:
+        return self._now
+
+    @staticmethod
+    def fromisoformat(s: str) -> datetime:
+        return datetime.fromisoformat(s)
+
+
+# ---------------------------------------------------------------------------
+# reconcile_project
+# ---------------------------------------------------------------------------
+
+
+async def test_no_openrouter_key():
+    """Project without openrouter_key returns early with detail."""
+    proj = _proj("demo", openrouter_key=None)
+    result = await reconcile_project(proj, _settings())
+    assert result["configured"] is False
+    assert "no openrouter_key" in result["detail"]
+
+
+async def test_openrouter_fetch_failure():
+    """OpenRouterKey fetch_key_usage raises → result has error, no snapshot saved."""
+    proj = _proj("demo")
+    with patch("robotsix_cost_monitor.reconcile.OpenRouterClient") as orc_cls:
+        mock_orc = orc_cls.return_value
+        mock_orc.fetch_key_usage = AsyncMock(side_effect=RuntimeError("boom"))
+
+        result = await reconcile_project(proj, _settings())
+
+    assert "OpenRouter fetch failed" in result["error"]
+    assert "balance" not in result  # credits fetch is skipped after usage failure
+
+
+async def test_first_snapshot(tmp_path, monkeypatch):
+    """No prior snapshot → records first snapshot, no drift fields."""
+    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+
+    proj = _proj("demo")
+    with patch("robotsix_cost_monitor.reconcile.OpenRouterClient") as orc_cls:
+        mock_orc = orc_cls.return_value
+        mock_orc.fetch_key_usage = AsyncMock(return_value=12.5)
+        mock_orc.fetch_credits = AsyncMock(
+            return_value={
+                "total_credits": 100.0,
+                "total_usage": 30.0,
+                "remaining": 70.0,
+            }
+        )
+
+        result = await reconcile_project(proj, _settings())
+
+    assert result["configured"] is True
+    assert result["balance"] == {
+        "total_credits": 100.0,
+        "total_usage": 30.0,
+        "remaining": 70.0,
+    }
+    assert "first snapshot recorded" in result["detail"]
+    assert "drift_usd" not in result
+
+    # Verify snapshot was saved
+    snap_path = tmp_path / "reconcile" / "demo.json"
+    assert snap_path.exists()
+    snap = json.loads(snap_path.read_text())
+    assert snap["cumulative"] == 12.5
+
+
+async def test_second_call_within_tolerance(tmp_path, monkeypatch):
+    """Prior snapshot exists → diffs against it, drift within tolerance."""
+    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+
+    now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
+    prior = now - timedelta(hours=24)
+    snap = {"cumulative": 10.0, "at": prior.isoformat()}
+    data_dir = tmp_path / "reconcile"
+    data_dir.mkdir(parents=True)
+    (data_dir / "demo.json").write_text(json.dumps(snap))
+
+    proj = _proj("demo")
+
+    with (
+        patch("robotsix_cost_monitor.reconcile.datetime", _FrozenNow(now)),
+        patch("robotsix_cost_monitor.reconcile.OpenRouterClient") as orc_cls,
+        patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
+    ):
+        mock_orc = orc_cls.return_value
+        mock_orc.fetch_key_usage = AsyncMock(return_value=15.0)
+        mock_orc.fetch_credits = AsyncMock(
+            return_value={
+                "total_credits": 100.0,
+                "total_usage": 15.0,
+                "remaining": 85.0,
+            }
+        )
+
+        mock_lf = lf_cls.return_value
+        mock_lf.fetch_traces_window = AsyncMock(
+            return_value=[
+                {"id": "t1", "name": "explore", "totalCost": 5.0},
+            ]
+        )
+
+        result = await reconcile_project(proj, _settings(tolerance=1.0))
+
+    assert result["interval_hours"] == 24.0
+    assert result["provider_delta_usd"] == 5.0
+    assert result["langfuse_cost_usd"] == 5.0
+    assert result["drift_usd"] == 0.0
+    assert result["within_tolerance"] is True
+
+
+async def test_drift_exceeds_tolerance(tmp_path, monkeypatch):
+    """Provider delta and Langfuse cost differ by more than tolerance."""
+    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+
+    now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
+    prior = now - timedelta(hours=24)
+    snap = {"cumulative": 10.0, "at": prior.isoformat()}
+    data_dir = tmp_path / "reconcile"
+    data_dir.mkdir(parents=True)
+    (data_dir / "demo.json").write_text(json.dumps(snap))
+
+    proj = _proj("demo")
+
+    with (
+        patch("robotsix_cost_monitor.reconcile.datetime", _FrozenNow(now)),
+        patch("robotsix_cost_monitor.reconcile.OpenRouterClient") as orc_cls,
+        patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
+    ):
+        mock_orc = orc_cls.return_value
+        mock_orc.fetch_key_usage = AsyncMock(return_value=20.0)
+        mock_orc.fetch_credits = AsyncMock(return_value={})
+
+        mock_lf = lf_cls.return_value
+        mock_lf.fetch_traces_window = AsyncMock(
+            return_value=[
+                {"id": "t1", "name": "explore", "totalCost": 3.0},
+            ]
+        )
+
+        result = await reconcile_project(proj, _settings(tolerance=0.5))
+
+    assert result["provider_delta_usd"] == 10.0
+    assert result["langfuse_cost_usd"] == 3.0
+    assert result["drift_usd"] == 7.0
+    assert result["within_tolerance"] is False
+
+
+async def test_negative_interval_treated_as_zero(tmp_path, monkeypatch):
+    """When now is before the prior snapshot, interval_h is 0.0 (negative cap)."""
+    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+
+    now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
+    # prior is IN THE FUTURE relative to now (impossible in practice but
+    # exercises the max(0, ...) guard in _hours_between)
+    prior = now + timedelta(hours=1)
+    snap = {"cumulative": 10.0, "at": prior.isoformat()}
+    data_dir = tmp_path / "reconcile"
+    data_dir.mkdir(parents=True)
+    (data_dir / "demo.json").write_text(json.dumps(snap))
+
+    proj = _proj("demo")
+
+    with (
+        patch("robotsix_cost_monitor.reconcile.datetime", _FrozenNow(now)),
+        patch("robotsix_cost_monitor.reconcile.OpenRouterClient") as orc_cls,
+        patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
+    ):
+        mock_orc = orc_cls.return_value
+        mock_orc.fetch_key_usage = AsyncMock(return_value=8.0)
+        mock_orc.fetch_credits = AsyncMock(return_value={})
+
+        mock_lf = lf_cls.return_value
+        mock_lf.fetch_traces_window = AsyncMock(return_value=[])
+
+        result = await reconcile_project(proj, _settings())
+
+    assert result["interval_hours"] == 0.0
+    # Cumulative went down (clock problem) → negative provider delta
+    assert result["provider_delta_usd"] == -2.0
+    assert result["langfuse_cost_usd"] == 0.0
+
+
+async def test_openrouter_credits_fetch_failure_ignored(tmp_path, monkeypatch):
+    """Credits fetch failure is suppressed — reconcile still succeeds."""
+    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+
+    proj = _proj("demo")
+
+    with patch("robotsix_cost_monitor.reconcile.OpenRouterClient") as orc_cls:
+        mock_orc = orc_cls.return_value
+        mock_orc.fetch_key_usage = AsyncMock(return_value=5.0)
+        mock_orc.fetch_credits = AsyncMock(side_effect=RuntimeError("credits-down"))
+
+        result = await reconcile_project(proj, _settings())
+
+    # Credits failure is suppressed — no error, no balance key
+    assert "error" not in result
+    assert "balance" not in result
+    assert "first snapshot recorded" in result["detail"]
+
+
+async def test_missing_snapshot_file_treated_as_first(tmp_path, monkeypatch):
+    """Corrupted/missing snapshot is treated as first run."""
+    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+
+    # _load_snapshot is tested directly below; here we verify the integration
+    proj = _proj("demo")
+    with patch("robotsix_cost_monitor.reconcile.OpenRouterClient") as orc_cls:
+        mock_orc = orc_cls.return_value
+        mock_orc.fetch_key_usage = AsyncMock(return_value=1.0)
+
+        result = await reconcile_project(proj, _settings())
+
+    assert "first snapshot recorded" in result["detail"]
+
+
+# ---------------------------------------------------------------------------
+# _load_snapshot / _save_snapshot
+# ---------------------------------------------------------------------------
+
+
+def test_load_snapshot_missing_file(tmp_path, monkeypatch):
+    """_load_snapshot returns None when file does not exist."""
+    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    assert _load_snapshot("nonexistent") is None
+
+
+def test_load_snapshot_corrupted_json(tmp_path, monkeypatch):
+    """_load_snapshot returns None on invalid JSON."""
+    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    data_dir = tmp_path / "reconcile"
+    data_dir.mkdir(parents=True)
+    (data_dir / "bad.json").write_text("not json {{")
+
+    assert _load_snapshot("bad") is None
+
+
+def test_save_and_load_roundtrip(tmp_path, monkeypatch):
+    """_save_snapshot then _load_snapshot returns the saved data."""
+    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
+
+    _save_snapshot("demo", 42.0, now)
+    loaded = _load_snapshot("demo")
+
+    assert loaded is not None
+    assert loaded["cumulative"] == 42.0
+    assert loaded["at"] == now.isoformat()
+
+
+def test_load_snapshot_stale_data(tmp_path, monkeypatch):
+    """_load_snapshot returns the saved data even if old."""
+    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    old = datetime(2020, 1, 1, 0, 0, 0, tzinfo=UTC)
+    _save_snapshot("stale", 1.0, old)
+
+    loaded = _load_snapshot("stale")
+    assert loaded is not None
+    assert loaded["cumulative"] == 1.0
+    assert loaded["at"] == old.isoformat()
