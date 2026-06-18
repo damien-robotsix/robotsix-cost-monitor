@@ -56,8 +56,11 @@ class LangfuseClient:
             data: dict[str, Any] = resp.json()
             return data
 
-    async def fetch_traces_window(self, hours: int) -> list[dict[str, Any]]:
+    async def fetch_traces_window(self, hours: float) -> list[dict[str, Any]]:
         """Return all traces with ``timestamp`` within the last *hours*.
+
+        *hours* may be fractional (reconciliation passes the exact snapshot
+        interval).
 
         Paginates ``/api/public/traces`` newest-first using ``fromTimestamp``;
         stops at the window edge or the page cap.

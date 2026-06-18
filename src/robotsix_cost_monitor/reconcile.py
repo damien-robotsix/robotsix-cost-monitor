@@ -101,8 +101,11 @@ async def reconcile_project(
         secret_key=project.secret_key,
         base_url=project.base_url,
     )
-    # Round the interval up to whole hours for the Langfuse window query.
-    traces = await lf.fetch_traces_window(max(1, round(interval_h + 0.5)))
+    # Traced cost over the SAME interval as the provider delta (both since the
+    # prior snapshot), so the two sides are comparable. Using a rounded ≥1h
+    # window here made short intervals nonsensical (provider over minutes vs
+    # traced over an hour).
+    traces = await lf.fetch_traces_window(interval_h)
     logged = total_cost(traces)
 
     drift = round(provider_delta - logged, 6)
