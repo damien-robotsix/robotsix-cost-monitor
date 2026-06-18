@@ -162,7 +162,12 @@ function renderReconcile(rows) {
       return (
         `<div class="recon-row"><span>${r.project}</span>` +
         `<span class="muted">provider ${fmt(r.provider_delta_usd)}</span>` +
-        `<span class="muted">traced ${fmt(r.langfuse_cost_usd)}</span>` +
+        `<span class="muted">traced ${fmt(r.langfuse_cost_usd)}` +
+        (r.langfuse_total_cost_usd != null &&
+        Math.abs(r.langfuse_total_cost_usd - r.langfuse_cost_usd) > 1e-9
+          ? ` (all ${fmt(r.langfuse_total_cost_usd)})`
+          : "") +
+        `</span>` +
         `<span class="${r.within_tolerance ? "ok" : "drift"}">Δ ${fmt(r.drift_usd)}</span>` +
         `<span>${pill} <span class="muted">${bal}</span></span></div>`
       );
