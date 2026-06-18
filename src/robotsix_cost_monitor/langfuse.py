@@ -98,10 +98,90 @@ class LangfuseClient:
         )
         return list(data.get("data") or [])
 
+    async def fetch_daily_model_usage(self, hours: int) -> list[dict[str, Any]]:
+        """Per-model cost + token usage over the last *hours*.
+
+        Uses Langfuse's daily-metrics endpoint (``/api/public/metrics/daily``),
+        which already aggregates cost and token usage per model server-side, and
+        sums each model's daily rows across the window. This is day-granular —
+        the window is effectively rounded out to whole days — but far cheaper
+        than paging every generation observation. Observations with no model
+        (non-generation spans) are skipped; they carry no cost.
+        """
+        since = _utc_now() - timedelta(hours=hours)
+        from_ts = since.isoformat().replace("+00:00", "Z")
+        acc: dict[str, dict[str, float]] = {}
+        for page in range(1, _MAX_PAGES + 1):
+            data = await self._get(
+                "/api/public/metrics/daily",
+                {"fromTimestamp": from_ts, "limit": _PAGE_LIMIT, "page": page},
+            )
+            rows = data.get("data") or []
+            if not rows:
+                break
+            for day in rows:
+                for usage in day.get("usage") or []:
+                    model = usage.get("model")
+                    if not model:
+                        continue
+                    slot = acc.setdefault(model, _empty_model_slot())
+                    slot["cost"] += float(usage.get("totalCost") or 0.0)
+                    slot["input_tokens"] += float(usage.get("inputUsage") or 0.0)
+                    slot["output_tokens"] += float(usage.get("outputUsage") or 0.0)
+                    slot["total_tokens"] += float(usage.get("totalUsage") or 0.0)
+                    slot["observations"] += float(usage.get("countObservations") or 0.0)
+            meta = data.get("meta") or {}
+            total_pages = meta.get("totalPages")
+            if total_pages is not None and page >= total_pages:
+                break
+            if len(rows) < _PAGE_LIMIT:
+                break
+        return _model_rows(acc)
+
 
 # ---------------------------------------------------------------------------
 # Pure aggregations over a list of trace dicts (no I/O).
 # ---------------------------------------------------------------------------
+
+
+def _empty_model_slot() -> dict[str, float]:
+    return {
+        "cost": 0.0,
+        "input_tokens": 0.0,
+        "output_tokens": 0.0,
+        "total_tokens": 0.0,
+        "observations": 0.0,
+    }
+
+
+def _model_rows(acc: dict[str, dict[str, float]]) -> list[dict[str, Any]]:
+    """Format a model→totals accumulator into rows sorted by cost desc."""
+    ordered = sorted(acc.items(), key=lambda kv: kv[1]["cost"], reverse=True)
+    return [
+        {
+            "model": model,
+            "cost": round(v["cost"], 6),
+            "input_tokens": int(v["input_tokens"]),
+            "output_tokens": int(v["output_tokens"]),
+            "total_tokens": int(v["total_tokens"]),
+            "observations": int(v["observations"]),
+        }
+        for model, v in ordered
+    ]
+
+
+def merge_model_costs(parts: list[list[dict[str, Any]]]) -> list[dict[str, Any]]:
+    """Merge per-model usage rows from several projects, summing by model."""
+    acc: dict[str, dict[str, float]] = {}
+    for rows in parts:
+        for r in rows:
+            slot = acc.setdefault(r["model"], _empty_model_slot())
+            slot["cost"] += float(r.get("cost") or 0.0)
+            slot["input_tokens"] += float(r.get("input_tokens") or 0.0)
+            slot["output_tokens"] += float(r.get("output_tokens") or 0.0)
+            slot["total_tokens"] += float(r.get("total_tokens") or 0.0)
+            slot["observations"] += float(r.get("observations") or 0.0)
+    return _model_rows(acc)
 
 
 def total_cost(traces: list[dict[str, Any]]) -> float:

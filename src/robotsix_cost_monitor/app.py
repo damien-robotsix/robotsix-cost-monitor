@@ -48,6 +48,14 @@ def create_app(config: Config | None = None) -> FastAPI:
         h = hours or cfg.settings.default_window_hours
         return await service.by_agent(project, h)
 
+    @app.get("/api/by-model")
+    async def by_model(
+        project: str = Query("all"),
+        hours: int = Query(0, ge=0),
+    ) -> list[dict[str, Any]]:
+        h = hours or cfg.settings.default_window_hours
+        return await service.by_model(project, h)
+
     @app.get("/api/trend")
     async def trend(
         project: str = Query("all"),
