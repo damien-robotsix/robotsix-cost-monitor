@@ -6,40 +6,17 @@ Covers caching, cross-project merging, exception isolation, and edge cases.
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
-from robotsix_cost_monitor.config import Config, ProjectConfig, Settings
+from conftest import _config, _mock_client, _proj
+from helpers import trace
+
+from robotsix_cost_monitor.config import ProjectConfig
 from robotsix_cost_monitor.service import CostService
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Helpers (file-local — not shared across test modules)
 # ---------------------------------------------------------------------------
-
-
-def _proj(name: str = "demo") -> ProjectConfig:
-    """A ProjectConfig with dummy keys (base_url points nowhere — never called)."""
-    return ProjectConfig(
-        name=name,
-        public_key=f"pk-{name}",
-        secret_key=f"sk-{name}",
-        base_url="http://localhost",
-    )
-
-
-def _config(*projects: ProjectConfig, ttl: int = 10) -> Config:
-    return Config(projects=list(projects), settings=Settings(cache_ttl_seconds=ttl))
-
-
-def _mock_client(**overrides: object) -> Mock:
-    """A LangfuseClient mock whose async fetch methods return empty results."""
-    client = Mock()
-    object.__setattr__(client, "fetch_traces_window", AsyncMock(return_value=[]))
-    object.__setattr__(client, "fetch_model_usage_window", AsyncMock(return_value=[]))
-    object.__setattr__(client, "fetch_backend_cost_window", AsyncMock(return_value={}))
-    object.__setattr__(client, "fetch_trace_detail", AsyncMock(return_value={}))
-    for k, v in overrides.items():
-        setattr(client, k, v)
-    return client
 
 
 def _svc(*projects: ProjectConfig) -> CostService:
@@ -49,18 +26,6 @@ def _svc(*projects: ProjectConfig) -> CostService:
     for slug in list(svc._clients):
         svc._clients[slug] = _mock_client()
     return svc
-
-
-def _trace(
-    cost: float = 1.0,
-    name: str = "implement",
-    tid: str = "t1",
-    session: str = "",
-) -> dict[str, Any]:
-    t: dict[str, Any] = {"id": tid, "name": name, "totalCost": cost}
-    if session:
-        t["sessionId"] = session
-    return t
 
 
 def _model_row(
@@ -143,7 +108,7 @@ async def test_hours_zero_does_not_crash() -> None:
 
 
 async def test_single_project_summary() -> None:
-    traces = [_trace(cost=2.5)]
+    traces = [trace(cost=2.5)]
     models = [_model_row(cost=2.5)]
     svc = _svc(_proj("demo"))
     object.__setattr__(
@@ -163,7 +128,7 @@ async def test_single_project_summary() -> None:
 
 
 async def test_single_project_by_agent() -> None:
-    traces = [_trace(1, "review"), _trace(3, "implement"), _trace(2, "implement")]
+    traces = [trace(1, "review"), trace(3, "implement"), trace(2, "implement")]
     svc = _svc(_proj("a"))
     object.__setattr__(
         svc._clients["a"], "fetch_traces_window", AsyncMock(return_value=traces)
@@ -192,7 +157,7 @@ async def test_single_project_by_model() -> None:
 
 
 async def test_single_project_highlights() -> None:
-    traces = [_trace(1, session="a"), _trace(9, session="b")]
+    traces = [trace(1, session="a"), trace(9, session="b")]
     svc = _svc(_proj("x"))
     object.__setattr__(
         svc._clients["x"], "fetch_traces_window", AsyncMock(return_value=traces)
@@ -206,7 +171,7 @@ async def test_single_project_highlights() -> None:
 async def test_slug_all_returns_same_as_none() -> None:
     """slug='all' should be treated the same as slug=None (all projects)."""
     svc = _svc(_proj("demo"))
-    traces = [_trace(cost=1.0)]
+    traces = [trace(cost=1.0)]
     object.__setattr__(
         svc._clients["demo"], "fetch_traces_window", AsyncMock(return_value=traces)
     )
@@ -229,9 +194,9 @@ async def test_unknown_slug_returns_empty() -> None:
 
 async def test_candidate_traces_sorted_by_cost() -> None:
     traces = [
-        _trace(1.0, "cheap", "t1"),
-        _trace(9.0, "expensive", "t2"),
-        _trace(3.0, "mid", "t3"),
+        trace(1.0, "cheap", tid="t1"),
+        trace(9.0, "expensive", tid="t2"),
+        trace(3.0, "mid", tid="t3"),
     ]
     svc = _svc(_proj("a"))
     object.__setattr__(
@@ -244,7 +209,7 @@ async def test_candidate_traces_sorted_by_cost() -> None:
 
 
 async def test_candidate_traces_limit() -> None:
-    traces = [_trace(float(i), f"t{i}", f"tr-{i}") for i in range(1, 6)]
+    traces = [trace(float(i), f"t{i}", tid=f"tr-{i}") for i in range(1, 6)]
     svc = _svc(_proj("a"))
     object.__setattr__(
         svc._clients["a"], "fetch_traces_window", AsyncMock(return_value=traces)
@@ -277,7 +242,7 @@ async def test_trace_detail_delegates_to_client() -> None:
 
 async def test_traces_cache_hit_same_window() -> None:
     """Calling by_agent twice with the same (slug, hours) uses cache."""
-    traces = [_trace(1.0)]
+    traces = [trace(1.0)]
     svc = _svc(_proj("demo"))
     client = svc._clients["demo"]
     object.__setattr__(client, "fetch_traces_window", AsyncMock(return_value=traces))
@@ -293,7 +258,7 @@ async def test_traces_cache_hit_same_window() -> None:
 
 async def test_traces_cache_miss_different_hours() -> None:
     """Different (slug, hours) keys produce separate fetches."""
-    traces = [_trace(1.0)]
+    traces = [trace(1.0)]
     svc = _svc(_proj("demo"))
     client = svc._clients["demo"]
     object.__setattr__(client, "fetch_traces_window", AsyncMock(return_value=traces))
@@ -305,8 +270,8 @@ async def test_traces_cache_miss_different_hours() -> None:
 
 async def test_traces_cache_expiry() -> None:
     """After TTL expires, a fresh fetch is made."""
-    traces_v1 = [_trace(1.0, "old")]
-    traces_v2 = [_trace(2.0, "new")]
+    traces_v1 = [trace(1.0, "old")]
+    traces_v2 = [trace(2.0, "new")]
     svc = _svc(_proj("demo"))  # default ttl=10
     client = svc._clients["demo"]
     object.__setattr__(
@@ -396,7 +361,7 @@ async def test_backend_cost_cache_expiry() -> None:
 
 async def test_summary_uses_both_caches() -> None:
     """summary() hits _model_usage and _traces; each should cache independently."""
-    traces = [_trace(1.0)]
+    traces = [trace(1.0)]
     models = [_model_row("opus", cost=1.0)]
     svc = _svc(_proj("demo"))
     client = svc._clients["demo"]
@@ -426,7 +391,7 @@ async def test_cross_project_summary_merges() -> None:
     object.__setattr__(
         svc._clients["proj-a"],
         "fetch_traces_window",
-        AsyncMock(return_value=[_trace(1.5, tid="t1")]),
+        AsyncMock(return_value=[trace(1.5, tid="t1")]),
     )
     object.__setattr__(
         svc._clients["proj-a"],
@@ -436,7 +401,7 @@ async def test_cross_project_summary_merges() -> None:
     object.__setattr__(
         svc._clients["proj-b"],
         "fetch_traces_window",
-        AsyncMock(return_value=[_trace(2.5, tid="t2")]),
+        AsyncMock(return_value=[trace(2.5, tid="t2")]),
     )
     object.__setattr__(
         svc._clients["proj-b"],
@@ -495,12 +460,12 @@ async def test_cross_project_by_agent_merges() -> None:
     object.__setattr__(
         svc._clients["a"],
         "fetch_traces_window",
-        AsyncMock(return_value=[_trace(3.0, "implement"), _trace(1.0, "review")]),
+        AsyncMock(return_value=[trace(3.0, "implement"), trace(1.0, "review")]),
     )
     object.__setattr__(
         svc._clients["b"],
         "fetch_traces_window",
-        AsyncMock(return_value=[_trace(2.0, "implement")]),
+        AsyncMock(return_value=[trace(2.0, "implement")]),
     )
 
     rows = await svc.by_agent(None, 24)
@@ -532,12 +497,12 @@ async def test_cross_project_highlights_finds_best_across_projects() -> None:
     object.__setattr__(
         svc._clients["a"],
         "fetch_traces_window",
-        AsyncMock(return_value=[_trace(2.0, session="s1")]),
+        AsyncMock(return_value=[trace(2.0, session="s1")]),
     )
     object.__setattr__(
         svc._clients["b"],
         "fetch_traces_window",
-        AsyncMock(return_value=[_trace(8.0, session="s2")]),
+        AsyncMock(return_value=[trace(8.0, session="s2")]),
     )
 
     result = await svc.highlights(None, 24)
@@ -550,12 +515,12 @@ async def test_cross_project_candidate_traces_merges_and_sorts() -> None:
     object.__setattr__(
         svc._clients["a"],
         "fetch_traces_window",
-        AsyncMock(return_value=[_trace(5.0, tid="expensive-a")]),
+        AsyncMock(return_value=[trace(5.0, tid="expensive-a")]),
     )
     object.__setattr__(
         svc._clients["b"],
         "fetch_traces_window",
-        AsyncMock(return_value=[_trace(3.0, tid="mid-b"), _trace(8.0, tid="top-b")]),
+        AsyncMock(return_value=[trace(3.0, tid="mid-b"), trace(8.0, tid="top-b")]),
     )
 
     rows = await svc.candidate_traces(None, 24, limit=5)
@@ -574,7 +539,7 @@ async def test_exception_isolation_by_agent() -> None:
     object.__setattr__(
         svc._clients["good"],
         "fetch_traces_window",
-        AsyncMock(return_value=[_trace(3.0, "implement")]),
+        AsyncMock(return_value=[trace(3.0, "implement")]),
     )
     object.__setattr__(
         svc._clients["bad"],
@@ -593,7 +558,7 @@ async def test_exception_isolation_summary() -> None:
     object.__setattr__(
         svc._clients["good"],
         "fetch_traces_window",
-        AsyncMock(return_value=[_trace(5.0)]),
+        AsyncMock(return_value=[trace(5.0)]),
     )
     object.__setattr__(
         svc._clients["good"],

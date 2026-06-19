@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from helpers import trace
 
 from robotsix_cost_monitor.aggregations import (
     aggregate_by_name,
@@ -18,21 +17,8 @@ from robotsix_cost_monitor.aggregations import (
 )
 
 
-def _trace(
-    cost: float, name: str = "implement", session: str = "t1", ago_h: float = 1.0
-) -> dict[str, Any]:
-    ts = (datetime.now(UTC) - timedelta(hours=ago_h)).isoformat()
-    return {
-        "id": f"tr-{cost}-{name}",
-        "name": name,
-        "sessionId": session,
-        "totalCost": cost,
-        "timestamp": ts.replace("+00:00", "Z"),
-    }
-
-
 def test_total_cost() -> None:
-    assert total_cost([_trace(1.5), _trace(2.25)]) == 3.75
+    assert total_cost([trace(1.5), trace(2.25)]) == 3.75
 
 
 def test_total_cost_tolerates_field_variants() -> None:
@@ -41,7 +27,7 @@ def test_total_cost_tolerates_field_variants() -> None:
 
 def test_aggregate_by_name_sorted_desc() -> None:
     rows = aggregate_by_name(
-        [_trace(1, "review"), _trace(3, "implement"), _trace(2, "implement")]
+        [trace(1, "review"), trace(3, "implement"), trace(2, "implement")]
     )
     assert rows[0] == {"name": "implement", "cost": 5.0, "count": 2}
     assert rows[1] == {"name": "review", "cost": 1.0, "count": 1}
@@ -133,7 +119,7 @@ def test_backend_cost_series_merges_filters_and_sorts() -> None:
 
 def test_aggregate_by_session() -> None:
     rows = aggregate_by_session(
-        [_trace(1, session="a"), _trace(4, session="b"), _trace(2, session="a")]
+        [trace(1, session="a"), trace(4, session="b"), trace(2, session="a")]
     )
     assert rows[0]["session_id"] == "b"
     assert rows[0]["cost"] == 4.0
@@ -142,7 +128,7 @@ def test_aggregate_by_session() -> None:
 
 
 def test_most_expensive_trace_and_session() -> None:
-    traces = [_trace(1, session="a"), _trace(9, "implement", session="b")]
+    traces = [trace(1, session="a"), trace(9, "implement", session="b")]
     most_exp_trace = most_expensive_trace(traces)
     assert most_exp_trace is not None
     assert most_exp_trace["cost"] == 9.0
@@ -152,7 +138,7 @@ def test_most_expensive_trace_and_session() -> None:
 
 
 def test_cost_trend_buckets_sum_to_total() -> None:
-    traces = [_trace(1.0, ago_h=1), _trace(2.0, ago_h=5), _trace(3.0, ago_h=20)]
+    traces = [trace(1.0, ago_h=1), trace(2.0, ago_h=5), trace(3.0, ago_h=20)]
     trend = cost_trend(traces, hours=24, buckets=24)
     assert len(trend) == 24
     assert round(sum(b["cost"] for b in trend), 6) == 6.0

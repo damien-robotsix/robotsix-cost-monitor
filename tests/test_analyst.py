@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from conftest import _config
 
 from robotsix_cost_monitor import analyst as analyst_mod
 from robotsix_cost_monitor.analyst import (
@@ -21,7 +22,6 @@ from robotsix_cost_monitor.analyst import (
     _parse_analysis,
     run_analyst,
 )
-from robotsix_cost_monitor.config import AnalystConfig, Config, Settings
 
 
 def test_parse_analysis_plain_json() -> None:
@@ -68,12 +68,6 @@ class _FakeService:
 
     async def trace_detail(self, project: str, trace_id: str) -> dict[str, Any]:
         return {"id": trace_id, "observations": []}
-
-
-def _config(**analyst_kwargs: Any) -> Config:
-    return Config(
-        projects=[], settings=Settings(analyst=AnalystConfig(**analyst_kwargs))
-    )
 
 
 async def test_disabled_without_key() -> None:
