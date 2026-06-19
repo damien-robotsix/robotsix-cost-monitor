@@ -30,6 +30,21 @@ logger = logging.getLogger(__name__)
 #: Cap a single trace's serialized detail handed to the trace agent.
 _TRACE_CHAR_CAP = 24_000
 
+#: Shared cost-model caveat appended to every analysis prompt.
+_COST_MODEL_NOTE = (
+    "IMPORTANT cost-model context: the Claude SDK backend (Claude / Opus models) "
+    "runs on a FIXED monthly SUBSCRIPTION — its traced cost is an ESTIMATE, not "
+    "marginal spend, and is paid regardless of volume. So: (1) do NOT recommend "
+    "switching Claude-SDK work to a pay-per-token model (e.g. DeepSeek via "
+    "OpenRouter) merely to 'reduce cost' — that can ADD real marginal cost while "
+    "the subscription is already paid; (2) for Claude-SDK the only lever is "
+    "keeping usage within the subscription's limits — cut genuinely wasteful or "
+    "excess calls, don't model-switch; (3) real marginal savings come from the "
+    "pay-per-token OpenRouter backends — trim prompts/context, right-size among "
+    "OpenRouter tiers, and avoid redundant calls/retries. Weight your proposals "
+    "accordingly and say which backend (subscription vs pay-per-token) each targets."
+)
+
 _ORCHESTRATOR_SYSTEM = (
     "You are a cost-reduction analyst for an LLM agent fleet. You are given a "
     "deterministic cost digest (per-stage spend + specimens) and `trace_findings` "
@@ -43,7 +58,9 @@ _ORCHESTRATOR_SYSTEM = (
     "board manager turns these into tickets (deduping + refining), so DON'T "
     "pre-merge distinct issues — list each separately; just omit anything trivial "
     "or low-confidence.\n\n"
-    'Return ONLY a JSON object (no prose, no code fences): {"summary": "...", '
+    + _COST_MODEL_NOTE
+    + "\n\n"
+    + 'Return ONLY a JSON object (no prose, no code fences): {"summary": "...", '
     '"proposals": [{"title": "...", "rationale": "...", "estimated_saving": '
     '"..."}]}.'
 )
@@ -53,7 +70,8 @@ _TRACE_SYSTEM = (
     "its observations. Identify concretely where cost/tokens are wasted "
     "(oversized prompts, an over-provisioned model tier for the work, repeated or "
     "redundant tool calls, retry/error loops) and quantify it where you can. Be "
-    "specific and terse; this feeds a higher-level analyst."
+    "specific and terse; this feeds a higher-level analyst. "
+    + _COST_MODEL_NOTE
 )
 
 #: Cap the serialized payload for the ticket/stage analyses (history is large).
@@ -77,7 +95,7 @@ _TICKET_SYSTEM = (
     "implement/audit retry loops, bouncing between states, oversized context "
     "carried across stages, redundant rework — not just per-trace token bloat. "
     "Then propose concrete, high-confidence ways to cut the cost of tickets like "
-    "this. " + _PROPOSAL_JSON
+    "this. " + _COST_MODEL_NOTE + " " + _PROPOSAL_JSON
 )
 
 _STAGE_SYSTEM = (
@@ -87,7 +105,7 @@ _STAGE_SYSTEM = (
     "Diagnose WHY this stage dominates spend and how to reduce it GLOBALLY "
     "(model-tier right-sizing, prompt/context trimming, caching, fewer/cheaper "
     "tool calls, avoiding retries) — changes that apply to every run of the "
-    "stage, not a one-off. " + _PROPOSAL_JSON
+    "stage, not a one-off. " + _COST_MODEL_NOTE + " " + _PROPOSAL_JSON
 )
 
 
