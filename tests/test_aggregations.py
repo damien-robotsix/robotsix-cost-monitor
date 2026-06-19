@@ -90,6 +90,53 @@ def test_aggregate_by_name_unnamed_falls_back_to_session() -> None:
     assert by["implement"]["cost"] == 0.5
 
 
+def test_aggregate_by_name_periodic_session_uses_stage() -> None:
+    """Unnamed traces from periodic-agent runs (stage-timestamp-hash)
+    should group under the stage name, not a per-run "(unnamed) …" bucket."""
+    rows = aggregate_by_name(
+        [
+            {
+                "name": "",
+                "sessionId": "robotsix-llmio · trace_review-20260619T200540Z-d2857b65",
+                "totalCost": 1.0,
+            },
+            {
+                "name": "",
+                "sessionId": "robotsix-cost-monitor · trace_review-20260619T200542Z-2ba9839d",
+                "totalCost": 2.0,
+            },
+            {
+                "name": "implement",
+                "sessionId": "robotsix-mill · 20260619T200540Z-some-slug",
+                "totalCost": 0.5,
+            },
+        ]
+    )
+    by = {r["name"]: r for r in rows}
+    # Both periodic trace_review runs group under "trace_review"
+    assert by["trace_review"]["cost"] == 3.0
+    assert by["trace_review"]["count"] == 2
+    # Named trace (implement) still uses its name
+    assert by["implement"]["cost"] == 0.5
+    assert by["implement"]["count"] == 1
+
+
+def test_aggregate_by_name_ticket_session_keeps_fallback() -> None:
+    """Ticket sessions (timestamp-slug, no stage prefix) keep the
+    "(unnamed) <session>" fallback."""
+    rows = aggregate_by_name(
+        [
+            {
+                "name": "",
+                "sessionId": "robotsix-mill · 20260619T200540Z-some-slug",
+                "totalCost": 1.5,
+            },
+        ]
+    )
+    assert rows[0]["name"] == "(unnamed) robotsix-mill · 20260619T200540Z-some-slug"
+    assert rows[0]["cost"] == 1.5
+
+
 def test_backend_for_model() -> None:
     assert backend_for_model("deepseek/deepseek-v4-pro-20260423") == "openrouter"
     assert backend_for_model("anthropic/claude-x") == "openrouter"

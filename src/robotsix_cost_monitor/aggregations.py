@@ -6,8 +6,19 @@ No I/O, no HTTP, no LangfuseClient dependency — only ``typing`` and
 
 from __future__ import annotations
 
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
+
+# Periodic-agent sessions: "<board> · <stage>-<YYYYMMDDTHHmmssZ>-<hash>"
+# Match the stage prefix (e.g. "trace_review", "implement") so unnamed
+# traces from periodic runs group under their stage rather than a per-run
+# "(unnamed) …" bucket.
+_PERIODIC_SESSION_RE = re.compile(
+    r"(?:^|.*[·|]\s*)"  # optional board prefix ending with · or |
+    r"([a-z_]+)"         # stage name (capture group 1)
+    r"-\d{8}T\d{6}Z-"    # timestamp separator
+)
 
 
 def _trace_cost(trace: dict[str, Any]) -> float:
@@ -115,6 +126,10 @@ def _trace_label(trace: dict[str, Any]) -> str:
     if name:
         return str(name)
     sid = trace.get("sessionId") or trace.get("session_id")
+    if sid and isinstance(sid, str):
+        m = _PERIODIC_SESSION_RE.match(sid)
+        if m:
+            return m.group(1)
     return f"(unnamed) {sid}" if sid else "(unnamed)"
 
 
