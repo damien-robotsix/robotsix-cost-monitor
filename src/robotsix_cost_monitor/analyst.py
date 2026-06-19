@@ -70,8 +70,7 @@ _TRACE_SYSTEM = (
     "its observations. Identify concretely where cost/tokens are wasted "
     "(oversized prompts, an over-provisioned model tier for the work, repeated or "
     "redundant tool calls, retry/error loops) and quantify it where you can. Be "
-    "specific and terse; this feeds a higher-level analyst. "
-    + _COST_MODEL_NOTE
+    "specific and terse; this feeds a higher-level analyst. " + _COST_MODEL_NOTE
 )
 
 #: Cap the serialized payload for the ticket/stage analyses (history is large).

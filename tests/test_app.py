@@ -36,6 +36,23 @@ def test_by_agent_and_trend_empty() -> None:
     assert len(c.get("/api/trend?hours=24&buckets=12").json()) == 12
 
 
+def test_by_agent_accepts_backend_param() -> None:
+    """The /api/by-agent route accepts ?backend=... and returns empty for no projects."""
+    c = _empty_app()
+    r = c.get("/api/by-agent?hours=24&backend=openrouter")
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+def test_by_agent_backend_all_is_default() -> None:
+    """Omitting ?backend=... is equivalent to ?backend=all."""
+    c = _empty_app()
+    assert (
+        c.get("/api/by-agent?hours=24").json()
+        == c.get("/api/by-agent?hours=24&backend=all").json()
+    )
+
+
 def test_by_model_empty() -> None:
     r = _empty_app().get("/api/by-model?hours=24")
     assert r.status_code == 200

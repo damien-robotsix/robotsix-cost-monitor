@@ -220,7 +220,7 @@ async function refresh() {
     const [s, trend, agents, models, hi] = await Promise.all([
       getJSON("/api/summary" + qs()),
       getJSON(trendPath),
-      getJSON("/api/by-agent" + qs()),
+      getJSON("/api/by-agent" + qs() + "&backend=" + encodeURIComponent(backend)),
       getJSON("/api/by-model" + qs()),
       getJSON("/api/highlights" + qs()),
     ]);
