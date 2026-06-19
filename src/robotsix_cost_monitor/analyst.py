@@ -41,13 +41,13 @@ _L3_FALLBACK_MODEL = "deepseek/deepseek-v4-pro"
 
 _ORCHESTRATOR_SYSTEM = (
     "You are a cost-reduction analyst for an LLM agent fleet. You are given a "
-    "deterministic cost digest (per-stage spend + specimens) and a list of the "
-    "most expensive recent traces (candidate_traces: each has trace_id, project, "
-    "name, cost). Use the analyze_trace(trace_id) tool to drill into the traces "
-    "that look most wasteful (model-tier over-provisioning, prompt/token bloat, "
-    "redundant tool calls, retry/cycle waste) — call it only for genuinely "
-    "suspicious traces, not all of them. Then return ONLY high-confidence, "
-    "concrete cost reductions. Set `ticket` ONLY when a problem is significant "
+    "deterministic cost digest (per-stage spend + specimens) and `trace_findings` "
+    "— per-trace cost analyses of the most expensive recent traces (each has "
+    "trace_id, project, cost, and a finding). Synthesise across them to identify "
+    "the highest-leverage waste (model-tier over-provisioning, prompt/token "
+    "bloat, redundant tool calls, retry/cycle waste). Then return ONLY "
+    "high-confidence, concrete cost reductions. Set `ticket` ONLY when a problem "
+    "is significant "
     "and actionable enough to warrant a tracked board ticket (clear title + a "
     "description with evidence and a concrete fix); otherwise leave it null.\n\n"
     'Return ONLY a JSON object (no prose, no code fences): {"summary": "...", '
@@ -135,11 +135,12 @@ def _run_agents(
     candidates: list[dict[str, Any]],
     details: dict[str, dict[str, Any]],
 ) -> Analysis:
-    """Run the level-2 agent (with its level-3 sub-agent tool) synchronously.
+    """Run the analyst: a level-2 trace pre-pass, then a level-3 orchestrator.
 
     robotsix-llmio's ``run_agent`` is blocking, so the caller runs this in a
-    thread. All network I/O the agents need (trace details) is pre-fetched into
-    *details*, keyed by trace_id, so the level-3 tool stays in-memory.
+    thread. Trace details are pre-fetched into *details*. The orchestrator has
+    NO tools (so it can run on the Claude SDK without gaining host bash/file
+    tools) — the per-trace findings are computed up front and handed to it.
     """
     # Lazy imports so the dashboard works without the optional `analyst` extra.
     from robotsix_llmio.core.factory import get_provider
@@ -157,20 +158,16 @@ def _run_agents(
                 service_name="robotsix-cost-analyst",
             )
 
-    provider = get_provider(provider=_PROVIDER, api_key=a.openrouter_key)
+    or_provider = get_provider(provider=_PROVIDER, api_key=a.openrouter_key)
 
-    def analyze_trace(trace_id: str) -> str:
-        """Run the level-2 trace sub-agent on one expensive trace's full detail.
-
-        Pass a trace_id taken from candidate_traces; returns a terse,
-        trace-specific cost analysis.
-        """
-        detail = details.get(trace_id)
+    # Level 2 (intermediate): parse each expensive trace into a terse finding,
+    # up front (so the orchestrator needs no tools). model None → tier-2 default.
+    findings: list[dict[str, Any]] = []
+    for c in candidates:
+        detail = details.get(c["trace_id"])
         if not detail:
-            return f"No detail available for trace {trace_id!r}."
-        # Level 2 (intermediate): parse/extract the waste in one trace. model
-        # None → llmio tier-2 default (deepseek-v4-pro).
-        ht = provider.build_agent(
+            continue
+        ht = or_provider.build_agent(
             level=2,
             model=a.trace_model or None,
             system_prompt=_TRACE_SYSTEM,
@@ -178,31 +175,38 @@ def _run_agents(
             name="cost-analyst-trace",
         )
         payload = json.dumps(detail)[:_TRACE_CHAR_CAP]
-        return cast(
+        finding = cast(
             "str",
             run_agent(
                 ht,
-                lambda: ht.run_sync(payload).output,
+                lambda h=ht, p=payload: h.run_sync(p).output,
                 label="cost-analyst-trace",
                 project=a.langfuse_project_id,
             ),
         )
+        findings.append(
+            {
+                "trace_id": c["trace_id"],
+                "project": c.get("project"),
+                "name": c.get("name"),
+                "cost": c.get("cost"),
+                "finding": finding,
+            }
+        )
 
-    # Level 3 (high-level orchestration/planning): synthesise across the digest +
-    # trace findings and decide proposals/ticket. output_type=str (not Analysis):
-    # DeepSeek reasoning ("thinking") models reject the forced tool_choice
-    # pydantic-ai uses for structured output, so it returns JSON text we parse;
-    # the analyze_trace tool (optional tool_choice) is unaffected. model defaults
-    # to _L3_FALLBACK_MODEL since tier-3 (opus) is unservable via OpenRouter.
-    h2 = provider.build_agent(
+    # Level 3 (high-level orchestration): synthesise the digest + trace findings
+    # → proposals/ticket. Runs on Claude Opus (Claude SDK) when configured +
+    # available, else the strongest OpenRouter model. No tools (output_type=str;
+    # DeepSeek thinking rejects forced tool_choice anyway, so we parse JSON).
+    orch, orch_model = _orchestrator(a, get_provider)
+    h2 = orch.build_agent(
         level=3,
-        model=a.global_model or _L3_FALLBACK_MODEL,
+        model=orch_model,
         system_prompt=_ORCHESTRATOR_SYSTEM,
-        tools=[analyze_trace],
         output_type=str,
         name="cost-analyst",
     )
-    user = json.dumps({"digest": digest, "candidate_traces": candidates})
+    user = json.dumps({"digest": digest, "trace_findings": findings})
     raw = str(
         run_agent(
             h2,
@@ -212,6 +216,27 @@ def _run_agents(
         )
     )
     return _parse_analysis(raw)
+
+
+def _orchestrator(a: AnalystConfig, get_provider: Any) -> tuple[Any, str | None]:
+    """Return ``(provider, model)`` for the level-3 orchestrator.
+
+    Claude Opus via the Claude SDK when ``orchestrator_provider == "claude-sdk"``
+    and it initialises (needs the mounted ~/.claude + the ``claude`` CLI in the
+    image); otherwise the strongest OpenRouter model.
+    """
+    if a.orchestrator_provider == "claude-sdk":
+        try:
+            return get_provider(provider="claude-sdk"), (a.global_model or None)
+        except Exception:  # noqa: BLE001 — degrade to OpenRouter, never crash
+            logger.warning(
+                "claude-sdk orchestrator unavailable; falling back to OpenRouter",
+                exc_info=True,
+            )
+    return (
+        get_provider(provider=_PROVIDER, api_key=a.openrouter_key),
+        a.global_model or _L3_FALLBACK_MODEL,
+    )
 
 
 def _parse_analysis(raw: str) -> Analysis:

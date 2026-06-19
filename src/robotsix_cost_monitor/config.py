@@ -39,9 +39,13 @@ class AnalystConfig(BaseModel):
     when a cost problem warrants it.
     """
 
-    # -- LLM (robotsix-llmio over OpenRouter) --
+    # -- LLM (robotsix-llmio) --
     openrouter_key: str | None = None
-    global_model: str | None = None  # level-3 orchestrator; blank → deepseek-v4-pro
+    # Level-3 orchestrator provider: "claude-sdk" → Claude Opus (needs the
+    # mounted ~/.claude + the claude CLI in the image; falls back to OpenRouter
+    # if unavailable). "openrouter-deepseek" → deepseek-v4-pro.
+    orchestrator_provider: str = "claude-sdk"
+    global_model: str | None = None  # L3 orchestrator model; blank → provider default
     trace_model: str | None = None  # level-2 trace agent; blank → llmio tier-2 default
     window_hours: int = 24
     top_stages: int = 8
