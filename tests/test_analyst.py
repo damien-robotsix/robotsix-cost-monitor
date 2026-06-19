@@ -1,8 +1,8 @@
 """Offline tests for the cost-analyst orchestration (no LLM / network).
 
-The level-2/level-3 llmio agents and the agent-comm ticket client are stubbed;
-these tests exercise the wiring around them: the disabled path, the digest +
-candidate gathering, the stored output shape, and the ticket-filing branch.
+The level-2/level-3 llmio agents and the agent-comm client are stubbed; these
+tests exercise the wiring around them: the disabled path, the stored output
+shape, and the proposal-filing branch (the board manager owns ticket creation).
 """
 
 from __future__ import annotations
@@ -18,7 +18,6 @@ from robotsix_cost_monitor import analyst as analyst_mod
 from robotsix_cost_monitor.analyst import (
     Analysis,
     Proposal,
-    TicketRequest,
     _parse_analysis,
     run_analyst,
 )
@@ -26,21 +25,16 @@ from robotsix_cost_monitor.analyst import (
 
 def test_parse_analysis_plain_json() -> None:
     a = _parse_analysis(
-        '{"summary": "s", "proposals": [{"title": "t", "rationale": "r"}], '
-        '"ticket": {"title": "x", "description": "y"}}'
+        '{"summary": "s", "proposals": [{"title": "t", "rationale": "r"}]}'
     )
     assert a.summary == "s"
     assert a.proposals[0].title == "t"
-    assert a.ticket is not None and a.ticket.title == "x"
 
 
 def test_parse_analysis_code_fenced() -> None:
-    a = _parse_analysis(
-        '```json\n{"summary": "z", "proposals": [], "ticket": null}\n```'
-    )
+    a = _parse_analysis('```json\n{"summary": "z", "proposals": []}\n```')
     assert a.summary == "z"
     assert a.proposals == []
-    assert a.ticket is None
 
 
 def test_parse_analysis_garbage_keeps_text() -> None:
@@ -78,7 +72,7 @@ async def test_disabled_without_key() -> None:
     }
 
 
-async def test_run_stores_proposals_and_files_ticket(
+async def test_run_stores_proposals_and_files(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
@@ -90,16 +84,15 @@ async def test_run_stores_proposals_and_files_ticket(
                 title="Drop explore to L2", rationale="...", estimated_saving="$5/day"
             )
         ],
-        ticket=TicketRequest(title="Explore cost spike", description="evidence + fix"),
     )
     monkeypatch.setattr(analyst_mod, "_run_agents", lambda *a, **k: (analysis, []))
     filed: dict[str, Any] = {}
 
-    def _fake_file(a: Any, ticket: TicketRequest) -> dict[str, Any]:
-        filed["ticket"] = ticket
-        return {"filed": True, "reply": {"id": "T-9"}}
+    def _fake_file(a: Any, analysis: Analysis) -> dict[str, Any]:
+        filed["analysis"] = analysis
+        return {"filed": True, "reply": {"reply": "created T-9 from proposal 1"}}
 
-    monkeypatch.setattr(analyst_mod, "_file_ticket", _fake_file)
+    monkeypatch.setattr(analyst_mod, "_file_proposals", _fake_file)
 
     cfg = _config(
         openrouter_key="sk-x",
@@ -110,29 +103,29 @@ async def test_run_stores_proposals_and_files_ticket(
 
     assert out["enabled"] is True
     assert out["proposals"][0]["title"] == "Drop explore to L2"
-    assert out["ticket"]["title"] == "Explore cost spike"
-    assert out["ticket_result"] == {"filed": True, "reply": {"id": "T-9"}}
-    assert filed["ticket"].title == "Explore cost spike"
-    # Persisted for the dashboard.
+    assert out["filing_result"] == {
+        "filed": True,
+        "reply": {"reply": "created T-9 from proposal 1"},
+    }
+    # The whole analysis (all proposals) is handed to the board manager.
+    assert filed["analysis"].proposals[0].title == "Drop explore to L2"
+    # Persisted for the dashboard / analyst page.
     stored = json.loads((tmp_path / "analyst" / "proposals.json").read_text())
     assert stored["proposals"][0]["title"] == "Drop explore to L2"
 
 
-async def test_no_ticket_when_broker_unconfigured(
+async def test_no_filing_when_broker_unconfigured(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-    analysis = Analysis(
-        proposals=[],
-        ticket=TicketRequest(title="x", description="y"),
-    )
+    analysis = Analysis(proposals=[Proposal(title="x", rationale="y")])
     monkeypatch.setattr(analyst_mod, "_run_agents", lambda *a, **k: (analysis, []))
     called = {"n": 0}
     monkeypatch.setattr(
-        analyst_mod, "_file_ticket", lambda *a, **k: called.__setitem__("n", 1)
+        analyst_mod, "_file_proposals", lambda *a, **k: called.__setitem__("n", 1)
     )
 
-    # openrouter_key set (enabled) but no broker → ticket is not filed.
+    # openrouter_key set (enabled) but no broker → proposals are not filed.
     out = await run_analyst(_config(openrouter_key="sk-x"), _FakeService())  # type: ignore[arg-type]
     assert called["n"] == 0
-    assert out["ticket_result"] is None
+    assert out["filing_result"] is None

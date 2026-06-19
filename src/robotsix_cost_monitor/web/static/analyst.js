@@ -44,13 +44,13 @@ function render(run) {
 
   const traces = run.analyzed_traces || [];
   const props = run.proposals || [];
-  const rr = run.ticket_result || null;
+  const fr = run.filing_result || null;
 
   $("run-meta").innerHTML = [
     card("last run", new Date(run.generated_at).toLocaleString(), `window ${run.window_hours}h`),
     card("traces analyzed", traces.length, ""),
     card("proposals", props.length, ""),
-    card("ticket", run.ticket ? "filed" : "none", run.ticket && rr && rr.filed ? "via board manager" : ""),
+    card("tickets", fr && fr.filed ? "filed" : "—", fr && fr.filed ? "via board manager" : ""),
   ].join("");
 
   $("summary").innerHTML = run.summary
@@ -87,19 +87,25 @@ function render(run) {
         .join("")
     : "<p class='muted'>no proposals</p>";
 
-  if (!run.ticket) {
-    $("ticket").innerHTML = "<p class='muted'>no ticket filed this run</p>";
+  if (!fr) {
+    $("ticket").innerHTML =
+      "<p class='muted'>proposals not filed (no broker configured, or no proposals)</p>";
+  } else if (fr.error) {
+    $("ticket").innerHTML = `
+      <div class="item">
+        <div class="item-head"><span>filing failed</span><span class="bad">✗</span></div>
+        <div class="item-body">${esc(fr.error)}</div>
+      </div>`;
   } else {
-    const reply = managerReply(rr);
+    const reply = managerReply(fr);
     $("ticket").innerHTML = `
       <div class="item">
         <div class="item-head">
-          <span>${esc(run.ticket.title)}</span>
-          <span class="${rr && rr.filed ? "ok" : "bad"}">${rr && rr.filed ? "✓ filed" : "✗ not filed"}</span>
+          <span>board manager</span>
+          <span class="ok">✓ filed</span>
         </div>
-        <div class="item-body">${esc(run.ticket.description || "")}</div>
-        ${reply ? `<div class="item-body muted"><b>board manager:</b> ${esc(reply)}</div>` : ""}
-        <div class="muted">synthesised from the ${traces.length} trace(s) above.</div>
+        <div class="item-body">${esc(reply || "(no reply)")}</div>
+        <div class="muted">tickets created/refined by the board manager from the ${props.length} proposal(s) above.</div>
       </div>`;
   }
 }
