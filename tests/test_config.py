@@ -102,7 +102,7 @@ def test_analyst_field_defaults() -> None:
     assert cfg.top_stages == 8
     assert cfg.max_trace_analyses == 12
     assert cfg.traces_per_agent == 1
-    assert cfg.schedule_hours == 0.0
+    assert cfg.schedule_hours == 24.0
     assert cfg.broker_port == 443
     assert cfg.broker_scheme == "https"
     assert cfg.board_agent_id == "board-robotsix-mill"

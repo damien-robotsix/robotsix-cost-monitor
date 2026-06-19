@@ -139,5 +139,97 @@ async function run() {
   }
 }
 
+// --- targeted analyses (most costly ticket / stage) ---
+
+function proposalsHTML(props) {
+  if (!props || !props.length) return "<p class='muted'>no proposals</p>";
+  return props
+    .map(
+      (p) => `
+      <div class="item">
+        <div class="item-head">
+          <span>${esc(p.title)}</span>
+          ${p.estimated_saving ? `<span class="save">${esc(p.estimated_saving)}</span>` : ""}
+        </div>
+        <div class="item-body">${esc(p.rationale || "")}</div>
+      </div>`,
+    )
+    .join("");
+}
+
+function filingHTML(fr) {
+  if (!fr) return "";
+  const reply = managerReply(fr);
+  return `<div class="item-body muted"><b>board manager:</b> ${esc(reply || fr.error || "")}</div>`;
+}
+
+function renderTargeted(id, run, headerHTML) {
+  const el = $(id);
+  if (!run || !run.generated_at) {
+    el.innerHTML = "<p class='muted'>not run yet — press “analyze”</p>";
+    return;
+  }
+  if (run.detail) {
+    el.innerHTML = `<p class='muted'>${esc(run.detail)}</p>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="item">${headerHTML(run)}</div>
+    ${run.summary ? `<div class="item-body"><b>why it's costly:</b> ${esc(run.summary)}</div>` : ""}
+    ${proposalsHTML(run.proposals)}
+    ${filingHTML(run.filing_result)}`;
+}
+
+function ticketHeader(run) {
+  const stages = (run.by_stage || [])
+    .map((s) => `${esc(s.name)} ${fmt(s.cost)}`)
+    .join(" · ");
+  return `
+    <div class="item-head">
+      <span class="mono">${esc(run.ticket_id || run.session_id || "")}</span>
+      <span class="muted">${esc(run.board_id || "")} · <b>${fmt(run.total_cost)}</b> · ${run.trace_count} traces${run.history_available ? " · history ✓" : ""}</span>
+    </div>
+    ${stages ? `<div class="item-body muted">by stage: ${stages}</div>` : ""}`;
+}
+
+function stageHeader(run) {
+  return `
+    <div class="item-head">
+      <span>${esc(run.stage || "")}</span>
+      <span class="muted"><b>${fmt(run.total_cost)}</b> · ${run.pct_of_traced}% of spend · ${run.trace_count} traces (sampled ${run.sample_size})</span>
+    </div>`;
+}
+
+function makeTargeted(kind, btnId, containerId, headerFn) {
+  const load = async () => {
+    try {
+      renderTargeted(containerId, await getJSON(`/api/analyst/${kind}`), headerFn);
+    } catch (e) {
+      setStatus(`${kind} load failed: ` + e.message);
+    }
+  };
+  const btn = $(btnId);
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    setStatus(`analyzing most costly ${kind}… this can take a couple of minutes`);
+    try {
+      const r = await fetch(`/api/analyst/${kind}-run`, { method: "POST" });
+      if (!r.ok) throw new Error(`${kind}-run → ${r.status}`);
+      renderTargeted(containerId, await r.json(), headerFn);
+      setStatus(`${kind} analysis complete`);
+    } catch (e) {
+      setStatus(`${kind} run failed: ` + e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  return load;
+}
+
+const loadTicket = makeTargeted("ticket", "ticket-btn", "ticket-analysis", ticketHeader);
+const loadStage = makeTargeted("stage", "stage-btn", "stage-analysis", stageHeader);
+
 $("run-btn").addEventListener("click", run);
 load();
+loadTicket();
+loadStage();

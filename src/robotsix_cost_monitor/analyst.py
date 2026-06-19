@@ -56,6 +56,40 @@ _TRACE_SYSTEM = (
     "specific and terse; this feeds a higher-level analyst."
 )
 
+#: Cap the serialized payload for the ticket/stage analyses (history is large).
+_TARGET_CHAR_CAP = 48_000
+
+_PROPOSAL_JSON = (
+    'Return ONLY a JSON object (no prose, no code fences): {"summary": "...", '
+    '"proposals": [{"title": "...", "rationale": "...", "estimated_saving": '
+    '"..."}]}. Each proposal is a candidate board ticket: clear title + a '
+    "rationale with evidence and a concrete fix; list distinct issues separately; "
+    "omit anything trivial."
+)
+
+_TICKET_SYSTEM = (
+    "You are a cost analyst examining the single most EXPENSIVE BOARD TICKET over "
+    "its whole lifecycle. You are given the ticket's total cost, its cost broken "
+    "down by stage (cost_by_stage — each stage/agent's spend on THIS ticket), its "
+    "traces, and the ticket's board history (state transitions, re-refinements, "
+    "retries, comments) + description. Diagnose WHY this ticket was so expensive "
+    "across its lifecycle — process-level waste: repeated re-refinement, "
+    "implement/audit retry loops, bouncing between states, oversized context "
+    "carried across stages, redundant rework — not just per-trace token bloat. "
+    "Then propose concrete, high-confidence ways to cut the cost of tickets like "
+    "this. " + _PROPOSAL_JSON
+)
+
+_STAGE_SYSTEM = (
+    "You are a cost analyst examining the single most EXPENSIVE STAGE (agent) "
+    "across the whole fleet. You are given the stage name, its total cost and "
+    "share of traced spend, and a sample of its priciest traces (with details). "
+    "Diagnose WHY this stage dominates spend and how to reduce it GLOBALLY "
+    "(model-tier right-sizing, prompt/context trimming, caching, fewer/cheaper "
+    "tool calls, avoiding retries) — changes that apply to every run of the "
+    "stage, not a one-off. " + _PROPOSAL_JSON
+)
+
 
 class Proposal(BaseModel):
     """A single high-confidence cost-reduction proposal."""
@@ -133,31 +167,16 @@ def _run_agents(
     tools) — the per-trace findings are computed up front and handed to it.
     """
     # Lazy imports so the dashboard works without the optional `analyst` extra.
+    from robotsix_llmio.config.tier import LEVEL2_DEFAULT
     from robotsix_llmio.core.factory import get_provider
     from robotsix_llmio.core.run import run_agent
 
-    if a.langfuse_public_key and a.langfuse_secret_key:
-        with contextlib.suppress(Exception):
-            from robotsix_llmio.core.tracing import setup_langfuse_tracing
-
-            setup_langfuse_tracing(
-                public_key=a.langfuse_public_key,
-                secret_key=a.langfuse_secret_key,
-                base_url=a.langfuse_base_url,
-                project_id=a.langfuse_project_id,
-                service_name="robotsix-cost-analyst",
-            )
-
-    # Provider + model per level come from llmio's tier config, not hardcoded:
-    # LEVEL2_DEFAULT → openrouter-deepseek/deepseek-v4-pro, LEVEL3_DEFAULT →
-    # claude-sdk/opus. We only choose which level each role runs at.
-    from robotsix_llmio.config.tier import LEVEL2_DEFAULT, LEVEL3_DEFAULT
-
-    trace_provider = _provider_for(LEVEL2_DEFAULT, a, get_provider)
-    orch_provider = _provider_for(LEVEL3_DEFAULT, a, get_provider)
+    _maybe_setup_tracing(a)
 
     # Level 2 (intermediate): parse each expensive trace into a terse finding,
-    # up front (so the orchestrator needs no tools). model None → tier-2 default.
+    # up front (so the orchestrator needs no tools). Provider/model from llmio's
+    # tier config (LEVEL2 → openrouter-deepseek/deepseek-v4-pro).
+    trace_provider = _provider_for(LEVEL2_DEFAULT, a, get_provider)
     findings: list[dict[str, Any]] = []
     for c in candidates:
         detail = details.get(c["trace_id"])
@@ -195,27 +214,61 @@ def _run_agents(
             }
         )
 
-    # Level 3 (high-level orchestration): synthesise the digest + trace findings
-    # → proposals/ticket. Tier-3 → Claude Opus (Claude SDK). No tools
-    # (output_type=str; DeepSeek thinking rejects forced tool_choice anyway, so
-    # we parse JSON). model None → tier-3 default.
-    h2 = orch_provider.build_agent(
-        level=3,
-        model=a.global_model or None,
+    # Level 3 (high-level orchestration): synthesise the digest + trace findings.
+    analysis = _opus_analysis(
+        a,
         system_prompt=_ORCHESTRATOR_SYSTEM,
-        output_type=str,
+        payload=json.dumps({"digest": digest, "trace_findings": findings}),
         name="cost-analyst",
     )
-    user = json.dumps({"digest": digest, "trace_findings": findings})
+    return analysis, findings
+
+
+def _maybe_setup_tracing(a: AnalystConfig) -> None:
+    """Wire the analyst's own Langfuse tracing (best-effort, idempotent)."""
+    if a.langfuse_public_key and a.langfuse_secret_key:
+        with contextlib.suppress(Exception):
+            from robotsix_llmio.core.tracing import setup_langfuse_tracing
+
+            setup_langfuse_tracing(
+                public_key=a.langfuse_public_key,
+                secret_key=a.langfuse_secret_key,
+                base_url=a.langfuse_base_url,
+                project_id=a.langfuse_project_id,
+                service_name="robotsix-cost-analyst",
+            )
+
+
+def _opus_analysis(
+    a: AnalystConfig, *, system_prompt: str, payload: str, name: str
+) -> Analysis:
+    """Run the level-3 (tier-3 → Claude Opus) orchestrator on *payload*, no tools.
+
+    Shared by the fleet / ticket / stage analyses. output_type=str (DeepSeek
+    thinking rejects forced tool_choice), parsed by :func:`_parse_analysis`.
+    """
+    from robotsix_llmio.config.tier import LEVEL3_DEFAULT
+    from robotsix_llmio.core.factory import get_provider
+    from robotsix_llmio.core.run import run_agent
+
+    _maybe_setup_tracing(a)
+    provider = _provider_for(LEVEL3_DEFAULT, a, get_provider)
+    h = provider.build_agent(
+        level=3,
+        model=a.global_model or None,
+        system_prompt=system_prompt,
+        output_type=str,
+        name=name,
+    )
     raw = str(
         run_agent(
-            h2,
-            lambda: h2.run_sync(user).output,
-            label="cost-analyst",
+            h,
+            lambda: h.run_sync(payload).output,
+            label=name,
             project=a.langfuse_project_id,
         )
     )
-    return _parse_analysis(raw), findings
+    return _parse_analysis(raw)
 
 
 def _provider_for(tlc: Any, a: AnalystConfig, get_provider: Any) -> Any:
@@ -346,4 +399,205 @@ async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
         "filing_result": filing_result,
     }
     _store_path().write_text(json.dumps(out, indent=2))
+    return out
+
+
+# --- targeted (ticket / stage) analyses -----------------------------------
+
+
+def _targeted_store_path(kind: str) -> Path:
+    d = data_dir() / "analyst"
+    d.mkdir(parents=True, exist_ok=True)
+    return d / f"{kind}.json"
+
+
+def load_targeted_analysis(kind: str) -> dict[str, Any]:
+    """Last stored ticket/stage analysis (for the page); empty when none yet."""
+    p = _targeted_store_path(kind)
+    if not p.exists():
+        return {"generated_at": None}
+    try:
+        data: dict[str, Any] = json.loads(p.read_text())
+        return data
+    except (json.JSONDecodeError, OSError):
+        return {"generated_at": None}
+
+
+def _split_session(session_id: str) -> tuple[str, str]:
+    """Parse a Langfuse session id ``"<board> · <ticket_id>"`` → (board, id)."""
+    parts = session_id.split(" · ", 1)
+    if len(parts) == 2:
+        return parts[0].strip(), parts[1].strip()
+    return "", session_id.strip()
+
+
+def _fetch_ticket_context(a: AnalystConfig, ticket_id: str) -> dict[str, Any]:
+    """Read a ticket's board context (ticket + history + description) via the
+    broker's read-only responder ops. Best-effort — missing pieces are skipped.
+    """
+    from robotsix_agent_comm.sdk.agent import Agent
+    from robotsix_agent_comm.transport.brokered import create_transport_pair
+
+    registry, transport = create_transport_pair(
+        "brokered",
+        broker_host=a.broker_host or "",
+        broker_port=a.broker_port,
+        broker_scheme=a.broker_scheme,
+        broker_token=a.broker_token or "",
+    )
+    agent = Agent(
+        "cost-analyst", registry, transport=transport, pull=True, timeout=30.0
+    )
+    ctx: dict[str, Any] = {}
+    try:
+        with agent:
+            for key, op in (
+                ("ticket", "get_ticket"),
+                ("history", "history"),
+                ("description", "description"),
+            ):
+                with contextlib.suppress(Exception):
+                    reply = agent.send_request(
+                        a.board_agent_id,
+                        {"op": op, "args": {"ticket_id": ticket_id}},
+                        timeout=30.0,
+                    )
+                    ctx[key] = getattr(reply, "body", None)
+    except Exception as exc:  # noqa: BLE001 — context is optional
+        logger.warning("ticket context fetch failed: %s", exc)
+    return ctx
+
+
+async def run_ticket_analyst(config: Config, service: CostService) -> dict[str, Any]:
+    """Analyse the single most expensive ticket over its whole lifecycle.
+
+    Aggregates the ticket's per-stage trace cost + its board history, runs the
+    level-3 (Opus) global analysis, and files the proposals via the manager.
+    """
+    a = config.settings.analyst
+    if not a.enabled:
+        return {"enabled": False, "detail": "analyst.openrouter_key not configured"}
+
+    top = await service.top_ticket("all", a.window_hours)
+    now = datetime.now(UTC).isoformat()
+    if not top:
+        out: dict[str, Any] = {
+            "enabled": True,
+            "generated_at": now,
+            "detail": "no ticket sessions in the window",
+        }
+        _targeted_store_path("ticket").write_text(json.dumps(out, indent=2))
+        return out
+
+    board_id, ticket_id = _split_session(top["session_id"])
+    context: dict[str, Any] = {}
+    if ticket_id and a.can_file_tickets:
+        context = await asyncio.to_thread(_fetch_ticket_context, a, ticket_id)
+
+    payload = json.dumps(
+        {
+            "ticket_id": ticket_id,
+            "board": board_id,
+            "total_cost_usd": top["cost"],
+            "trace_count": top["count"],
+            "cost_by_stage": top["by_stage"],
+            "traces": top["traces"],
+            "ticket": context.get("ticket"),
+            "history": context.get("history"),
+            "description": context.get("description"),
+        }
+    )[:_TARGET_CHAR_CAP]
+    analysis = await asyncio.to_thread(
+        _opus_analysis,
+        a,
+        system_prompt=_TICKET_SYSTEM,
+        payload=payload,
+        name="cost-analyst-ticket",
+    )
+    filing_result: dict[str, Any] | None = None
+    if analysis.proposals and a.can_file_tickets:
+        filing_result = await asyncio.to_thread(_file_proposals, a, analysis)
+
+    out = {
+        "enabled": True,
+        "generated_at": now,
+        "window_hours": a.window_hours,
+        "session_id": top["session_id"],
+        "board_id": board_id,
+        "ticket_id": ticket_id,
+        "total_cost": top["cost"],
+        "trace_count": top["count"],
+        "by_stage": top["by_stage"],
+        "traces": top["traces"],
+        "history_available": bool(context.get("history")),
+        "summary": analysis.summary,
+        "proposals": [p.model_dump() for p in analysis.proposals],
+        "filing_result": filing_result,
+    }
+    _targeted_store_path("ticket").write_text(json.dumps(out, indent=2))
+    return out
+
+
+async def run_stage_analyst(config: Config, service: CostService) -> dict[str, Any]:
+    """Analyse the single most expensive stage (agent) across the fleet.
+
+    Samples the stage's priciest traces (with detail), runs the level-3 (Opus)
+    global analysis, and files the proposals via the manager.
+    """
+    a = config.settings.analyst
+    if not a.enabled:
+        return {"enabled": False, "detail": "analyst.openrouter_key not configured"}
+
+    top = await service.top_stage("all", a.window_hours, sample=a.max_trace_analyses)
+    now = datetime.now(UTC).isoformat()
+    if not top:
+        out: dict[str, Any] = {
+            "enabled": True,
+            "generated_at": now,
+            "detail": "no traces in the window",
+        }
+        _targeted_store_path("stage").write_text(json.dumps(out, indent=2))
+        return out
+
+    sampled: list[dict[str, Any]] = []
+    for t in top["traces"]:
+        detail: dict[str, Any] | None = None
+        with contextlib.suppress(Exception):
+            detail = await service.trace_detail(t["project"], t["trace_id"])
+        sampled.append({"trace_id": t["trace_id"], "cost": t["cost"], "detail": detail})
+
+    payload = json.dumps(
+        {
+            "stage": top["stage"],
+            "total_cost_usd": top["cost"],
+            "pct_of_traced": top["pct_of_traced"],
+            "trace_count": top["count"],
+            "sample_traces": sampled,
+        }
+    )[:_TARGET_CHAR_CAP]
+    analysis = await asyncio.to_thread(
+        _opus_analysis,
+        a,
+        system_prompt=_STAGE_SYSTEM,
+        payload=payload,
+        name="cost-analyst-stage",
+    )
+    filing_result: dict[str, Any] | None = None
+    if analysis.proposals and a.can_file_tickets:
+        filing_result = await asyncio.to_thread(_file_proposals, a, analysis)
+
+    out = {
+        "enabled": True,
+        "generated_at": now,
+        "window_hours": a.window_hours,
+        "stage": top["stage"],
+        "total_cost": top["cost"],
+        "pct_of_traced": top["pct_of_traced"],
+        "trace_count": top["count"],
+        "sample_size": len(sampled),
+        "summary": analysis.summary,
+        "proposals": [p.model_dump() for p in analysis.proposals],
+        "filing_result": filing_result,
+    }
+    _targeted_store_path("stage").write_text(json.dumps(out, indent=2))
     return out

@@ -128,6 +128,88 @@ class CostService:
             )
         return selected
 
+    async def top_ticket(self, slug: str | None, hours: int) -> dict[str, Any] | None:
+        """The most expensive session (= board ticket) in the window.
+
+        Returns the session id, total cost, trace count, the per-stage cost
+        breakdown (where the ticket's spend went), and its traces — the basis
+        for the ticket-level (global) cost analysis. ``None`` if no sessions.
+        """
+        gathered = await self._gather(slug, hours)
+        all_traces = [t for _, traces in gathered for t in traces]
+        top = most_expensive_session(all_traces)
+        if not top:
+            return None
+        sid = top["session_id"]
+        session_traces = [
+            t for t in all_traces if (t.get("sessionId") or t.get("session_id")) == sid
+        ]
+        traces = sorted(
+            (
+                {
+                    "trace_id": t["id"],
+                    "name": t.get("name") or "(unnamed)",
+                    "cost": round(_trace_cost(t), 6),
+                }
+                for t in session_traces
+                if t.get("id")
+            ),
+            key=lambda r: r["cost"],
+            reverse=True,
+        )
+        return {
+            "session_id": sid,
+            "cost": top["cost"],
+            "count": top["count"],
+            "by_stage": aggregate_by_name(session_traces),
+            "traces": traces,
+        }
+
+    async def top_stage(
+        self, slug: str | None, hours: int, sample: int = 8
+    ) -> dict[str, Any] | None:
+        """The most expensive stage (agent / trace name) in the window.
+
+        Returns the stage, its total cost + share of traced spend, and a sample
+        of its priciest traces (with project) — the basis for the stage-level
+        (global) cost analysis. ``None`` if there are no traces.
+        """
+        gathered = await self._gather(slug, hours)
+        rows: list[dict[str, Any]] = []
+        for p, traces in gathered:
+            for t in traces:
+                if not t.get("id"):
+                    continue
+                rows.append(
+                    {
+                        "trace_id": t["id"],
+                        "project": p.slug,
+                        "name": t.get("name") or "(unnamed)",
+                        "cost": round(_trace_cost(t), 6),
+                    }
+                )
+        if not rows:
+            return None
+        by_name: dict[str, dict[str, float]] = {}
+        for r in rows:
+            agg = by_name.setdefault(r["name"], {"cost": 0.0, "count": 0})
+            agg["cost"] += r["cost"]
+            agg["count"] += 1
+        total = sum(v["cost"] for v in by_name.values()) or 1e-9
+        name, agg = max(by_name.items(), key=lambda kv: kv[1]["cost"])
+        stage_traces = sorted(
+            (r for r in rows if r["name"] == name),
+            key=lambda r: r["cost"],
+            reverse=True,
+        )[:sample]
+        return {
+            "stage": name,
+            "cost": round(agg["cost"], 6),
+            "count": int(agg["count"]),
+            "pct_of_traced": round(100 * agg["cost"] / total, 1),
+            "traces": stage_traces,
+        }
+
     async def trace_detail(self, project_slug: str, trace_id: str) -> dict[str, Any]:
         """Fetch a single trace's full detail (observations) from its project."""
         client = self._clients.get(project_slug)
