@@ -140,6 +140,10 @@ def create_app(config: Config | None = None) -> FastAPI:
     def index() -> str:
         return (_WEB / "index.html").read_text()
 
+    @app.get("/analyst", response_class=HTMLResponse)
+    def analyst_page() -> str:
+        return (_WEB / "analyst.html").read_text()
+
     if (_WEB / "static").is_dir():
         app.mount("/static", StaticFiles(directory=_WEB / "static"), name="static")
 
