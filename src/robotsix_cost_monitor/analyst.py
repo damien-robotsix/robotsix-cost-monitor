@@ -2,8 +2,8 @@
 
 The digest (stage table + specimens) is always available and needs no LLM. When
 ``settings.analyst`` is configured with an OpenRouter key, :func:`run_analyst`
-runs a **level-2** (llmio tier-2) agent over the digest, with a **level-3**
-sub-agent it can call to drill into the most expensive traces, and stores
+runs a **level-3** orchestrator over the digest, with a **level-2** sub-agent
+it can call to drill into the most expensive traces, and stores
 cost-reduction proposals under ``.data/analyst/proposals.json`` (surfaced in the
 dashboard). When a broker is configured and the analysis warrants it, the
 analyst also files a board ticket via agent-comm (pull/mailbox → the central
@@ -27,19 +27,19 @@ from .service import CostService
 
 logger = logging.getLogger(__name__)
 
-#: Cap a single trace's serialized detail handed to the level-3 agent.
+#: Cap a single trace's serialized detail handed to the trace agent.
 _TRACE_CHAR_CAP = 24_000
 
 #: llmio provider for the analyst's agents. ``openrouter`` isn't a registered
 #: provider name; ``openrouter-deepseek`` is the OpenRouter-backed one.
 _PROVIDER = "openrouter-deepseek"
 
-#: Default level-3 model. tier-3 defaults to the Claude SDK (``opus``), which the
-#: OpenRouter provider can't serve, so the trace agent uses the strongest
-#: llmio-known OpenRouter model (override via analyst.trace_model).
-_DEFAULT_TRACE_MODEL = "deepseek/deepseek-v4-pro"
+#: Model for the level-3 ORCHESTRATOR. llmio's tier-3 default is the Claude SDK
+#: (``opus``), unservable via OpenRouter, so the level-3 agent uses the strongest
+#: llmio-known OpenRouter model (override via analyst.global_model).
+_L3_FALLBACK_MODEL = "deepseek/deepseek-v4-pro"
 
-_L2_SYSTEM = (
+_ORCHESTRATOR_SYSTEM = (
     "You are a cost-reduction analyst for an LLM agent fleet. You are given a "
     "deterministic cost digest (per-stage spend + specimens) and a list of the "
     "most expensive recent traces (candidate_traces: each has trace_id, project, "
@@ -55,7 +55,7 @@ _L2_SYSTEM = (
     '"..."}], "ticket": {"title": "...", "description": "..."} or null}.'
 )
 
-_L3_SYSTEM = (
+_TRACE_SYSTEM = (
     "You are a trace-level cost analyst. You are given one LLM agent trace with "
     "its observations. Identify concretely where cost/tokens are wasted "
     "(oversized prompts, an over-provisioned model tier for the work, repeated or "
@@ -160,7 +160,7 @@ def _run_agents(
     provider = get_provider(provider=_PROVIDER, api_key=a.openrouter_key)
 
     def analyze_trace(trace_id: str) -> str:
-        """Run the level-3 sub-agent on one expensive trace's full detail.
+        """Run the level-2 trace sub-agent on one expensive trace's full detail.
 
         Pass a trace_id taken from candidate_traces; returns a terse,
         trace-specific cost analysis.
@@ -168,10 +168,12 @@ def _run_agents(
         detail = details.get(trace_id)
         if not detail:
             return f"No detail available for trace {trace_id!r}."
-        h3 = provider.build_agent(
-            level=3,
-            model=a.trace_model or _DEFAULT_TRACE_MODEL,
-            system_prompt=_L3_SYSTEM,
+        # Level 2 (intermediate): parse/extract the waste in one trace. model
+        # None → llmio tier-2 default (deepseek-v4-pro).
+        ht = provider.build_agent(
+            level=2,
+            model=a.trace_model or None,
+            system_prompt=_TRACE_SYSTEM,
             output_type=str,
             name="cost-analyst-trace",
         )
@@ -179,21 +181,23 @@ def _run_agents(
         return cast(
             "str",
             run_agent(
-                h3,
-                lambda: h3.run_sync(payload).output,
+                ht,
+                lambda: ht.run_sync(payload).output,
                 label="cost-analyst-trace",
                 project=a.langfuse_project_id,
             ),
         )
 
-    # output_type=str (not Analysis): DeepSeek reasoning ("thinking") models
-    # reject the forced tool_choice pydantic-ai uses for structured output, so
-    # the L2 agent returns JSON text we parse. The analyze_trace tool (optional
-    # tool_choice) is unaffected.
+    # Level 3 (high-level orchestration/planning): synthesise across the digest +
+    # trace findings and decide proposals/ticket. output_type=str (not Analysis):
+    # DeepSeek reasoning ("thinking") models reject the forced tool_choice
+    # pydantic-ai uses for structured output, so it returns JSON text we parse;
+    # the analyze_trace tool (optional tool_choice) is unaffected. model defaults
+    # to _L3_FALLBACK_MODEL since tier-3 (opus) is unservable via OpenRouter.
     h2 = provider.build_agent(
-        level=2,
-        model=a.global_model or None,
-        system_prompt=_L2_SYSTEM,
+        level=3,
+        model=a.global_model or _L3_FALLBACK_MODEL,
+        system_prompt=_ORCHESTRATOR_SYSTEM,
         tools=[analyze_trace],
         output_type=str,
         name="cost-analyst",
