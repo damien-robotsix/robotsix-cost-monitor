@@ -49,7 +49,10 @@ _L2_SYSTEM = (
     "suspicious traces, not all of them. Then return ONLY high-confidence, "
     "concrete cost reductions. Set `ticket` ONLY when a problem is significant "
     "and actionable enough to warrant a tracked board ticket (clear title + a "
-    "description with evidence and a concrete fix); otherwise leave it null."
+    "description with evidence and a concrete fix); otherwise leave it null.\n\n"
+    'Return ONLY a JSON object (no prose, no code fences): {"summary": "...", '
+    '"proposals": [{"title": "...", "rationale": "...", "estimated_saving": '
+    '"..."}], "ticket": {"title": "...", "description": "..."} or null}.'
 )
 
 _L3_SYSTEM = (
@@ -183,24 +186,45 @@ def _run_agents(
             ),
         )
 
+    # output_type=str (not Analysis): DeepSeek reasoning ("thinking") models
+    # reject the forced tool_choice pydantic-ai uses for structured output, so
+    # the L2 agent returns JSON text we parse. The analyze_trace tool (optional
+    # tool_choice) is unaffected.
     h2 = provider.build_agent(
         level=2,
         model=a.global_model or None,
         system_prompt=_L2_SYSTEM,
         tools=[analyze_trace],
-        output_type=Analysis,
+        output_type=str,
         name="cost-analyst",
     )
     user = json.dumps({"digest": digest, "candidate_traces": candidates})
-    return cast(
-        "Analysis",
+    raw = str(
         run_agent(
             h2,
             lambda: h2.run_sync(user).output,
             label="cost-analyst",
             project=a.langfuse_project_id,
-        ),
+        )
     )
+    return _parse_analysis(raw)
+
+
+def _parse_analysis(raw: str) -> Analysis:
+    """Parse the level-2 agent's JSON reply into an :class:`Analysis`.
+
+    Tolerant of code fences / surrounding prose; on any failure the raw text is
+    kept as the summary so a run is never lost.
+    """
+    text = raw.strip()
+    if text.startswith("```"):
+        text = text.split("```", 2)[1] if text.count("```") >= 2 else text
+        text = text.removeprefix("json").strip("`").strip()
+    start, end = text.find("{"), text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        with contextlib.suppress(Exception):
+            return Analysis.model_validate(json.loads(text[start : end + 1]))
+    return Analysis(summary=raw[:1000])
 
 
 def _file_ticket(a: AnalystConfig, ticket: TicketRequest) -> dict[str, Any]:

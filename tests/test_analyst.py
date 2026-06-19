@@ -14,8 +14,39 @@ from typing import Any
 import pytest
 
 from robotsix_cost_monitor import analyst as analyst_mod
-from robotsix_cost_monitor.analyst import Analysis, Proposal, TicketRequest, run_analyst
+from robotsix_cost_monitor.analyst import (
+    Analysis,
+    Proposal,
+    TicketRequest,
+    _parse_analysis,
+    run_analyst,
+)
 from robotsix_cost_monitor.config import AnalystConfig, Config, Settings
+
+
+def test_parse_analysis_plain_json() -> None:
+    a = _parse_analysis(
+        '{"summary": "s", "proposals": [{"title": "t", "rationale": "r"}], '
+        '"ticket": {"title": "x", "description": "y"}}'
+    )
+    assert a.summary == "s"
+    assert a.proposals[0].title == "t"
+    assert a.ticket is not None and a.ticket.title == "x"
+
+
+def test_parse_analysis_code_fenced() -> None:
+    a = _parse_analysis(
+        '```json\n{"summary": "z", "proposals": [], "ticket": null}\n```'
+    )
+    assert a.summary == "z"
+    assert a.proposals == []
+    assert a.ticket is None
+
+
+def test_parse_analysis_garbage_keeps_text() -> None:
+    a = _parse_analysis("not json at all")
+    assert a.summary == "not json at all"
+    assert a.proposals == []
 
 
 class _FakeService:
