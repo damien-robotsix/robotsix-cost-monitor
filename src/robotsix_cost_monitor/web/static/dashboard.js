@@ -103,7 +103,6 @@ function renderByAgent(rows) {
   const max = Math.max(...rows.map((r) => r.cost), 1e-9);
   $("by-agent").innerHTML =
     rows
-      .slice(0, 15)
       .map(
         (r) =>
           `<div class="bar-row"><span class="name" title="${r.name}">${r.name}</span>` +
