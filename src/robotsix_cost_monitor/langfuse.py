@@ -7,8 +7,7 @@ the traces endpoint. No Langfuse SDK dependency — just ``httpx``.
 Cost is read from each trace's ``totalCost`` (Langfuse's span-derived cost).
 
 Pure aggregation / transformation functions live in
-:mod:`robotsix_cost_monitor.aggregations` and are re-exported here for
-backward compatibility.
+:mod:`robotsix_cost_monitor.aggregations`.
 """
 
 from __future__ import annotations
@@ -19,34 +18,15 @@ from typing import Any
 
 import httpx
 
-from .aggregations import (  # re-exported for backward compatibility
+from .aggregations import (
     _empty_model_slot,
     _model_rows,
-    _trace_cost,  # noqa: F401 — re-exported; used by service.py via lf._trace_cost
     _utc_now,
-    aggregate_by_name,
-    aggregate_by_session,
-    backend_cost_series,
     backend_for_model,
-    cost_trend,
-    merge_model_costs,
-    most_expensive_session,
-    most_expensive_trace,
-    total_cost,
 )
 
 __all__ = [
     "LangfuseClient",
-    "_trace_cost",
-    "total_cost",
-    "aggregate_by_name",
-    "aggregate_by_session",
-    "cost_trend",
-    "backend_cost_series",
-    "merge_model_costs",
-    "backend_for_model",
-    "most_expensive_trace",
-    "most_expensive_session",
 ]
 
 _PAGE_LIMIT = 100
