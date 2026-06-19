@@ -77,7 +77,7 @@ def _config(**analyst_kwargs: Any) -> Config:
 
 
 async def test_disabled_without_key() -> None:
-    out = await run_analyst(_config(), _FakeService())
+    out = await run_analyst(_config(), _FakeService())  # type: ignore[arg-type]
     assert out == {
         "enabled": False,
         "detail": "analyst.openrouter_key not configured",
@@ -112,7 +112,7 @@ async def test_run_stores_proposals_and_files_ticket(
         broker_host="ai-broker.example",
         broker_token="tok",
     )
-    out = await run_analyst(cfg, _FakeService())
+    out = await run_analyst(cfg, _FakeService())  # type: ignore[arg-type]
 
     assert out["enabled"] is True
     assert out["proposals"][0]["title"] == "Drop explore to L2"
@@ -139,6 +139,6 @@ async def test_no_ticket_when_broker_unconfigured(
     )
 
     # openrouter_key set (enabled) but no broker → ticket is not filed.
-    out = await run_analyst(_config(openrouter_key="sk-x"), _FakeService())
+    out = await run_analyst(_config(openrouter_key="sk-x"), _FakeService())  # type: ignore[arg-type]
     assert called["n"] == 0
     assert out["ticket_result"] is None

@@ -13,59 +13,67 @@ from robotsix_cost_monitor.openrouter import OpenRouterClient
 # ---------------------------------------------------------------------------
 
 
-async def test_fetch_key_usage_returns_usage():
+async def test_fetch_key_usage_returns_usage() -> None:
     """Normal response: extract usage from data.usage."""
     client = OpenRouterClient("sk-test")
-    client._get = AsyncMock(return_value={"data": {"usage": 3.14}})
+    object.__setattr__(
+        client, "_get", AsyncMock(return_value={"data": {"usage": 3.14}})
+    )
 
     result = await client.fetch_key_usage()
     assert result == 3.14
-    client._get.assert_called_once_with("/key")
+    client._get.assert_called_once_with("/key")  # type: ignore[attr-defined]
 
 
-async def test_fetch_key_usage_missing_data_key():
+async def test_fetch_key_usage_missing_data_key() -> None:
     """When 'data' key is absent, return 0.0."""
     client = OpenRouterClient("sk-test")
-    client._get = AsyncMock(return_value={})
+    object.__setattr__(client, "_get", AsyncMock(return_value={}))
 
     result = await client.fetch_key_usage()
     assert result == 0.0
 
 
-async def test_fetch_key_usage_missing_usage_field():
+async def test_fetch_key_usage_missing_usage_field() -> None:
     """When 'usage' field is absent from data, return 0.0."""
     client = OpenRouterClient("sk-test")
-    client._get = AsyncMock(return_value={"data": {}})
+    object.__setattr__(client, "_get", AsyncMock(return_value={"data": {}}))
 
     result = await client.fetch_key_usage()
     assert result == 0.0
 
 
-async def test_fetch_key_usage_data_is_none():
+async def test_fetch_key_usage_data_is_none() -> None:
     """When data is None/null, return 0.0."""
     client = OpenRouterClient("sk-test")
-    client._get = AsyncMock(return_value={})
+    object.__setattr__(client, "_get", AsyncMock(return_value={}))
 
     result = await client.fetch_key_usage()
     assert result == 0.0
 
 
-async def test_fetch_key_usage_usage_is_none():
+async def test_fetch_key_usage_usage_is_none() -> None:
     """When usage is null, return 0.0 (float conversion of None → 0.0)."""
     client = OpenRouterClient("sk-test")
-    client._get = AsyncMock(return_value={"data": {"usage": None}})
+    object.__setattr__(
+        client, "_get", AsyncMock(return_value={"data": {"usage": None}})
+    )
 
     result = await client.fetch_key_usage()
     assert result == 0.0
 
 
-async def test_fetch_key_usage_http_error():
+async def test_fetch_key_usage_http_error() -> None:
     """HTTP errors propagate as exceptions."""
     client = OpenRouterClient("sk-test")
-    client._get = AsyncMock(
-        side_effect=httpx.HTTPStatusError(
-            "unauthorized", request=Mock(), response=Mock(status_code=401)
-        )
+    object.__setattr__(
+        client,
+        "_get",
+        AsyncMock(
+            side_effect=httpx.HTTPStatusError(
+                "unauthorized", request=Mock(), response=Mock(status_code=401)
+            )
+        ),
     )
 
     try:
@@ -80,11 +88,13 @@ async def test_fetch_key_usage_http_error():
 # ---------------------------------------------------------------------------
 
 
-async def test_fetch_credits_returns_balance():
+async def test_fetch_credits_returns_balance() -> None:
     """Normal response: extract total_credits, total_usage, remaining."""
     client = OpenRouterClient("sk-test")
-    client._get = AsyncMock(
-        return_value={"data": {"total_credits": 100.0, "total_usage": 42.5}}
+    object.__setattr__(
+        client,
+        "_get",
+        AsyncMock(return_value={"data": {"total_credits": 100.0, "total_usage": 42.5}}),
     )
 
     result = await client.fetch_credits()
@@ -95,10 +105,10 @@ async def test_fetch_credits_returns_balance():
     }
 
 
-async def test_fetch_credits_missing_data_key():
+async def test_fetch_credits_missing_data_key() -> None:
     """When 'data' key is absent, return all zeros."""
     client = OpenRouterClient("sk-test")
-    client._get = AsyncMock(return_value={})
+    object.__setattr__(client, "_get", AsyncMock(return_value={}))
 
     result = await client.fetch_credits()
     assert result == {
@@ -108,10 +118,12 @@ async def test_fetch_credits_missing_data_key():
     }
 
 
-async def test_fetch_credits_partial_data():
+async def test_fetch_credits_partial_data() -> None:
     """When some fields are missing, they default to 0.0."""
     client = OpenRouterClient("sk-test")
-    client._get = AsyncMock(return_value={"data": {"total_credits": 50.0}})
+    object.__setattr__(
+        client, "_get", AsyncMock(return_value={"data": {"total_credits": 50.0}})
+    )
 
     result = await client.fetch_credits()
     assert result == {
@@ -121,11 +133,13 @@ async def test_fetch_credits_partial_data():
     }
 
 
-async def test_fetch_credits_none_values():
+async def test_fetch_credits_none_values() -> None:
     """When fields are null, they default to 0.0."""
     client = OpenRouterClient("sk-test")
-    client._get = AsyncMock(
-        return_value={"data": {"total_credits": None, "total_usage": None}}
+    object.__setattr__(
+        client,
+        "_get",
+        AsyncMock(return_value={"data": {"total_credits": None, "total_usage": None}}),
     )
 
     result = await client.fetch_credits()
@@ -136,13 +150,17 @@ async def test_fetch_credits_none_values():
     }
 
 
-async def test_fetch_credits_http_error():
+async def test_fetch_credits_http_error() -> None:
     """HTTP errors propagate as exceptions."""
     client = OpenRouterClient("sk-test")
-    client._get = AsyncMock(
-        side_effect=httpx.HTTPStatusError(
-            "unauthorized", request=Mock(), response=Mock(status_code=401)
-        )
+    object.__setattr__(
+        client,
+        "_get",
+        AsyncMock(
+            side_effect=httpx.HTTPStatusError(
+                "unauthorized", request=Mock(), response=Mock(status_code=401)
+            )
+        ),
     )
 
     try:

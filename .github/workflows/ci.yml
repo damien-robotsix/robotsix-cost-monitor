@@ -19,8 +19,9 @@ jobs:
     secrets: inherit
 
   security:
-    uses: damien-robotsix/robotsix-mill/.github/workflows/python-security.yml@a063c729739539138db80ce72c82a35e38eb76f9
+    uses: damien-robotsix/robotsix-mill/.github/workflows/python-security.yml@main
     with:
       install-extras: ""
       trufflehog-pr-diff: true
       trufflehog-extra-args: "--results=verified,unknown"
+    secrets: inherit
