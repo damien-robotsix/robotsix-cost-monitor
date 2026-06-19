@@ -11,11 +11,14 @@
     <h1>cost analyst</h1>
     <div class="controls">
       <a class="navlink" href="/">← dashboard</a>
-      <button id="run-btn" title="run a fresh analysis">run analysis</button>
     </div>
   </header>
 
   <main>
+    <div class="panel-head section-head">
+      <h2>fleet cost analysis</h2>
+      <button id="run-btn" class="analyze-btn" title="run a fresh fleet analysis">analyze</button>
+    </div>
     <section class="cards" id="run-meta"></section>
 
     <section class="panel">
@@ -41,7 +44,7 @@
     <section class="panel">
       <div class="panel-head">
         <h2>most costly ticket — global analysis</h2>
-        <button id="ticket-btn" title="analyze the most expensive ticket over its lifecycle">analyze</button>
+        <button id="ticket-btn" class="analyze-btn" title="analyze the most expensive ticket over its lifecycle">analyze</button>
       </div>
       <div id="ticket-analysis"></div>
     </section>
@@ -49,7 +52,7 @@
     <section class="panel">
       <div class="panel-head">
         <h2>most costly stage — global analysis</h2>
-        <button id="stage-btn" title="analyze the most expensive stage across the fleet">analyze</button>
+        <button id="stage-btn" class="analyze-btn" title="analyze the most expensive stage across the fleet">analyze</button>
       </div>
       <div id="stage-analysis"></div>
     </section>

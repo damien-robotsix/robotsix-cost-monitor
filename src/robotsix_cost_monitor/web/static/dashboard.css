@@ -92,8 +92,10 @@ canvas { width: 100%; display: block; }
 }
 .ok { color: #6ee7b7; font-size: 12px; }
 .bad { color: #ff8a8a; font-size: 12px; }
-#run-btn { background: var(--accent); color: #fff; border: none; font-weight: 600; }
-#run-btn:disabled { opacity: .5; cursor: progress; }
+.analyze-btn { background: var(--accent); color: #fff; border: none; font-weight: 600; }
+.analyze-btn:disabled { opacity: .5; cursor: progress; }
+/* fleet-analysis header sits outside a .panel, so it needs its own spacing */
+.section-head { margin: 4px 0 14px; }
 
 /* --- reconciliation warning banner --- */
 .banner {
