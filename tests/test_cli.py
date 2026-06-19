@@ -6,6 +6,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from pytest import CaptureFixture
 
 from robotsix_cost_monitor.cli import main
 
@@ -31,7 +32,7 @@ def _cfg(
 # ---------------------------------------------------------------------------
 
 
-def test_serve_default_host_port():
+def test_serve_default_host_port() -> None:
     """``serve`` subcommand calls uvicorn.run with default host/port."""
     with patch("robotsix_cost_monitor.cli.uvicorn.run") as mock_run:
         exit_code = main(["serve"])
@@ -45,7 +46,7 @@ def test_serve_default_host_port():
     )
 
 
-def test_serve_custom_host_port():
+def test_serve_custom_host_port() -> None:
     """``serve`` subcommand passes custom --host and --port to uvicorn."""
     with patch("robotsix_cost_monitor.cli.uvicorn.run") as mock_run:
         exit_code = main(["serve", "--host", "0.0.0.0", "--port", "3000"])
@@ -64,7 +65,7 @@ def test_serve_custom_host_port():
 # ---------------------------------------------------------------------------
 
 
-def test_no_args_defaults_to_serve():
+def test_no_args_defaults_to_serve() -> None:
     """No subcommand → acts like serve (uvicorn.run called)."""
     with patch("robotsix_cost_monitor.cli.uvicorn.run") as mock_run:
         exit_code = main([])
@@ -83,7 +84,7 @@ def test_no_args_defaults_to_serve():
 # ---------------------------------------------------------------------------
 
 
-def test_unknown_subcommand_exits_1():
+def test_unknown_subcommand_exits_1() -> None:
     """Unknown subcommand → exit code 1 (print_help path)."""
     with pytest.raises(SystemExit) as exc_info:
         main(["bogus"])
@@ -96,7 +97,7 @@ def test_unknown_subcommand_exits_1():
 # ---------------------------------------------------------------------------
 
 
-def test_summary_default_project_all():
+def test_summary_default_project_all() -> None:
     """``summary`` (no --project) passes 'all' to CostService.summary()."""
     mock_svc = MagicMock()
     mock_svc.summary = MagicMock(return_value={"total": 42.0})
@@ -113,7 +114,7 @@ def test_summary_default_project_all():
     mock_svc.summary.assert_called_once_with("all", 168)
 
 
-def test_summary_project_specific():
+def test_summary_project_specific() -> None:
     """``summary --project <slug>`` passes the slug to CostService.summary()."""
     mock_svc = MagicMock()
     mock_svc.summary = MagicMock(return_value={"total": 10.0})
@@ -130,7 +131,7 @@ def test_summary_project_specific():
     mock_svc.summary.assert_called_once_with("myproj", 168)
 
 
-def test_summary_custom_hours():
+def test_summary_custom_hours() -> None:
     """``summary --hours N`` passes the window to CostService.summary()."""
     mock_svc = MagicMock()
     mock_svc.summary = MagicMock(return_value={"total": 5.0})
@@ -147,7 +148,7 @@ def test_summary_custom_hours():
     mock_svc.summary.assert_called_once_with("all", 24)
 
 
-def test_summary_prints_json(capsys):
+def test_summary_prints_json(capsys: CaptureFixture[str]) -> None:
     """``summary`` prints the JSON output returned by CostService.summary()."""
     expected = {"demo": 12.5, "total": 12.5}
     mock_svc = MagicMock()
@@ -171,7 +172,7 @@ def test_summary_prints_json(capsys):
 # ---------------------------------------------------------------------------
 
 
-def test_reconcile_project_all():
+def test_reconcile_project_all() -> None:
     """``reconcile --project all`` calls reconcile_project for every project."""
     proj_a = MagicMock(slug="a")
     proj_b = MagicMock(slug="b")
@@ -193,7 +194,7 @@ def test_reconcile_project_all():
     assert mock_rp.call_args_list[1][0][0].slug == "b"
 
 
-def test_reconcile_project_specific_slug():
+def test_reconcile_project_specific_slug() -> None:
     """``reconcile --project <slug>`` filters to matching project."""
     proj_x = MagicMock(slug="x")
     proj_y = MagicMock(slug="y")
@@ -212,7 +213,7 @@ def test_reconcile_project_specific_slug():
     assert mock_rp.call_args[0][0].slug == "y"
 
 
-def test_reconcile_prints_json(capsys):
+def test_reconcile_prints_json(capsys: CaptureFixture[str]) -> None:
     """``reconcile`` prints JSON array of per-project results."""
     proj = MagicMock(slug="demo")
     cfg = _cfg(projects=[proj])

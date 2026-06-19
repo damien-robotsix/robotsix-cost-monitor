@@ -10,31 +10,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  tests:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.12", "3.13"]
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
-      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e  # v6
-        with:
-          enable-cache: true
-      - run: uv sync --extra analyst
-      - name: Security audit
-        run: uv audit
-      - name: ruff check
-        run: uv run ruff check .
-      - name: ruff format
-        run: uv run ruff format --check .
-      - name: mypy
-        run: uv run mypy src/
-      - name: pytest
-        run: uv run pytest -q
+  ci:
+    uses: damien-robotsix/robotsix-mill/.github/workflows/python-ci.yml@main
+    with:
+      python-version: "3.12"
+      install-extras: "analyst"
+      cov-package: "robotsix_cost_monitor"
+    secrets: inherit
 
   security:
-    uses: damien-robotsix/robotsix-mill/.github/workflows/python-security.yml@a063c729739539138db80ce72c82a35e38eb76f9
+    uses: damien-robotsix/robotsix-mill/.github/workflows/python-security.yml@main
     with:
       install-extras: ""
       trufflehog-pr-diff: true
       trufflehog-extra-args: "--results=verified,unknown"
+    secrets: inherit

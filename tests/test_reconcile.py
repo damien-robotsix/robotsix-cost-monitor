@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from robotsix_cost_monitor.config import ProjectConfig, Settings
 from robotsix_cost_monitor.reconcile import (
@@ -54,7 +57,7 @@ class _FrozenNow:
 # ---------------------------------------------------------------------------
 
 
-async def test_no_openrouter_key():
+async def test_no_openrouter_key() -> None:
     """Project without openrouter_key returns early with detail."""
     proj = _proj("demo", openrouter_key=None)
     result = await reconcile_project(proj, _settings())
@@ -62,7 +65,7 @@ async def test_no_openrouter_key():
     assert "no openrouter_key" in result["detail"]
 
 
-async def test_openrouter_fetch_failure():
+async def test_openrouter_fetch_failure() -> None:
     """OpenRouterKey fetch_key_usage raises → result has error, no snapshot saved."""
     proj = _proj("demo")
     with patch("robotsix_cost_monitor.reconcile.OpenRouterClient") as orc_cls:
@@ -75,7 +78,7 @@ async def test_openrouter_fetch_failure():
     assert "balance" not in result  # credits fetch is skipped after usage failure
 
 
-async def test_first_snapshot(tmp_path, monkeypatch):
+async def test_first_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """No prior snapshot → records first snapshot, no drift fields."""
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
 
@@ -109,7 +112,9 @@ async def test_first_snapshot(tmp_path, monkeypatch):
     assert snap["cumulative"] == 12.5
 
 
-async def test_second_call_within_tolerance(tmp_path, monkeypatch):
+async def test_second_call_within_tolerance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Prior snapshot exists → diffs against it, drift within tolerance."""
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
 
@@ -149,7 +154,9 @@ async def test_second_call_within_tolerance(tmp_path, monkeypatch):
     assert result["within_tolerance"] is True
 
 
-async def test_drift_exceeds_tolerance(tmp_path, monkeypatch):
+async def test_drift_exceeds_tolerance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Provider delta and Langfuse cost differ by more than tolerance."""
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
 
@@ -182,7 +189,9 @@ async def test_drift_exceeds_tolerance(tmp_path, monkeypatch):
     assert result["within_tolerance"] is False
 
 
-async def test_negative_interval_treated_as_zero(tmp_path, monkeypatch):
+async def test_negative_interval_treated_as_zero(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """When now is before the prior snapshot, interval_h is 0.0 (negative cap)."""
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
 
@@ -217,7 +226,9 @@ async def test_negative_interval_treated_as_zero(tmp_path, monkeypatch):
     assert result["langfuse_cost_usd"] == 0.0
 
 
-async def test_openrouter_credits_fetch_failure_ignored(tmp_path, monkeypatch):
+async def test_openrouter_credits_fetch_failure_ignored(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Credits fetch failure is suppressed — reconcile still succeeds."""
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
 
@@ -236,7 +247,9 @@ async def test_openrouter_credits_fetch_failure_ignored(tmp_path, monkeypatch):
     assert "first snapshot recorded" in result["detail"]
 
 
-async def test_missing_snapshot_file_treated_as_first(tmp_path, monkeypatch):
+async def test_missing_snapshot_file_treated_as_first(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Corrupted/missing snapshot is treated as first run."""
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
 
@@ -256,13 +269,17 @@ async def test_missing_snapshot_file_treated_as_first(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_load_snapshot_missing_file(tmp_path, monkeypatch):
+def test_load_snapshot_missing_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """_load_snapshot returns None when file does not exist."""
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
     assert _load_snapshot("nonexistent") is None
 
 
-def test_load_snapshot_corrupted_json(tmp_path, monkeypatch):
+def test_load_snapshot_corrupted_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """_load_snapshot returns None on invalid JSON."""
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
     data_dir = tmp_path / "reconcile"
@@ -272,7 +289,9 @@ def test_load_snapshot_corrupted_json(tmp_path, monkeypatch):
     assert _load_snapshot("bad") is None
 
 
-def test_save_and_load_roundtrip(tmp_path, monkeypatch):
+def test_save_and_load_roundtrip(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """_save_snapshot then _load_snapshot returns the saved data."""
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
     now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
@@ -285,7 +304,9 @@ def test_save_and_load_roundtrip(tmp_path, monkeypatch):
     assert loaded["at"] == now.isoformat()
 
 
-def test_load_snapshot_stale_data(tmp_path, monkeypatch):
+def test_load_snapshot_stale_data(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """_load_snapshot returns the saved data even if old."""
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
     old = datetime(2020, 1, 1, 0, 0, 0, tzinfo=UTC)

@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from robotsix_cost_monitor import langfuse as lf
 
 
-def _trace(cost, name="implement", session="t1", ago_h=1.0):
+def _trace(
+    cost: float, name: str = "implement", session: str = "t1", ago_h: float = 1.0
+) -> dict[str, Any]:
     ts = (datetime.now(UTC) - timedelta(hours=ago_h)).isoformat()
     return {
         "id": f"tr-{cost}-{name}",
@@ -18,15 +21,15 @@ def _trace(cost, name="implement", session="t1", ago_h=1.0):
     }
 
 
-def test_total_cost():
+def test_total_cost() -> None:
     assert lf.total_cost([_trace(1.5), _trace(2.25)]) == 3.75
 
 
-def test_total_cost_tolerates_field_variants():
+def test_total_cost_tolerates_field_variants() -> None:
     assert lf.total_cost([{"calculatedTotalCost": 2.0}, {"cost": 1.0}]) == 3.0
 
 
-def test_aggregate_by_name_sorted_desc():
+def test_aggregate_by_name_sorted_desc() -> None:
     rows = lf.aggregate_by_name(
         [_trace(1, "review"), _trace(3, "implement"), _trace(2, "implement")]
     )
@@ -34,7 +37,7 @@ def test_aggregate_by_name_sorted_desc():
     assert rows[1] == {"name": "review", "cost": 1.0, "count": 1}
 
 
-def test_merge_model_costs_sums_by_model_sorted_desc():
+def test_merge_model_costs_sums_by_model_sorted_desc() -> None:
     project_a = [
         {
             "model": "opus",
@@ -77,7 +80,7 @@ def test_merge_model_costs_sums_by_model_sorted_desc():
     assert lf.merge_model_costs([]) == []
 
 
-def test_aggregate_by_name_unnamed_falls_back_to_session():
+def test_aggregate_by_name_unnamed_falls_back_to_session() -> None:
     rows = lf.aggregate_by_name(
         [
             {"name": "", "sessionId": "robotsix-mill · ticket-1", "totalCost": 2.0},
@@ -91,14 +94,14 @@ def test_aggregate_by_name_unnamed_falls_back_to_session():
     assert by["implement"]["cost"] == 0.5
 
 
-def test_backend_for_model():
+def test_backend_for_model() -> None:
     assert lf.backend_for_model("deepseek/deepseek-v4-pro-20260423") == "openrouter"
     assert lf.backend_for_model("anthropic/claude-x") == "openrouter"
     assert lf.backend_for_model("opus") == "claude-sdk"
     assert lf.backend_for_model("haiku") == "claude-sdk"
 
 
-def test_backend_cost_series_merges_filters_and_sorts():
+def test_backend_cost_series_merges_filters_and_sorts() -> None:
     project_a = {
         "2026-06-17": {"openrouter": 1.0, "claude-sdk": 4.0},
         "2026-06-18": {"openrouter": 2.0},
@@ -118,7 +121,7 @@ def test_backend_cost_series_merges_filters_and_sorts():
     assert lf.backend_cost_series([], "openrouter") == []
 
 
-def test_aggregate_by_session():
+def test_aggregate_by_session() -> None:
     rows = lf.aggregate_by_session(
         [_trace(1, session="a"), _trace(4, session="b"), _trace(2, session="a")]
     )
@@ -128,20 +131,24 @@ def test_aggregate_by_session():
     assert rows[1]["cost"] == 3.0
 
 
-def test_most_expensive_trace_and_session():
+def test_most_expensive_trace_and_session() -> None:
     traces = [_trace(1, session="a"), _trace(9, "implement", session="b")]
-    assert lf.most_expensive_trace(traces)["cost"] == 9.0
-    assert lf.most_expensive_session(traces)["session_id"] == "b"
+    most_exp_trace = lf.most_expensive_trace(traces)
+    assert most_exp_trace is not None
+    assert most_exp_trace["cost"] == 9.0
+    most_exp_session = lf.most_expensive_session(traces)
+    assert most_exp_session is not None
+    assert most_exp_session["session_id"] == "b"
 
 
-def test_cost_trend_buckets_sum_to_total():
+def test_cost_trend_buckets_sum_to_total() -> None:
     traces = [_trace(1.0, ago_h=1), _trace(2.0, ago_h=5), _trace(3.0, ago_h=20)]
     trend = lf.cost_trend(traces, hours=24, buckets=24)
     assert len(trend) == 24
     assert round(sum(b["cost"] for b in trend), 6) == 6.0
 
 
-def test_empty_inputs():
+def test_empty_inputs() -> None:
     assert lf.total_cost([]) == 0.0
     assert lf.aggregate_by_name([]) == []
     assert lf.most_expensive_trace([]) is None
