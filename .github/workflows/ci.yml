@@ -21,6 +21,8 @@ jobs:
         with:
           enable-cache: true
       - run: uv sync --extra analyst
+      - name: Security audit
+        run: uv audit
       - name: ruff check
         run: uv run ruff check .
       - name: ruff format
