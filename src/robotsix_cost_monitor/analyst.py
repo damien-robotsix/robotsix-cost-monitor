@@ -245,22 +245,25 @@ def _file_ticket(a: AnalystConfig, ticket: TicketRequest) -> dict[str, Any]:
         broker_scheme=a.broker_scheme,
         broker_token=a.broker_token or "",
     )
+    # Ask the board MANAGER (not the dumb responder) in natural language, so it
+    # deduplicates and records the source. The manager is an LLM agent, so allow
+    # a generous timeout. (It can ask back / we could continue the exchange —
+    # the broker + the manager's memory support multi-turn — but one self-
+    # completing request is enough here.)
     agent = Agent(
-        "cost-analyst", registry, transport=transport, pull=True, timeout=30.0
+        "cost-analyst", registry, transport=transport, pull=True, timeout=180.0
+    )
+    message = (
+        f"Please file a board ticket on the {a.board_repo_id} board.\n"
+        f"Title: {ticket.title}\n\nDescription:\n{ticket.description}\n\n"
+        "First check the existing open tickets — if one already covers this "
+        "issue, comment on / update that one instead of creating a duplicate. "
+        "Reply with the ticket id (created or existing) and what you did."
     )
     try:
         with agent:
             reply = agent.send_request(
-                a.board_agent_id,
-                {
-                    "op": "create_ticket",
-                    "args": {
-                        "title": ticket.title,
-                        "description": ticket.description,
-                        "repo_id": a.board_repo_id,
-                    },
-                },
-                timeout=30.0,
+                a.board_manager_id, {"message": message}, timeout=180.0
             )
     except Exception as exc:  # noqa: BLE001 — surface as status, not a crash
         logger.warning("ticket filing failed: %s", exc)

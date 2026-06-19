@@ -53,6 +53,10 @@ class AnalystConfig(BaseModel):
     broker_port: int = 443
     broker_scheme: str = "https"
     broker_token: str | None = None
+    # The analyst files tickets by *messaging the board manager* (which dedups +
+    # acts), never the dumb responder — so there's no filing path that bypasses
+    # the manager. board_agent_id is kept for optional read queries.
+    board_manager_id: str = "board-manager-robotsix-mill"
     board_agent_id: str = "board-robotsix-mill"
     board_repo_id: str = "robotsix-cost-monitor"
 
