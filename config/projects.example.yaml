@@ -44,7 +44,8 @@ settings:
     broker_port: 443
     broker_scheme: https
     broker_token: null          # the cost-analyst's broker bearer token
-    board_agent_id: board-robotsix-mill
+    board_manager_id: board-manager-robotsix-mill  # LLM manager it files through (dedups)
+    board_agent_id: board-robotsix-mill            # structured responder (optional reads)
     board_repo_id: robotsix-cost-monitor
     # The analyst's own Langfuse project, so its L2/L3 runs are themselves traced.
     langfuse_public_key: null
