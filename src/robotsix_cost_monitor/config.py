@@ -55,7 +55,9 @@ class AnalystConfig(BaseModel):
     # of agents for full coverage.
     traces_per_agent: int = 1
     max_trace_analyses: int = 12  # overall cap on traces analyzed per run
-    schedule_hours: float = 0.0  # >0 → run automatically on this cadence
+    # >0 → run ALL analyses (fleet + most-costly ticket + most-costly stage) on
+    # this cadence; default daily. 0 disables the scheduler (manual only).
+    schedule_hours: float = 24.0
 
     # -- Ticket filing via the agent-comm broker (optional) --
     broker_host: str | None = None

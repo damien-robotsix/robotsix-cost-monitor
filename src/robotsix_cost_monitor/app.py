@@ -13,7 +13,14 @@ from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from .analyst import build_digest, load_proposals, run_analyst
+from .analyst import (
+    build_digest,
+    load_proposals,
+    load_targeted_analysis,
+    run_analyst,
+    run_stage_analyst,
+    run_ticket_analyst,
+)
 from .config import Config, load_config
 from .reconcile import load_last_reconcile, reconcile_all, reconcile_project
 from .service import CostService
@@ -23,14 +30,21 @@ logger = logging.getLogger(__name__)
 
 
 async def _analyst_loop(cfg: Config, service: CostService, hours: float) -> None:
-    """Run the analyst every *hours* hours until cancelled."""
+    """Run all analyses (fleet + most-costly ticket + most-costly stage) every
+    *hours* hours until cancelled."""
     interval = max(1.0, hours) * 3600
+    analyses = (
+        ("fleet", run_analyst),
+        ("ticket", run_ticket_analyst),
+        ("stage", run_stage_analyst),
+    )
     while True:
         await asyncio.sleep(interval)
-        try:
-            await run_analyst(cfg, service)
-        except Exception:  # noqa: BLE001 — a failed run must not kill the loop
-            logger.exception("scheduled analyst run failed")
+        for label, fn in analyses:
+            try:
+                await fn(cfg, service)
+            except Exception:  # noqa: BLE001 — a failed run must not kill the loop
+                logger.exception("scheduled %s analysis failed", label)
 
 
 async def _reconcile_loop(cfg: Config, hours: float) -> None:
@@ -159,6 +173,22 @@ def create_app(config: Config | None = None) -> FastAPI:
     @app.post("/api/analyst/run")
     async def analyst_run() -> dict[str, Any]:
         return await run_analyst(cfg, service)
+
+    @app.get("/api/analyst/ticket")
+    def analyst_ticket() -> dict[str, Any]:
+        return load_targeted_analysis("ticket")
+
+    @app.post("/api/analyst/ticket-run")
+    async def analyst_ticket_run() -> dict[str, Any]:
+        return await run_ticket_analyst(cfg, service)
+
+    @app.get("/api/analyst/stage")
+    def analyst_stage() -> dict[str, Any]:
+        return load_targeted_analysis("stage")
+
+    @app.post("/api/analyst/stage-run")
+    async def analyst_stage_run() -> dict[str, Any]:
+        return await run_stage_analyst(cfg, service)
 
     @app.get("/", response_class=HTMLResponse)
     def index() -> str:

@@ -692,3 +692,41 @@ async def test_exception_isolation_mixed_in_backend_trend() -> None:
 
     rows = await svc.backend_trend(None, 24, "all")
     assert rows == [{"bucket_start": "2026-06-17", "cost": 5.0}]
+
+
+async def test_top_ticket_picks_priciest_session() -> None:
+    svc = _svc(_proj("a"))
+    traces = [
+        trace(5.0, "refine", session="robotsix-mill · T1", tid="r1"),
+        trace(3.0, "implement", session="robotsix-mill · T1", tid="i1"),
+        trace(2.0, "refine", session="robotsix-mill · T2", tid="r2"),
+    ]
+    object.__setattr__(
+        svc._clients["a"], "fetch_traces_window", AsyncMock(return_value=traces)
+    )
+    top = await svc.top_ticket(None, 24)
+    assert top is not None
+    assert top["session_id"] == "robotsix-mill · T1"  # 5+3=8 beats 2
+    assert top["cost"] == 8.0
+    assert top["count"] == 2
+    stages = {s["name"]: s["cost"] for s in top["by_stage"]}
+    assert stages == {"refine": 5.0, "implement": 3.0}
+
+
+async def test_top_stage_picks_priciest_stage() -> None:
+    svc = _svc(_proj("a"))
+    traces = [
+        trace(5.0, "refine", tid="r1"),
+        trace(4.0, "refine", tid="r2"),
+        trace(2.0, "audit", tid="a1"),
+    ]
+    object.__setattr__(
+        svc._clients["a"], "fetch_traces_window", AsyncMock(return_value=traces)
+    )
+    top = await svc.top_stage(None, 24, sample=5)
+    assert top is not None
+    assert top["stage"] == "refine"  # 9 beats 2
+    assert top["cost"] == 9.0
+    assert top["count"] == 2
+    assert top["pct_of_traced"] == 81.8  # 9 / 11
+    assert [t["trace_id"] for t in top["traces"]] == ["r1", "r2"]
