@@ -63,10 +63,15 @@ RUN apt-get update \
     && claude --version \
     && rm -rf /var/lib/apt/lists/*
 
-# Run as a non-root user with a writable home/work directory. Pre-create an
-# appuser-owned ~/.claude so the `claude` CLI can write state/cache; the host's
-# credentials are bind-mounted into it at deploy time.
-RUN useradd --create-home --uid 10001 appuser \
+# Run as a non-root user with a writable home/work directory. The UID/GID match
+# the deploy host's user (robotsix = 1001) so the bind-mounted ~/.claude (whose
+# mode-600 credentials are owned by that user) is readable and the `claude` CLI
+# can write its state back. Pre-create an appuser-owned ~/.claude as a fallback
+# when no mount is present.
+ARG APP_UID=1001
+ARG APP_GID=1001
+RUN groupadd --gid ${APP_GID} appuser \
+    && useradd --create-home --uid ${APP_UID} --gid ${APP_GID} appuser \
     && mkdir -p /home/appuser/config /home/appuser/.data /home/appuser/.claude \
     && chown -R appuser:appuser /home/appuser/config /home/appuser/.data /home/appuser/.claude
 WORKDIR /home/appuser
