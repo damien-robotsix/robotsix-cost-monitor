@@ -6,6 +6,10 @@ robotsix_cost_monitor:
   path: src/robotsix_cost_monitor/__init__.py
   role: Package root (version + re-exports)
 
+robotsix_cost_monitor.aggregations:
+  path: src/robotsix_cost_monitor/aggregations.py
+  role: Pure cost-aggregation and transformation functions over trace dicts (no I/O)
+
 robotsix_cost_monitor.app:
   path: src/robotsix_cost_monitor/app.py
   role: FastAPI app factory, server-rendered UI, static files
