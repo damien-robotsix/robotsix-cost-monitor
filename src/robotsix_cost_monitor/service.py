@@ -10,7 +10,15 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from . import langfuse as lf
+from .aggregations import (
+    _trace_cost,
+    aggregate_by_name,
+    backend_cost_series,
+    cost_trend,
+    merge_model_costs,
+    most_expensive_session,
+    most_expensive_trace,
+)
 from .config import Config, ProjectConfig
 from .langfuse import LangfuseClient
 
@@ -81,7 +89,7 @@ class CostService:
                         "trace_id": tid,
                         "project": p.slug,
                         "name": t.get("name") or "(unnamed)",
-                        "cost": round(lf._trace_cost(t), 6),
+                        "cost": round(_trace_cost(t), 6),
                     }
                 )
         rows.sort(key=lambda r: r["cost"], reverse=True)
@@ -134,7 +142,7 @@ class CostService:
         """Cost by trace name (stage/agent), merged across selected projects."""
         gathered = await self._gather(slug, hours)
         all_traces = [t for _, traces in gathered for t in traces]
-        return lf.aggregate_by_name(all_traces)
+        return aggregate_by_name(all_traces)
 
     async def _model_usage(
         self, project: ProjectConfig, hours: int
@@ -158,7 +166,7 @@ class CostService:
                 parts.append(await self._model_usage(p, hours))
             except Exception:  # noqa: BLE001 — a dead project must not 500 the page
                 parts.append([])
-        return lf.merge_model_costs(parts)
+        return merge_model_costs(parts)
 
     async def _backend_cost(
         self, project: ProjectConfig, hours: int
@@ -184,19 +192,19 @@ class CostService:
                 parts.append(await self._backend_cost(p, hours))
             except Exception:  # noqa: BLE001 — a dead project must not 500 the page
                 parts.append({})
-        return lf.backend_cost_series(parts, backend)
+        return backend_cost_series(parts, backend)
 
     async def trend(
         self, slug: str | None, hours: int, buckets: int = 48
     ) -> list[dict[str, Any]]:
         gathered = await self._gather(slug, hours)
         all_traces = [t for _, traces in gathered for t in traces]
-        return lf.cost_trend(all_traces, hours, buckets)
+        return cost_trend(all_traces, hours, buckets)
 
     async def highlights(self, slug: str | None, hours: int) -> dict[str, Any]:
         gathered = await self._gather(slug, hours)
         all_traces = [t for _, traces in gathered for t in traces]
         return {
-            "most_expensive_trace": lf.most_expensive_trace(all_traces),
-            "most_expensive_session": lf.most_expensive_session(all_traces),
+            "most_expensive_trace": most_expensive_trace(all_traces),
+            "most_expensive_session": most_expensive_session(all_traces),
         }
