@@ -125,7 +125,7 @@ def _run_agents(
     digest: dict[str, Any],
     candidates: list[dict[str, Any]],
     details: dict[str, dict[str, Any]],
-) -> Analysis:
+) -> tuple[Analysis, list[dict[str, Any]]]:
     """Run the analyst: a level-2 trace pre-pass, then a level-3 orchestrator.
 
     robotsix-llmio's ``run_agent`` is blocking, so the caller runs this in a
@@ -211,7 +211,7 @@ def _run_agents(
             project=a.langfuse_project_id,
         )
     )
-    return _parse_analysis(raw)
+    return _parse_analysis(raw), findings
 
 
 def _provider_for(tlc: Any, a: AnalystConfig, get_provider: Any) -> Any:
@@ -310,7 +310,9 @@ async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
                 c["project"], c["trace_id"]
             )
 
-    analysis = await asyncio.to_thread(_run_agents, a, digest, candidates, details)
+    analysis, findings = await asyncio.to_thread(
+        _run_agents, a, digest, candidates, details
+    )
 
     ticket_result: dict[str, Any] | None = None
     if analysis.ticket is not None and a.can_file_tickets:
@@ -322,7 +324,9 @@ async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
         "window_hours": a.window_hours,
         "summary": analysis.summary,
         "proposals": [p.model_dump() for p in analysis.proposals],
-        "analyzed_traces": candidates,
+        # findings = the traces actually analysed by the L2 pre-pass, each with
+        # its cost + the "why" (finding). (Candidates without detail are skipped.)
+        "analyzed_traces": findings,
         "ticket": analysis.ticket.model_dump() if analysis.ticket else None,
         "ticket_result": ticket_result,
     }

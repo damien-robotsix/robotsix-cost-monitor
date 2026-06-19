@@ -92,7 +92,7 @@ async def test_run_stores_proposals_and_files_ticket(
         ],
         ticket=TicketRequest(title="Explore cost spike", description="evidence + fix"),
     )
-    monkeypatch.setattr(analyst_mod, "_run_agents", lambda *a, **k: analysis)
+    monkeypatch.setattr(analyst_mod, "_run_agents", lambda *a, **k: (analysis, []))
     filed: dict[str, Any] = {}
 
     def _fake_file(a: Any, ticket: TicketRequest) -> dict[str, Any]:
@@ -126,7 +126,7 @@ async def test_no_ticket_when_broker_unconfigured(
         proposals=[],
         ticket=TicketRequest(title="x", description="y"),
     )
-    monkeypatch.setattr(analyst_mod, "_run_agents", lambda *a, **k: analysis)
+    monkeypatch.setattr(analyst_mod, "_run_agents", lambda *a, **k: (analysis, []))
     called = {"n": 0}
     monkeypatch.setattr(
         analyst_mod, "_file_ticket", lambda *a, **k: called.__setitem__("n", 1)

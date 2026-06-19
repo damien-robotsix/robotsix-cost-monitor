@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>robotsix · cost analyst</title>
+  <link rel="stylesheet" href="/static/dashboard.css" />
+</head>
+<body>
+  <header>
+    <h1>cost analyst</h1>
+    <div class="controls">
+      <a class="navlink" href="/">← dashboard</a>
+      <button id="run-btn" title="run a fresh analysis">run analysis</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="cards" id="run-meta"></section>
+
+    <section class="panel">
+      <h2>summary</h2>
+      <div id="summary"></div>
+    </section>
+
+    <section class="panel">
+      <h2>traces analyzed (and why)</h2>
+      <div id="analyzed"></div>
+    </section>
+
+    <section class="panel">
+      <h2>proposals</h2>
+      <div id="proposals"></div>
+    </section>
+
+    <section class="panel">
+      <h2>ticket created</h2>
+      <div id="ticket"></div>
+    </section>
+  </main>
+
+  <footer><span id="status"></span></footer>
+  <script src="/static/analyst.js"></script>
+</body>
+</html>
