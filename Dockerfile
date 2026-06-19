@@ -51,10 +51,24 @@ COPY --from=builder /opt/venv /opt/venv
 ENV VIRTUAL_ENV=/opt/venv \
     PATH="/opt/venv/bin:$PATH"
 
-# Run as a non-root user with a writable home/work directory.
+# Claude Agent SDK transport: the level-3 orchestrator runs on Claude Opus when
+# analyst.orchestrator_provider == "claude-sdk", which drives the `claude` CLI
+# subprocess for subscription auth. Install Node + the CLI globally; the
+# subscription credentials come from a bind-mounted ~/.claude (see the deploy
+# compose). Harmless when the analyst falls back to OpenRouter.
+# hadolint ignore=DL3008
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends nodejs npm \
+    && npm install -g @anthropic-ai/claude-code@2.1.158 \
+    && claude --version \
+    && rm -rf /var/lib/apt/lists/*
+
+# Run as a non-root user with a writable home/work directory. Pre-create an
+# appuser-owned ~/.claude so the `claude` CLI can write state/cache; the host's
+# credentials are bind-mounted into it at deploy time.
 RUN useradd --create-home --uid 10001 appuser \
-    && mkdir -p /home/appuser/config /home/appuser/.data \
-    && chown -R appuser:appuser /home/appuser/config /home/appuser/.data
+    && mkdir -p /home/appuser/config /home/appuser/.data /home/appuser/.claude \
+    && chown -R appuser:appuser /home/appuser/config /home/appuser/.data /home/appuser/.claude
 WORKDIR /home/appuser
 USER appuser
 
