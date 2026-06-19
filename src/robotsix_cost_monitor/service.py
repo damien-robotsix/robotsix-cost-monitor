@@ -73,14 +73,16 @@ class CostService:
         return out
 
     async def candidate_traces(
-        self, slug: str | None, hours: int, limit: int
+        self, slug: str | None, hours: int, limit: int, *, per_agent: int = 1
     ) -> list[dict[str, Any]]:
-        """Return the *limit* most expensive traces in the window, each tagged
-        with its project slug — the cost-analyst's drill-in candidates.
+        """Return the cost-analyst's drill-in candidate traces.
 
-        The selection is deterministic: cost rank. Each returned candidate
-        carries why it was picked (``rank``, ``pct_of_traced``,
-        ``selection_reason``) so consumers can show what triggered the choice.
+        Selection is deterministic and **per agent** (trace name): take the top
+        ``per_agent`` most expensive traces of EACH agent — so a cheaper agent
+        is still inspected instead of being crowded out by the priciest one —
+        then cap the total at ``limit`` (priciest agents win if it overflows).
+        Each candidate carries why it was picked (``rank``, ``pct_of_traced``,
+        ``agent_pct_of_traced``, ``selection_reason``).
         """
         gathered = await self._gather(slug, hours)
         rows: list[dict[str, Any]] = []
@@ -98,18 +100,33 @@ class CostService:
                     }
                 )
         total = sum(r["cost"] for r in rows) or 1e-9
-        rows.sort(key=lambda r: r["cost"], reverse=True)
-        top = rows[:limit]
-        for i, r in enumerate(top, 1):
-            pct = round(100 * r["cost"] / total, 1)
+
+        # Group by agent (trace name) across all projects; take each agent's
+        # top `per_agent` traces so every agent gets coverage.
+        by_agent: dict[str, list[dict[str, Any]]] = {}
+        for r in rows:
+            by_agent.setdefault(r["name"], []).append(r)
+        selected: list[dict[str, Any]] = []
+        for traces_for_agent in by_agent.values():
+            traces_for_agent.sort(key=lambda r: r["cost"], reverse=True)
+            agent_pct = round(100 * sum(t["cost"] for t in traces_for_agent) / total, 1)
+            for j, t in enumerate(traces_for_agent[:per_agent], 1):
+                t["agent_rank"] = j
+                t["agent_pct_of_traced"] = agent_pct
+                selected.append(t)
+
+        selected.sort(key=lambda r: r["cost"], reverse=True)
+        selected = selected[:limit]
+        for i, r in enumerate(selected, 1):
             r["rank"] = i
-            r["pct_of_traced"] = pct
+            r["pct_of_traced"] = round(100 * r["cost"] / total, 1)
             r["selection_reason"] = (
-                f"#{i} most expensive trace in the last {hours}h "
-                f"(${r['cost']:.2f} = {pct}% of traced spend) — picked as a "
-                f"top-{limit} cost driver"
+                f"top trace for agent '{r['name']}' (#{r['agent_rank']} of its "
+                f"traces) — ${r['cost']:.2f}; agent '{r['name']}' is "
+                f"{r['agent_pct_of_traced']}% of traced spend over the last "
+                f"{hours}h"
             )
-        return top
+        return selected
 
     async def trace_detail(self, project_slug: str, trace_id: str) -> dict[str, Any]:
         """Fetch a single trace's full detail (observations) from its project."""

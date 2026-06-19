@@ -100,7 +100,8 @@ def test_analyst_field_defaults() -> None:
     cfg = AnalystConfig()
     assert cfg.window_hours == 24
     assert cfg.top_stages == 8
-    assert cfg.max_trace_analyses == 5
+    assert cfg.max_trace_analyses == 12
+    assert cfg.traces_per_agent == 1
     assert cfg.schedule_hours == 0.0
     assert cfg.broker_port == 443
     assert cfg.broker_scheme == "https"

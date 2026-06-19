@@ -56,7 +56,7 @@ class _FakeService:
         return {"most_expensive_trace": None, "most_expensive_session": None}
 
     async def candidate_traces(
-        self, slug: str, hours: int, limit: int
+        self, slug: str, hours: int, limit: int, *, per_agent: int = 1
     ) -> list[dict[str, Any]]:
         return [{"trace_id": "t1", "project": "p", "name": "explore", "cost": 9.0}]
 

@@ -209,7 +209,26 @@ async def test_candidate_traces_sorted_by_cost() -> None:
     # Each candidate carries why the selector picked it.
     assert rows[0]["rank"] == 1
     assert rows[0]["pct_of_traced"] == 69.2  # 9.0 / 13.0
-    assert "most expensive" in rows[0]["selection_reason"]
+    assert "agent 'expensive'" in rows[0]["selection_reason"]
+
+
+async def test_candidate_traces_per_agent_covers_cheaper_agent() -> None:
+    # Agent A has the two priciest traces; agent B has only a cheap one. Global
+    # top-2 would pick both A traces and ignore B — per-agent must surface B.
+    traces = [
+        trace(10.0, "agentA", tid="a1"),
+        trace(8.0, "agentA", tid="a2"),
+        trace(2.0, "agentB", tid="b1"),
+    ]
+    svc = _svc(_proj("a"))
+    object.__setattr__(
+        svc._clients["a"], "fetch_traces_window", AsyncMock(return_value=traces)
+    )
+
+    rows = await svc.candidate_traces(None, 24, limit=2, per_agent=1)
+    names = {r["name"] for r in rows}
+    assert names == {"agentA", "agentB"}  # both agents represented
+    assert [r["cost"] for r in rows] == [10.0, 2.0]
 
 
 async def test_candidate_traces_limit() -> None:
@@ -516,15 +535,22 @@ async def test_cross_project_highlights_finds_best_across_projects() -> None:
 
 async def test_cross_project_candidate_traces_merges_and_sorts() -> None:
     svc = _svc(_proj("a"), _proj("b"))
+    # Distinct agent names so per-agent selection keeps all three (this test
+    # checks the cross-project merge + global cost sort).
     object.__setattr__(
         svc._clients["a"],
         "fetch_traces_window",
-        AsyncMock(return_value=[trace(5.0, tid="expensive-a")]),
+        AsyncMock(return_value=[trace(5.0, "agentA", tid="expensive-a")]),
     )
     object.__setattr__(
         svc._clients["b"],
         "fetch_traces_window",
-        AsyncMock(return_value=[trace(3.0, tid="mid-b"), trace(8.0, tid="top-b")]),
+        AsyncMock(
+            return_value=[
+                trace(3.0, "agentB", tid="mid-b"),
+                trace(8.0, "agentC", tid="top-b"),
+            ]
+        ),
     )
 
     rows = await svc.candidate_traces(None, 24, limit=5)

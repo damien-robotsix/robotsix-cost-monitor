@@ -49,7 +49,12 @@ class AnalystConfig(BaseModel):
     trace_model: str | None = None  # L2 trace model; blank → tier-2 default
     window_hours: int = 24
     top_stages: int = 8
-    max_trace_analyses: int = 5  # how many top-cost traces the L3 agent may open
+    # Trace selection is PER AGENT (so cheaper agents aren't crowded out by the
+    # priciest one): take the top `traces_per_agent` traces of each agent, then
+    # cap the total at `max_trace_analyses`. Keep max_trace_analyses ≥ the number
+    # of agents for full coverage.
+    traces_per_agent: int = 1
+    max_trace_analyses: int = 12  # overall cap on traces analyzed per run
     schedule_hours: float = 0.0  # >0 → run automatically on this cadence
 
     # -- Ticket filing via the agent-comm broker (optional) --
