@@ -66,7 +66,11 @@ function render(run) {
           <span class="mono">${esc(t.trace_id)}</span>
           <span class="muted">${esc(t.project || "")}${t.name ? " · " + esc(t.name) : ""} · <b>${fmt(t.cost)}</b></span>
         </div>
-        <div class="item-body">${esc(t.finding || "(no finding)")}</div>
+        <div class="item-body"><b>selected:</b> ${esc(
+          t.selection_reason ||
+            (t.rank ? `#${t.rank} by cost` : "top-cost trace"),
+        )}</div>
+        <div class="item-body"><b>analysis:</b> ${esc(t.finding || "(no finding)")}</div>
       </div>`,
         )
         .join("")

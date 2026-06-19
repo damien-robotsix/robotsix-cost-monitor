@@ -186,6 +186,11 @@ def _run_agents(
                 "project": c.get("project"),
                 "name": c.get("name"),
                 "cost": c.get("cost"),
+                # Why the deterministic selector picked this trace.
+                "rank": c.get("rank"),
+                "pct_of_traced": c.get("pct_of_traced"),
+                "selection_reason": c.get("selection_reason"),
+                # The L2 agent's analysis of the waste inside the trace.
                 "finding": finding,
             }
         )
