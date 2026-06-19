@@ -94,3 +94,12 @@ canvas { width: 100%; display: block; }
 .bad { color: #ff8a8a; font-size: 12px; }
 #run-btn { background: var(--accent); color: #fff; border: none; font-weight: 600; }
 #run-btn:disabled { opacity: .5; cursor: progress; }
+
+/* --- reconciliation warning banner --- */
+.banner {
+  background: #3a2410; border: 1px solid #b9831f; color: #ffd9a3;
+  border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px;
+}
+.banner[hidden] { display: none; }
+.banner b { color: #ffb347; margin-right: 4px; }
+.banner-when { color: var(--muted); margin-left: 8px; }

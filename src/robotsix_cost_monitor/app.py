@@ -7,7 +7,7 @@ import contextlib
 import logging
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse
@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .analyst import build_digest, load_proposals, run_analyst
 from .config import Config, load_config
-from .reconcile import reconcile_project
+from .reconcile import load_last_reconcile, reconcile_all, reconcile_project
 from .service import CostService
 
 _WEB = Path(__file__).resolve().parent / "web"
@@ -33,24 +33,43 @@ async def _analyst_loop(cfg: Config, service: CostService, hours: float) -> None
             logger.exception("scheduled analyst run failed")
 
 
+async def _reconcile_loop(cfg: Config, hours: float) -> None:
+    """Reconcile all projects every *hours* hours (with an initial run so the
+    banner has data immediately) until cancelled."""
+    interval = max(1.0, hours) * 3600
+    while True:
+        try:
+            await reconcile_all(cfg)
+        except Exception:  # noqa: BLE001 — a failed run must not kill the loop
+            logger.exception("scheduled reconcile failed")
+        await asyncio.sleep(interval)
+
+
 def create_app(config: Config | None = None) -> FastAPI:
     cfg = config or load_config()
     service = CostService(cfg)
 
     @contextlib.asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-        task: asyncio.Task[None] | None = None
+        tasks: list[asyncio.Task[None]] = []
         a = cfg.settings.analyst
         if a.enabled and a.schedule_hours > 0:
             logger.info("starting analyst scheduler (every %sh)", a.schedule_hours)
-            task = asyncio.create_task(_analyst_loop(cfg, service, a.schedule_hours))
+            tasks.append(
+                asyncio.create_task(_analyst_loop(cfg, service, a.schedule_hours))
+            )
+        rh = cfg.settings.reconcile_schedule_hours
+        if rh > 0 and cfg.projects:
+            logger.info("starting reconcile scheduler (every %sh)", rh)
+            tasks.append(asyncio.create_task(_reconcile_loop(cfg, rh)))
         try:
             yield
         finally:
-            if task is not None:
-                task.cancel()
+            for t in tasks:
+                t.cancel()
+            for t in tasks:
                 with contextlib.suppress(asyncio.CancelledError):
-                    await task
+                    await t
 
     app = FastAPI(title="robotsix-cost-monitor", version="0.1.0", lifespan=lifespan)
     app.state.config = cfg
@@ -116,12 +135,17 @@ def create_app(config: Config | None = None) -> FastAPI:
 
     @app.get("/api/reconcile")
     async def reconcile(project: str = Query("all")) -> list[dict[str, Any]]:
-        targets = (
-            cfg.projects
-            if project == "all"
-            else [p for p in cfg.projects if p.slug == project]
-        )
+        # Running all projects persists last.json (banner + scheduler share it);
+        # a single-project run is a transient check that doesn't overwrite it.
+        if project == "all":
+            out = await reconcile_all(cfg)
+            return cast("list[dict[str, Any]]", out["results"])
+        targets = [p for p in cfg.projects if p.slug == project]
         return [await reconcile_project(p, cfg.settings) for p in targets]
+
+    @app.get("/api/reconcile/last")
+    def reconcile_last() -> dict[str, Any]:
+        return load_last_reconcile()
 
     @app.get("/api/analyst/digest")
     async def analyst_digest(hours: int = Query(0, ge=0)) -> dict[str, Any]:

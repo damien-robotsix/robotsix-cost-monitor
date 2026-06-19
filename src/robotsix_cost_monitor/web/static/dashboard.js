@@ -175,6 +175,38 @@ function renderReconcile(rows) {
     .join("");
 }
 
+// Best-effort warning banner from the last (scheduled or manual) reconcile.
+async function loadReconBanner() {
+  const el = $("recon-banner");
+  if (!el) return;
+  try {
+    const last = await getJSON("/api/reconcile/last");
+    if (!last || last.status !== "warning") {
+      el.hidden = true;
+      return;
+    }
+    const bad = (last.results || []).filter(
+      (r) => r.error || r.within_tolerance === false,
+    );
+    const when = last.generated_at
+      ? new Date(last.generated_at).toLocaleString()
+      : "";
+    const items = bad
+      .map((r) =>
+        r.error
+          ? `${r.project}: ${r.error}`
+          : `${r.project}: Δ ${fmt(r.drift_usd)} (provider ${fmt(
+              r.provider_delta_usd,
+            )} vs traced ${fmt(r.langfuse_cost_usd)})`,
+      )
+      .join(" · ");
+    el.innerHTML = `<b>⚠ cost reconciliation drift</b> — ${items} <span class="banner-when">checked ${when}</span>`;
+    el.hidden = false;
+  } catch (_e) {
+    el.hidden = true;
+  }
+}
+
 async function refresh() {
   setStatus("loading…");
   try {
@@ -211,6 +243,7 @@ async function runReconcile() {
   try {
     const rows = await getJSON("/api/reconcile?project=" + $("project").value);
     renderReconcile(rows);
+    await loadReconBanner();
     setStatus("reconciled " + new Date().toLocaleTimeString());
   } catch (e) {
     setStatus("reconcile error: " + e.message);
@@ -226,4 +259,5 @@ $("reconcile-btn").onclick = runReconcile;
 (async () => {
   await loadProjects();
   await refresh();
+  await loadReconBanner();
 })();
