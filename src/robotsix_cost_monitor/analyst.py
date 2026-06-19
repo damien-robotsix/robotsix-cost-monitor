@@ -30,6 +30,15 @@ logger = logging.getLogger(__name__)
 #: Cap a single trace's serialized detail handed to the level-3 agent.
 _TRACE_CHAR_CAP = 24_000
 
+#: llmio provider for the analyst's agents. ``openrouter`` isn't a registered
+#: provider name; ``openrouter-deepseek`` is the OpenRouter-backed one.
+_PROVIDER = "openrouter-deepseek"
+
+#: Default level-3 model. tier-3 defaults to the Claude SDK (``opus``), which the
+#: OpenRouter provider can't serve, so the trace agent uses the strongest
+#: llmio-known OpenRouter model (override via analyst.trace_model).
+_DEFAULT_TRACE_MODEL = "deepseek/deepseek-v4-pro"
+
 _L2_SYSTEM = (
     "You are a cost-reduction analyst for an LLM agent fleet. You are given a "
     "deterministic cost digest (per-stage spend + specimens) and a list of the "
@@ -145,7 +154,7 @@ def _run_agents(
                 service_name="robotsix-cost-analyst",
             )
 
-    provider = get_provider(provider="openrouter", api_key=a.openrouter_key)
+    provider = get_provider(provider=_PROVIDER, api_key=a.openrouter_key)
 
     def analyze_trace(trace_id: str) -> str:
         """Run the level-3 sub-agent on one expensive trace's full detail.
@@ -158,7 +167,7 @@ def _run_agents(
             return f"No detail available for trace {trace_id!r}."
         h3 = provider.build_agent(
             level=3,
-            model=a.trace_model,
+            model=a.trace_model or _DEFAULT_TRACE_MODEL,
             system_prompt=_L3_SYSTEM,
             output_type=str,
             name="cost-analyst-trace",
@@ -176,7 +185,7 @@ def _run_agents(
 
     h2 = provider.build_agent(
         level=2,
-        model=a.global_model,
+        model=a.global_model or None,
         system_prompt=_L2_SYSTEM,
         tools=[analyze_trace],
         output_type=Analysis,

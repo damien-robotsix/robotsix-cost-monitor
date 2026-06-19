@@ -1156,7 +1156,7 @@ dependencies = [
 [package.optional-dependencies]
 analyst = [
     { name = "robotsix-agent-comm" },
-    { name = "robotsix-llmio", extra = ["openrouter"] },
+    { name = "robotsix-llmio", extra = ["openrouter-deepseek"] },
 ]
 
 [package.dev-dependencies]
@@ -1180,7 +1180,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.10" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "robotsix-agent-comm", marker = "extra == 'analyst'", git = "https://github.com/damien-robotsix/robotsix-agent-comm.git?rev=main" },
-    { name = "robotsix-llmio", extras = ["openrouter"], marker = "extra == 'analyst'", git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=2af509cfbfb6f35e99f02651143dfa265a400a27" },
+    { name = "robotsix-llmio", extras = ["openrouter-deepseek"], marker = "extra == 'analyst'", git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=2af509cfbfb6f35e99f02651143dfa265a400a27" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34" },
 ]
 provides-extras = ["analyst"]
@@ -1210,7 +1210,7 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-openrouter = [
+openrouter-deepseek = [
     { name = "pydantic-ai-slim", extra = ["openrouter"] },
 ]
 
