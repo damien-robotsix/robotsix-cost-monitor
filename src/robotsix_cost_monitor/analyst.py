@@ -36,14 +36,16 @@ _ORCHESTRATOR_SYSTEM = (
     "— per-trace cost analyses of the most expensive recent traces (each has "
     "trace_id, project, cost, and a finding). Synthesise across them to identify "
     "the highest-leverage waste (model-tier over-provisioning, prompt/token "
-    "bloat, redundant tool calls, retry/cycle waste). Then return ONLY "
-    "high-confidence, concrete cost reductions. Set `ticket` ONLY when a problem "
-    "is significant "
-    "and actionable enough to warrant a tracked board ticket (clear title + a "
-    "description with evidence and a concrete fix); otherwise leave it null.\n\n"
+    "bloat, redundant tool calls, retry/cycle waste). Return ONLY high-confidence, "
+    "concrete cost reductions as proposals. Each proposal is a candidate board "
+    "ticket, so make it actionable: a clear `title`, and a `rationale` with the "
+    "evidence (which stage/trace, the cost) AND a concrete fix. A downstream "
+    "board manager turns these into tickets (deduping + refining), so DON'T "
+    "pre-merge distinct issues — list each separately; just omit anything trivial "
+    "or low-confidence.\n\n"
     'Return ONLY a JSON object (no prose, no code fences): {"summary": "...", '
     '"proposals": [{"title": "...", "rationale": "...", "estimated_saving": '
-    '"..."}], "ticket": {"title": "...", "description": "..."} or null}.'
+    '"..."}]}.'
 )
 
 _TRACE_SYSTEM = (
@@ -63,19 +65,16 @@ class Proposal(BaseModel):
     estimated_saving: str = ""
 
 
-class TicketRequest(BaseModel):
-    """A board ticket the analyst wants filed for a significant cost issue."""
-
-    title: str
-    description: str
-
-
 class Analysis(BaseModel):
-    """Structured output of the level-2 analyst agent."""
+    """Structured output of the orchestrator agent — proposals only.
+
+    Ticket creation is delegated to the board manager, which turns the
+    proposals into tickets (dedup + refinement); the analyst no longer decides
+    on a single synthesised ticket.
+    """
 
     summary: str = ""
     proposals: list[Proposal] = []
-    ticket: TicketRequest | None = None
 
 
 def _store_path() -> Path:
@@ -243,11 +242,12 @@ def _parse_analysis(raw: str) -> Analysis:
     return Analysis(summary=raw[:1000])
 
 
-def _file_ticket(a: AnalystConfig, ticket: TicketRequest) -> dict[str, Any]:
-    """File *ticket* on the board via the agent-comm broker (pull/mailbox).
+def _file_proposals(a: AnalystConfig, analysis: Analysis) -> dict[str, Any]:
+    """Hand the run's proposals to the board MANAGER, which creates/refines the
+    tickets (one per distinct actionable issue, deduped, sourced).
 
     Synchronous (the agent-comm pull client is sync); the caller runs it in a
-    thread. Returns the board agent's reply body, or an ``error`` entry.
+    thread. Returns the manager's reply body, or an ``error`` entry.
     """
     from robotsix_agent_comm.sdk.agent import Agent
     from robotsix_agent_comm.transport.brokered import create_transport_pair
@@ -261,28 +261,36 @@ def _file_ticket(a: AnalystConfig, ticket: TicketRequest) -> dict[str, Any]:
         broker_scheme=a.broker_scheme,
         broker_token=a.broker_token or "",
     )
-    # Ask the board MANAGER (not the dumb responder) in natural language, so it
-    # deduplicates and records the source. The manager is an LLM agent, so allow
-    # a generous timeout. (It can ask back / we could continue the exchange —
-    # the broker + the manager's memory support multi-turn — but one self-
-    # completing request is enough here.)
+    # The board MANAGER (an LLM agent, generous timeout) owns ticket creation:
+    # it decides which proposals warrant tickets, refines them, dedupes against
+    # existing tickets, and sets the source. We just report the findings.
     agent = Agent(
-        "cost-analyst", registry, transport=transport, pull=True, timeout=180.0
+        "cost-analyst", registry, transport=transport, pull=True, timeout=240.0
+    )
+    lines = "\n".join(
+        f"{i}. {p.title}\n   rationale: {p.rationale}"
+        + (f"\n   est. saving: {p.estimated_saving}" if p.estimated_saving else "")
+        for i, p in enumerate(analysis.proposals, 1)
     )
     message = (
-        f"Please file a board ticket on the {a.board_repo_id} board.\n"
-        f"Title: {ticket.title}\n\nDescription:\n{ticket.description}\n\n"
-        "First check the existing open tickets — if one already covers this "
-        "issue, comment on / update that one instead of creating a duplicate. "
-        "Reply with the ticket id (created or existing) and what you did."
+        f"A cost-analysis run for the fleet produced {len(analysis.proposals)} "
+        "cost-reduction proposal(s). Please create or refine board tickets for the "
+        "ones that warrant tracking — one ticket per distinct actionable issue on "
+        "the appropriate board — deduplicating against existing open tickets "
+        "(comment on / update instead of duplicating) and skipping anything "
+        "trivial or already covered.\n\n"
+        f"Run summary: {analysis.summary}\n\n"
+        f"Proposals:\n{lines}\n\n"
+        "Reply with the tickets you created or updated (ids + which proposal each "
+        "maps to)."
     )
     try:
         with agent:
             reply = agent.send_request(
-                a.board_manager_id, {"message": message}, timeout=180.0
+                a.board_manager_id, {"message": message}, timeout=240.0
             )
     except Exception as exc:  # noqa: BLE001 — surface as status, not a crash
-        logger.warning("ticket filing failed: %s", exc)
+        logger.warning("proposal filing failed: %s", exc)
         return {"filed": False, "error": str(exc)}
     body = getattr(reply, "body", None)
     return {"filed": True, "reply": body}
@@ -314,9 +322,10 @@ async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
         _run_agents, a, digest, candidates, details
     )
 
-    ticket_result: dict[str, Any] | None = None
-    if analysis.ticket is not None and a.can_file_tickets:
-        ticket_result = await asyncio.to_thread(_file_ticket, a, analysis.ticket)
+    # Hand all proposals to the board manager, which owns ticket creation.
+    filing_result: dict[str, Any] | None = None
+    if analysis.proposals and a.can_file_tickets:
+        filing_result = await asyncio.to_thread(_file_proposals, a, analysis)
 
     out: dict[str, Any] = {
         "enabled": True,
@@ -327,8 +336,9 @@ async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
         # findings = the traces actually analysed by the L2 pre-pass, each with
         # its cost + the "why" (finding). (Candidates without detail are skipped.)
         "analyzed_traces": findings,
-        "ticket": analysis.ticket.model_dump() if analysis.ticket else None,
-        "ticket_result": ticket_result,
+        # The board manager's reply: which tickets it created/updated from the
+        # proposals (it decides count, dedup, refinement).
+        "filing_result": filing_result,
     }
     _store_path().write_text(json.dumps(out, indent=2))
     return out
