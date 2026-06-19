@@ -314,7 +314,7 @@ async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
 
     # Pre-fetch the top-cost traces' details (async) so the L3 tool is in-memory.
     candidates = await service.candidate_traces(
-        "all", a.window_hours, a.max_trace_analyses
+        "all", a.window_hours, a.max_trace_analyses, per_agent=a.traces_per_agent
     )
     details: dict[str, dict[str, Any]] = {}
     for c in candidates:
