@@ -206,6 +206,10 @@ async def test_candidate_traces_sorted_by_cost() -> None:
     rows = await svc.candidate_traces(None, 24, limit=10)
     assert [r["cost"] for r in rows] == [9.0, 3.0, 1.0]
     assert rows[0]["project"] == "a"
+    # Each candidate carries why the selector picked it.
+    assert rows[0]["rank"] == 1
+    assert rows[0]["pct_of_traced"] == 69.2  # 9.0 / 13.0
+    assert "most expensive" in rows[0]["selection_reason"]
 
 
 async def test_candidate_traces_limit() -> None:

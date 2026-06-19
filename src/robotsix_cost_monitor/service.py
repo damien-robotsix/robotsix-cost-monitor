@@ -76,7 +76,12 @@ class CostService:
         self, slug: str | None, hours: int, limit: int
     ) -> list[dict[str, Any]]:
         """Return the *limit* most expensive traces in the window, each tagged
-        with its project slug — the cost-analyst's drill-in candidates."""
+        with its project slug — the cost-analyst's drill-in candidates.
+
+        The selection is deterministic: cost rank. Each returned candidate
+        carries why it was picked (``rank``, ``pct_of_traced``,
+        ``selection_reason``) so consumers can show what triggered the choice.
+        """
         gathered = await self._gather(slug, hours)
         rows: list[dict[str, Any]] = []
         for p, traces in gathered:
@@ -92,8 +97,19 @@ class CostService:
                         "cost": round(_trace_cost(t), 6),
                     }
                 )
+        total = sum(r["cost"] for r in rows) or 1e-9
         rows.sort(key=lambda r: r["cost"], reverse=True)
-        return rows[:limit]
+        top = rows[:limit]
+        for i, r in enumerate(top, 1):
+            pct = round(100 * r["cost"] / total, 1)
+            r["rank"] = i
+            r["pct_of_traced"] = pct
+            r["selection_reason"] = (
+                f"#{i} most expensive trace in the last {hours}h "
+                f"(${r['cost']:.2f} = {pct}% of traced spend) — picked as a "
+                f"top-{limit} cost driver"
+            )
+        return top
 
     async def trace_detail(self, project_slug: str, trace_id: str) -> dict[str, Any]:
         """Fetch a single trace's full detail (observations) from its project."""
