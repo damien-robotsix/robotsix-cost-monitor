@@ -9,8 +9,9 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from conftest import _proj
 
-from robotsix_cost_monitor.config import ProjectConfig, Settings
+from robotsix_cost_monitor.config import Settings
 from robotsix_cost_monitor.reconcile import (
     _load_snapshot,
     _save_snapshot,
@@ -20,18 +21,6 @@ from robotsix_cost_monitor.reconcile import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _proj(
-    name: str = "demo", *, openrouter_key: str | None = "sk-demo"
-) -> ProjectConfig:
-    return ProjectConfig(
-        name=name,
-        public_key=f"pk-{name}",
-        secret_key=f"sk-{name}",
-        base_url="http://localhost",
-        openrouter_key=openrouter_key,
-    )
 
 
 def _settings(tolerance: float = 1.0) -> Settings:
