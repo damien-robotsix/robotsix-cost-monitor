@@ -16,7 +16,27 @@ from robotsix_cost_monitor.reconcile import (
     _load_snapshot,
     _save_snapshot,
     reconcile_project,
+    reconcile_status,
 )
+
+
+def test_reconcile_status() -> None:
+    # drift beyond tolerance → warning
+    assert reconcile_status([{"within_tolerance": False}]) == "warning"
+    # an error → warning
+    assert reconcile_status([{"error": "boom"}]) == "warning"
+    # every comparable project still on its first snapshot → pending
+    assert reconcile_status([{"detail": "first snapshot recorded"}]) == "pending"
+    # within tolerance → ok
+    assert reconcile_status([{"within_tolerance": True}]) == "ok"
+    # unconfigured projects are ignored → ok, not warning
+    assert reconcile_status([{"configured": False}]) == "ok"
+    # mixed: one clean, one drifting → warning
+    assert (
+        reconcile_status([{"within_tolerance": True}, {"within_tolerance": False}])
+        == "warning"
+    )
+
 
 # ---------------------------------------------------------------------------
 # Helpers

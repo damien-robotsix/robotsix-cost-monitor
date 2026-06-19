@@ -14,7 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from .config import ProjectConfig, Settings, data_dir
+from .config import Config, ProjectConfig, Settings, data_dir
 from .langfuse import LangfuseClient
 from .openrouter import OpenRouterClient
 
@@ -130,3 +130,51 @@ async def reconcile_project(
         }
     )
     return result
+
+
+def _last_path() -> Path:
+    return _state_dir() / "last.json"
+
+
+def reconcile_status(results: list[dict[str, Any]]) -> str:
+    """Overall status across per-project reconcile results.
+
+    ``warning`` if any configured project errored or drifted beyond tolerance;
+    ``pending`` while every configured project is still on its first snapshot;
+    ``ok`` otherwise. Unconfigured projects are ignored.
+    """
+    comparable = [r for r in results if r.get("configured", True)]
+    if any(r.get("error") or r.get("within_tolerance") is False for r in comparable):
+        return "warning"
+    if comparable and all("within_tolerance" not in r for r in comparable):
+        return "pending"
+    return "ok"
+
+
+async def reconcile_all(config: Config) -> dict[str, Any]:
+    """Reconcile every project, persist the result, and return it.
+
+    The stored ``last.json`` powers the dashboard's warning banner and the
+    ``/api/reconcile/last`` endpoint.
+    """
+    results = [await reconcile_project(p, config.settings) for p in config.projects]
+    out: dict[str, Any] = {
+        "generated_at": datetime.now(UTC).isoformat(),
+        "status": reconcile_status(results),
+        "tolerance_usd": config.settings.reconcile_tolerance_usd,
+        "results": results,
+    }
+    _last_path().write_text(json.dumps(out, indent=2))
+    return out
+
+
+def load_last_reconcile() -> dict[str, Any]:
+    """The last stored reconcile result (for the banner); empty when none yet."""
+    p = _last_path()
+    if not p.exists():
+        return {"generated_at": None, "status": "unknown", "results": []}
+    try:
+        data: dict[str, Any] = json.loads(p.read_text())
+        return data
+    except (json.JSONDecodeError, OSError):
+        return {"generated_at": None, "status": "unknown", "results": []}

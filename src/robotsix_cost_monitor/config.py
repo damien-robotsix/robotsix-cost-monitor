@@ -85,6 +85,9 @@ class Settings(BaseModel):
     default_window_hours: int = 168
     cache_ttl_seconds: int = 60
     reconcile_tolerance_usd: float = 1.0
+    # Auto-run reconciliation every N hours (0 disables; default daily). The
+    # stored result drives the dashboard warning banner.
+    reconcile_schedule_hours: float = 24.0
     analyst: AnalystConfig = Field(default_factory=AnalystConfig)
 
 
