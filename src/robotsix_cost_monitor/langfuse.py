@@ -100,10 +100,12 @@ class LangfuseClient:
         hours: float,
         *,
         metrics: list[dict[str, str]],
+        dimensions: list[dict[str, str]] | None = None,
         time_dimension: dict[str, str] | None = None,
     ) -> list[dict[str, Any]]:
         """Run a Langfuse metrics query over the *observations* view for the
-        exact last *hours*, grouped by model. Returns the raw ``data`` rows.
+        exact last *hours*, grouped by *dimensions* (defaults to model). Returns
+        the raw ``data`` rows.
 
         ``/api/public/metrics`` aggregates server-side and, unlike the
         daily-metrics endpoint, honors the exact ``from``/``to`` window (the
@@ -114,7 +116,7 @@ class LangfuseClient:
         query: dict[str, Any] = {
             "view": "observations",
             "metrics": metrics,
-            "dimensions": [{"field": "providedModelName"}],
+            "dimensions": dimensions or [{"field": "providedModelName"}],
             "fromTimestamp": (now - timedelta(hours=hours))
             .isoformat()
             .replace("+00:00", "Z"),
@@ -124,6 +126,50 @@ class LangfuseClient:
             query["timeDimension"] = time_dimension
         data = await self._get("/api/public/metrics", {"query": json.dumps(query)})
         return list(data.get("data") or [])
+
+    async def fetch_agent_usage_window(self, hours: int) -> list[dict[str, Any]]:
+        """Per-(stage, backend) cost over the exact last *hours*.
+
+        Groups observations by trace name AND model, then maps each model to its
+        serving backend via :func:`backend_for_model`. Returns rows shaped
+        ``{"name": <stage>, "backend": <backend>, "cost": <float>,
+        "count": <int>}`` sorted by cost descending.
+
+        Observations with no model name carry no cost and are skipped. Uses the
+        same window-accurate metrics source as :meth:`fetch_model_usage_window`.
+        """
+        rows = await self._metrics(
+            hours,
+            metrics=[
+                {"measure": "totalCost", "aggregation": "sum"},
+                {"measure": "count", "aggregation": "count"},
+            ],
+            dimensions=[
+                {"field": "traceName"},
+                {"field": "providedModelName"},
+            ],
+        )
+        acc: dict[tuple[str, str], dict[str, float]] = {}
+        for row in rows:
+            model = row.get("providedModelName")
+            stage = row.get("traceName")
+            if not model or not stage:
+                continue
+            backend = backend_for_model(model)
+            key = (stage, backend)
+            slot = acc.setdefault(key, {"cost": 0.0, "count": 0.0})
+            slot["cost"] += float(row.get("sum_totalCost") or 0.0)
+            slot["count"] += float(row.get("count_count") or 0.0)
+        ordered = sorted(acc.items(), key=lambda kv: kv[1]["cost"], reverse=True)
+        return [
+            {
+                "name": stage,
+                "backend": backend,
+                "cost": round(v["cost"], 6),
+                "count": int(v["count"]),
+            }
+            for (stage, backend), v in ordered
+        ]
 
     async def fetch_model_usage_window(self, hours: int) -> list[dict[str, Any]]:
         """Per-model cost + token usage over the exact last *hours*.

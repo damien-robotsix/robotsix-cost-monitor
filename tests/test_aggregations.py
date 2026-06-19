@@ -6,6 +6,7 @@ from helpers import trace
 
 from robotsix_cost_monitor.aggregations import (
     aggregate_by_name,
+    aggregate_by_name_backend,
     aggregate_by_session,
     backend_cost_series,
     backend_for_model,
@@ -196,3 +197,77 @@ def test_empty_inputs() -> None:
     assert aggregate_by_name([]) == []
     assert most_expensive_trace([]) is None
     assert most_expensive_session([]) is None
+
+
+# ---------------------------------------------------------------------------
+# aggregate_by_name_backend
+# ---------------------------------------------------------------------------
+
+
+def test_aggregate_by_name_backend_sorted_desc() -> None:
+    rows = [
+        {"name": "review", "backend": "claude-sdk", "cost": 1.0, "count": 3},
+        {"name": "implement", "backend": "claude-sdk", "cost": 5.0, "count": 2},
+    ]
+    result = aggregate_by_name_backend(rows, "claude-sdk")
+    assert result[0] == {"name": "implement", "cost": 5.0, "count": 2}
+    assert result[1] == {"name": "review", "cost": 1.0, "count": 3}
+
+
+def test_aggregate_by_name_backend_filters_by_backend() -> None:
+    """Rows whose backend does not match are silently dropped."""
+    rows = [
+        {"name": "implement", "backend": "openrouter", "cost": 10.0, "count": 1},
+        {"name": "implement", "backend": "claude-sdk", "cost": 3.0, "count": 2},
+        {"name": "review", "backend": "claude-sdk", "cost": 2.0, "count": 1},
+    ]
+    result = aggregate_by_name_backend(rows, "claude-sdk")
+    assert len(result) == 2
+    assert result[0] == {"name": "implement", "cost": 3.0, "count": 2}
+    assert result[1] == {"name": "review", "cost": 2.0, "count": 1}
+
+
+def test_aggregate_by_name_backend_merges_same_stage_across_projects() -> None:
+    """Multiple rows for the same stage (from different projects) are summed."""
+    rows = [
+        {"name": "implement", "backend": "claude-sdk", "cost": 1.5, "count": 2},
+        {"name": "implement", "backend": "claude-sdk", "cost": 2.5, "count": 3},
+    ]
+    result = aggregate_by_name_backend(rows, "claude-sdk")
+    assert len(result) == 1
+    assert result[0] == {"name": "implement", "cost": 4.0, "count": 5}
+
+
+def test_aggregate_by_name_backend_rounds_to_6_decimals() -> None:
+    rows = [
+        {
+            "name": "implement",
+            "backend": "claude-sdk",
+            "cost": 1.0 / 3.0,
+            "count": 1,
+        },
+    ]
+    result = aggregate_by_name_backend(rows, "claude-sdk")
+    # 1/3 ≈ 0.3333333333… should be rounded to 0.333333
+    assert result[0]["cost"] == round(1.0 / 3.0, 6)
+
+
+def test_aggregate_by_name_backend_empty_rows() -> None:
+    assert aggregate_by_name_backend([], "claude-sdk") == []
+
+
+def test_aggregate_by_name_backend_no_match() -> None:
+    """When no rows match the requested backend, return empty."""
+    rows = [
+        {"name": "implement", "backend": "openrouter", "cost": 5.0, "count": 1},
+    ]
+    assert aggregate_by_name_backend(rows, "claude-sdk") == []
+
+
+def test_aggregate_by_name_backend_handles_null_cost() -> None:
+    rows = [
+        {"name": "review", "backend": "claude-sdk", "cost": None, "count": 1},
+    ]
+    result = aggregate_by_name_backend(rows, "claude-sdk")
+    assert result[0]["cost"] == 0.0
+    assert result[0]["count"] == 1

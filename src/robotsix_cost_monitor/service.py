@@ -13,6 +13,7 @@ from typing import Any
 from .aggregations import (
     _trace_cost,
     aggregate_by_name,
+    aggregate_by_name_backend,
     backend_cost_series,
     cost_trend,
     merge_model_costs,
@@ -43,6 +44,10 @@ class CostService:
         # cache: (slug, hours) -> ({time_bucket -> {backend -> cost}}, deadline)
         self._backend_cache: dict[
             tuple[str, int], tuple[dict[str, dict[str, float]], float]
+        ] = {}
+        # cache: (slug, hours) -> (per-(stage, backend) rows, monotonic_deadline)
+        self._agent_usage_cache: dict[
+            tuple[str, int], tuple[list[dict[str, Any]], float]
         ] = {}
 
     def _projects(self, slug: str | None) -> list[ProjectConfig]:
@@ -253,11 +258,31 @@ class CostService:
             "projects": per_project,
         }
 
-    async def by_agent(self, slug: str | None, hours: int) -> list[dict[str, Any]]:
-        """Cost by trace name (stage/agent), merged across selected projects."""
-        gathered = await self._gather(slug, hours)
-        all_traces = [t for _, traces in gathered for t in traces]
-        return aggregate_by_name(all_traces)
+    async def by_agent(
+        self, slug: str | None, hours: int, backend: str = "all"
+    ) -> list[dict[str, Any]]:
+        """Cost by trace name (stage/agent), merged across selected projects.
+
+        When ``backend`` is ``"all"`` (default), uses trace-level cost
+        (``aggregate_by_name``) — unchanged from the original behavior.
+
+        When a specific backend is selected, uses per-(stage, backend)
+        observation-metrics so that each stage's cost is attributed to the
+        backend(s) it actually used.
+        """
+        if backend == "all":
+            gathered = await self._gather(slug, hours)
+            all_traces = [t for _, traces in gathered for t in traces]
+            return aggregate_by_name(all_traces)
+
+        parts: list[list[dict[str, Any]]] = []
+        for p in self._projects(slug):
+            try:
+                parts.append(await self._agent_usage(p, hours))
+            except Exception:  # noqa: BLE001 — a dead project must not 500 the page
+                parts.append([])
+        all_rows: list[dict[str, Any]] = [r for part in parts for r in part]
+        return aggregate_by_name_backend(all_rows, backend)
 
     async def _model_usage(
         self, project: ProjectConfig, hours: int
@@ -294,6 +319,18 @@ class CostService:
         ttl = self.config.settings.cache_ttl_seconds
         self._backend_cache[key] = (data, time.monotonic() + ttl)
         return data
+
+    async def _agent_usage(
+        self, project: ProjectConfig, hours: int
+    ) -> list[dict[str, Any]]:
+        key = (project.slug, hours)
+        hit = self._agent_usage_cache.get(key)
+        if hit and hit[1] > time.monotonic():
+            return hit[0]
+        rows = await self._clients[project.slug].fetch_agent_usage_window(hours)
+        ttl = self.config.settings.cache_ttl_seconds
+        self._agent_usage_cache[key] = (rows, time.monotonic() + ttl)
+        return rows
 
     async def backend_trend(
         self, slug: str | None, hours: int, backend: str

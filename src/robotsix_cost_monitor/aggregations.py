@@ -16,8 +16,8 @@ from typing import Any
 # "(unnamed) …" bucket.
 _PERIODIC_SESSION_RE = re.compile(
     r"(?:^|.*[·|]\s*)"  # optional board prefix ending with · or |
-    r"([a-z_]+)"         # stage name (capture group 1)
-    r"-\d{8}T\d{6}Z-"    # timestamp separator
+    r"([a-z_]+)"  # stage name (capture group 1)
+    r"-\d{8}T\d{6}Z-"  # timestamp separator
 )
 
 
@@ -198,6 +198,33 @@ def cost_trend(
             "cost": round(totals[i], 6),
         }
         for i in range(buckets)
+    ]
+
+
+def aggregate_by_name_backend(
+    rows: list[dict[str, Any]], backend: str
+) -> list[dict[str, Any]]:
+    """Merge per-(stage, backend) observation rows for *backend* into the
+    ``{"name", "cost", "count"}`` shape returned by
+    :func:`aggregate_by_name`.
+
+    ``rows`` are pre-flattened dicts (each with at least ``name``, ``backend``,
+    ``cost`` and ``count``).  Rows whose ``backend`` does not match are
+    silently dropped.  Multiple projects' rows can be passed together — they
+    are summed by stage name.
+    """
+    acc: dict[str, dict[str, float]] = {}
+    for r in rows:
+        if r.get("backend") != backend:
+            continue
+        name = r["name"]
+        slot = acc.setdefault(name, {"cost": 0.0, "count": 0.0})
+        slot["cost"] += float(r.get("cost") or 0.0)
+        slot["count"] += float(r.get("count") or 0.0)
+    ordered = sorted(acc.items(), key=lambda kv: kv[1]["cost"], reverse=True)
+    return [
+        {"name": n, "cost": round(v["cost"], 6), "count": int(v["count"])}
+        for n, v in ordered
     ]
 
 

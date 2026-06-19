@@ -762,3 +762,211 @@ async def test_backend_cost_window_empty() -> None:
     ):
         result = await c.fetch_backend_cost_window(hours=24)
     assert result == {}
+
+
+# ---------------------------------------------------------------------------
+# fetch_agent_usage_window
+# ---------------------------------------------------------------------------
+
+
+async def test_agent_usage_basic_aggregation() -> None:
+    """A single (stage, backend) pair aggregates cost and count, sorted desc."""
+    c = _client()
+    rows = [
+        {
+            "traceName": "implement",
+            "providedModelName": "opus",
+            "sum_totalCost": 2.5,
+            "count_count": 3,
+        },
+        {
+            "traceName": "review",
+            "providedModelName": "haiku",
+            "sum_totalCost": 0.5,
+            "count_count": 1,
+        },
+    ]
+    mock_client = _async_client_mock(_response(200, {"data": rows}))
+    with patch(
+        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        return_value=mock_client,
+    ):
+        result = await c.fetch_agent_usage_window(hours=24)
+    assert len(result) == 2
+    # implement (opus) is first — higher cost
+    assert result[0] == {
+        "name": "implement",
+        "backend": "claude-sdk",
+        "cost": 2.5,
+        "count": 3,
+    }
+    assert result[1] == {
+        "name": "review",
+        "backend": "claude-sdk",
+        "cost": 0.5,
+        "count": 1,
+    }
+
+
+async def test_agent_usage_merges_same_stage_backend() -> None:
+    """Multiple rows for the same (stage, backend) are summed."""
+    c = _client()
+    rows = [
+        {
+            "traceName": "implement",
+            "providedModelName": "opus",
+            "sum_totalCost": 1.0,
+            "count_count": 2,
+        },
+        {
+            "traceName": "implement",
+            "providedModelName": "opus",
+            "sum_totalCost": 2.0,
+            "count_count": 3,
+        },
+    ]
+    mock_client = _async_client_mock(_response(200, {"data": rows}))
+    with patch(
+        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        return_value=mock_client,
+    ):
+        result = await c.fetch_agent_usage_window(hours=24)
+    assert len(result) == 1
+    assert result[0]["name"] == "implement"
+    assert result[0]["backend"] == "claude-sdk"
+    assert result[0]["cost"] == 3.0
+    assert result[0]["count"] == 5
+
+
+async def test_agent_usage_splits_stage_across_backends() -> None:
+    """One stage using models from two backends yields TWO rows."""
+    c = _client()
+    rows = [
+        {
+            "traceName": "implement",
+            "providedModelName": "deepseek/deepseek-v4",
+            "sum_totalCost": 3.0,
+            "count_count": 1,
+        },
+        {
+            "traceName": "implement",
+            "providedModelName": "opus",
+            "sum_totalCost": 2.0,
+            "count_count": 1,
+        },
+    ]
+    mock_client = _async_client_mock(_response(200, {"data": rows}))
+    with patch(
+        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        return_value=mock_client,
+    ):
+        result = await c.fetch_agent_usage_window(hours=24)
+    assert len(result) == 2
+    backends = {(r["name"], r["backend"]): r["cost"] for r in result}
+    assert backends[("implement", "openrouter")] == 3.0
+    assert backends[("implement", "claude-sdk")] == 2.0
+
+
+async def test_agent_usage_skips_missing_model_name() -> None:
+    """Rows with no model are skipped (they carry no cost)."""
+    c = _client()
+    rows = [
+        {
+            "traceName": "implement",
+            "providedModelName": None,
+            "sum_totalCost": 5.0,
+            "count_count": 1,
+        },
+        {
+            "traceName": "implement",
+            "providedModelName": "opus",
+            "sum_totalCost": 1.0,
+            "count_count": 1,
+        },
+    ]
+    mock_client = _async_client_mock(_response(200, {"data": rows}))
+    with patch(
+        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        return_value=mock_client,
+    ):
+        result = await c.fetch_agent_usage_window(hours=24)
+    assert len(result) == 1
+    assert result[0]["backend"] == "claude-sdk"
+    assert result[0]["cost"] == 1.0
+
+
+async def test_agent_usage_skips_missing_trace_name() -> None:
+    """Rows with no trace name are skipped."""
+    c = _client()
+    rows = [
+        {
+            "traceName": None,
+            "providedModelName": "opus",
+            "sum_totalCost": 9.0,
+            "count_count": 1,
+        },
+        {
+            "traceName": "review",
+            "providedModelName": "haiku",
+            "sum_totalCost": 0.5,
+            "count_count": 1,
+        },
+    ]
+    mock_client = _async_client_mock(_response(200, {"data": rows}))
+    with patch(
+        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        return_value=mock_client,
+    ):
+        result = await c.fetch_agent_usage_window(hours=24)
+    assert len(result) == 1
+    assert result[0]["name"] == "review"
+
+
+async def test_agent_usage_handles_missing_metric_fields() -> None:
+    """Rows with missing metric fields default to 0."""
+    c = _client()
+    rows = [
+        {"traceName": "audit", "providedModelName": "haiku"},
+    ]
+    mock_client = _async_client_mock(_response(200, {"data": rows}))
+    with patch(
+        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        return_value=mock_client,
+    ):
+        result = await c.fetch_agent_usage_window(hours=24)
+    assert len(result) == 1
+    assert result[0]["cost"] == 0.0
+    assert result[0]["count"] == 0
+
+
+async def test_agent_usage_empty() -> None:
+    c = _client()
+    mock_client = _async_client_mock(_response(200, {"data": []}))
+    with patch(
+        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        return_value=mock_client,
+    ):
+        result = await c.fetch_agent_usage_window(hours=24)
+    assert result == []
+
+
+async def test_agent_uses_custom_dimensions() -> None:
+    """Verify fetch_agent_usage_window asks for traceName + providedModelName."""
+    c = _client()
+    mock_client = _async_client_mock(_response(200, {"data": []}))
+    with patch(
+        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        return_value=mock_client,
+    ):
+        await c.fetch_agent_usage_window(hours=24)
+    call_kwargs = mock_client.get.call_args.kwargs
+    query = json.loads(call_kwargs["params"]["query"])
+    assert query["dimensions"] == [
+        {"field": "traceName"},
+        {"field": "providedModelName"},
+    ]
+    assert query["metrics"] == [
+        {"measure": "totalCost", "aggregation": "sum"},
+        {"measure": "count", "aggregation": "count"},
+    ]
+    assert "timeDimension" not in query

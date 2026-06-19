@@ -109,9 +109,10 @@ def create_app(config: Config | None = None) -> FastAPI:
     async def by_agent(
         project: str = Query("all"),
         hours: int = Query(0, ge=0),
+        backend: str = Query("all"),
     ) -> list[dict[str, Any]]:
         h = hours or cfg.settings.default_window_hours
-        return await service.by_agent(project, h)
+        return await service.by_agent(project, h, backend)
 
     @app.get("/api/by-model")
     async def by_model(
