@@ -30,15 +30,6 @@ logger = logging.getLogger(__name__)
 #: Cap a single trace's serialized detail handed to the trace agent.
 _TRACE_CHAR_CAP = 24_000
 
-#: llmio provider for the analyst's agents. ``openrouter`` isn't a registered
-#: provider name; ``openrouter-deepseek`` is the OpenRouter-backed one.
-_PROVIDER = "openrouter-deepseek"
-
-#: Model for the level-3 ORCHESTRATOR. llmio's tier-3 default is the Claude SDK
-#: (``opus``), unservable via OpenRouter, so the level-3 agent uses the strongest
-#: llmio-known OpenRouter model (override via analyst.global_model).
-_L3_FALLBACK_MODEL = "deepseek/deepseek-v4-pro"
-
 _ORCHESTRATOR_SYSTEM = (
     "You are a cost-reduction analyst for an LLM agent fleet. You are given a "
     "deterministic cost digest (per-stage spend + specimens) and `trace_findings` "
@@ -158,7 +149,13 @@ def _run_agents(
                 service_name="robotsix-cost-analyst",
             )
 
-    or_provider = get_provider(provider=_PROVIDER, api_key=a.openrouter_key)
+    # Provider + model per level come from llmio's tier config, not hardcoded:
+    # LEVEL2_DEFAULT → openrouter-deepseek/deepseek-v4-pro, LEVEL3_DEFAULT →
+    # claude-sdk/opus. We only choose which level each role runs at.
+    from robotsix_llmio.config.tier import LEVEL2_DEFAULT, LEVEL3_DEFAULT
+
+    trace_provider = _provider_for(LEVEL2_DEFAULT, a, get_provider)
+    orch_provider = _provider_for(LEVEL3_DEFAULT, a, get_provider)
 
     # Level 2 (intermediate): parse each expensive trace into a terse finding,
     # up front (so the orchestrator needs no tools). model None → tier-2 default.
@@ -167,7 +164,7 @@ def _run_agents(
         detail = details.get(c["trace_id"])
         if not detail:
             continue
-        ht = or_provider.build_agent(
+        ht = trace_provider.build_agent(
             level=2,
             model=a.trace_model or None,
             system_prompt=_TRACE_SYSTEM,
@@ -195,13 +192,12 @@ def _run_agents(
         )
 
     # Level 3 (high-level orchestration): synthesise the digest + trace findings
-    # → proposals/ticket. Runs on Claude Opus (Claude SDK) when configured +
-    # available, else the strongest OpenRouter model. No tools (output_type=str;
-    # DeepSeek thinking rejects forced tool_choice anyway, so we parse JSON).
-    orch, orch_model = _orchestrator(a, get_provider)
-    h2 = orch.build_agent(
+    # → proposals/ticket. Tier-3 → Claude Opus (Claude SDK). No tools
+    # (output_type=str; DeepSeek thinking rejects forced tool_choice anyway, so
+    # we parse JSON). model None → tier-3 default.
+    h2 = orch_provider.build_agent(
         level=3,
-        model=orch_model,
+        model=a.global_model or None,
         system_prompt=_ORCHESTRATOR_SYSTEM,
         output_type=str,
         name="cost-analyst",
@@ -218,25 +214,16 @@ def _run_agents(
     return _parse_analysis(raw)
 
 
-def _orchestrator(a: AnalystConfig, get_provider: Any) -> tuple[Any, str | None]:
-    """Return ``(provider, model)`` for the level-3 orchestrator.
+def _provider_for(tlc: Any, a: AnalystConfig, get_provider: Any) -> Any:
+    """Instantiate the llmio provider for a tier level (``tlc``).
 
-    Claude Opus via the Claude SDK when ``orchestrator_provider == "claude-sdk"``
-    and it initialises (needs the mounted ~/.claude + the ``claude`` CLI in the
-    image); otherwise the strongest OpenRouter model.
+    The transport is taken from llmio's tier config — nothing is hardcoded.
+    Only the OpenRouter transport needs the analyst's API key; the Claude SDK
+    uses the mounted ~/.claude subscription auth.
     """
-    if a.orchestrator_provider == "claude-sdk":
-        try:
-            return get_provider(provider="claude-sdk"), (a.global_model or None)
-        except Exception:  # noqa: BLE001 — degrade to OpenRouter, never crash
-            logger.warning(
-                "claude-sdk orchestrator unavailable; falling back to OpenRouter",
-                exc_info=True,
-            )
-    return (
-        get_provider(provider=_PROVIDER, api_key=a.openrouter_key),
-        a.global_model or _L3_FALLBACK_MODEL,
-    )
+    if tlc.provider == "openrouter-deepseek":
+        return get_provider(provider=tlc.provider, api_key=a.openrouter_key)
+    return get_provider(provider=tlc.provider)
 
 
 def _parse_analysis(raw: str) -> Analysis:

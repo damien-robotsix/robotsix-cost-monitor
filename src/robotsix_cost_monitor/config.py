@@ -40,13 +40,13 @@ class AnalystConfig(BaseModel):
     """
 
     # -- LLM (robotsix-llmio) --
+    # Provider + model per level come from llmio's tier config (LEVEL2 →
+    # openrouter-deepseek/deepseek-v4-pro for the trace agent; LEVEL3 →
+    # claude-sdk/opus for the orchestrator). These optional overrides only pin a
+    # specific MODEL for a level; blank → the llmio tier default.
     openrouter_key: str | None = None
-    # Level-3 orchestrator provider: "claude-sdk" → Claude Opus (needs the
-    # mounted ~/.claude + the claude CLI in the image; falls back to OpenRouter
-    # if unavailable). "openrouter-deepseek" → deepseek-v4-pro.
-    orchestrator_provider: str = "claude-sdk"
-    global_model: str | None = None  # L3 orchestrator model; blank → provider default
-    trace_model: str | None = None  # level-2 trace agent; blank → llmio tier-2 default
+    global_model: str | None = None  # L3 orchestrator model; blank → tier-3 default
+    trace_model: str | None = None  # L2 trace model; blank → tier-2 default
     window_hours: int = 24
     top_stages: int = 8
     max_trace_analyses: int = 5  # how many top-cost traces the L3 agent may open
