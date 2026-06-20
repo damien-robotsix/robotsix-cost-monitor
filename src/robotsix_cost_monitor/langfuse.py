@@ -1,10 +1,10 @@
-"""Self-contained async Langfuse read client.
+"""Langfuse read client for cost-monitor.
 
-One :class:`LangfuseClient` per project. Talks to the Langfuse public REST API
-(``/api/public/*``) with HTTP Basic auth (public key : secret key) and paginates
-the traces endpoint. No Langfuse SDK dependency — just ``httpx``.
-
-Cost is read from each trace's ``totalCost`` (Langfuse's span-derived cost).
+One :class:`LangfuseClient` per project. Composes the shared
+:class:`robotsix_llmio.core.LangfuseReadClient` for auth/URL construction
+and adds async HTTP calls plus cost-monitor's domain-specific aggregation
+methods (``/api/public/metrics`` queries, per-model / per-backend / per-agent
+aggregation). Talks to the Langfuse public REST API (``/api/public/*``).
 
 Pure aggregation / transformation functions live in
 :mod:`robotsix_cost_monitor.aggregations`.
@@ -17,6 +17,7 @@ from datetime import timedelta
 from typing import Any
 
 import httpx
+from robotsix_llmio.core import LangfuseReadClient
 
 from .aggregations import (
     _empty_model_slot,
@@ -34,7 +35,11 @@ _MAX_PAGES = 100  # safety cap (≤ 10k traces per query)
 
 
 class LangfuseClient:
-    """Read-only cost/trace client for a single Langfuse project."""
+    """Read-only cost/trace client for a single Langfuse project.
+
+    Composes :class:`LangfuseReadClient` for auth/URL helpers;
+    owns its own async HTTP and domain aggregation.
+    """
 
     def __init__(
         self,
@@ -44,18 +49,34 @@ class LangfuseClient:
         base_url: str,
         timeout: float = 30.0,
     ) -> None:
-        self._auth = (public_key, secret_key)
-        self._base = base_url.rstrip("/")
+        self._lf = LangfuseReadClient(
+            public_key=public_key,
+            secret_key=secret_key,
+            base_url=base_url,
+        )
         self._timeout = timeout
 
     async def _get(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             resp = await client.get(
-                f"{self._base}{path}", params=params, auth=self._auth
+                self._lf.url(path),
+                params=params,
+                headers={"Authorization": self._lf.auth_header()},
             )
             resp.raise_for_status()
             data: dict[str, Any] = resp.json()
             return data
+
+    # ------------------------------------------------------------------
+    # fetch_traces_window / fetch_trace_detail keep local async HTTP
+    # implementations rather than delegating to the composed
+    # LangfuseReadClient's sync iter_pages().  LangfuseReadClient is a
+    # synchronous class — its iter_pages() calls httpx.Client (sync)
+    # internally, and there is no AsyncLangfuseReadClient.  Cost-monitor
+    # runs under FastAPI / anyio and must use httpx.AsyncClient to avoid
+    # blocking the event loop.  The composed client still contributes
+    # auth_header(), url(), and base_url so the auth/URL layer is shared.
+    # ------------------------------------------------------------------
 
     async def fetch_traces_window(self, hours: float) -> list[dict[str, Any]]:
         """Return all traces with ``timestamp`` within the last *hours*.
