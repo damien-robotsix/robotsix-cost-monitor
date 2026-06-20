@@ -17,7 +17,6 @@ from datetime import timedelta
 from typing import Any
 
 import httpx
-from robotsix_llmio.core import LangfuseReadClient
 
 from .aggregations import (
     _empty_model_slot,
@@ -49,6 +48,9 @@ class LangfuseClient:
         base_url: str,
         timeout: float = 30.0,
     ) -> None:
+        # Lazy import so the dashboard works without the optional `analyst` extra.
+        from robotsix_llmio.core import LangfuseReadClient
+
         self._lf = LangfuseReadClient(
             public_key=public_key,
             secret_key=secret_key,
