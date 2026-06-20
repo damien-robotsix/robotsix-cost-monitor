@@ -67,16 +67,17 @@ def _async_client_mock(get_response: object = None) -> AsyncMock:
 # ---------------------------------------------------------------------------
 
 
-def test_init_stores_auth_tuple() -> None:
+def test_init_composes_langfuse_read_client() -> None:
     c = _client(public_key="pk-a", secret_key="sk-a")
-    assert c._auth == ("pk-a", "sk-a")  # type: ignore[attr-defined]
+    assert c._lf._public_key == "pk-a"  # type: ignore[attr-defined]
+    assert c._lf._secret_key == "sk-a"  # type: ignore[attr-defined]
 
 
 def test_init_strips_trailing_slash_from_base_url() -> None:
     c = LangfuseClient(
         public_key="pk", secret_key="sk", base_url="http://example.com/api//"
     )
-    assert c._base == "http://example.com/api"  # type: ignore[attr-defined]
+    assert c._lf.base_url == "http://example.com/api"  # type: ignore[attr-defined]
 
 
 def test_init_uses_default_timeout() -> None:
@@ -115,7 +116,7 @@ async def test_get_passes_auth_and_params() -> None:
         await c._get("/api/public/traces", {"page": 2})
     mock_client.get.assert_called_once()
     call_kwargs = mock_client.get.call_args.kwargs
-    assert call_kwargs["auth"] == ("pk-test", "sk-test")
+    assert call_kwargs["headers"] == {"Authorization": "Basic cGstdGVzdDpzay10ZXN0"}
     assert call_kwargs["params"] == {"page": 2}
 
 
