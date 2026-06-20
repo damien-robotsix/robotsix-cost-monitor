@@ -12,7 +12,6 @@ from typing import Any, cast
 from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-
 from .analyst import (
     build_digest,
     load_proposals,
@@ -27,6 +26,14 @@ from .service import CostService
 
 _WEB = Path(__file__).resolve().parent / "web"
 logger = logging.getLogger(__name__)
+
+# Lazy import so the dashboard works without the optional `analyst` extra.
+try:
+    from robotsix_llmio.logging import setup_logging
+
+    setup_logging(loggers=["robotsix_cost_monitor"], fmt="json")
+except ImportError:
+    pass
 
 
 async def _analyst_loop(cfg: Config, service: CostService, hours: float) -> None:
