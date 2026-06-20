@@ -362,7 +362,9 @@ def _file_proposals(a: AnalystConfig, analysis: Analysis) -> dict[str, Any]:
     try:
         with agent:
             reply = agent.send_request(
-                a.board_manager_id, {"message": message}, timeout=240.0
+                a.board_manager_id,
+                {"message": message, "repo_id": a.board_repo_id},
+                timeout=240.0,
             )
     except Exception as exc:  # noqa: BLE001 — surface as status, not a crash
         logger.warning("proposal filing failed: %s", exc)
