@@ -482,6 +482,34 @@ def _fetch_ticket_context(a: AnalystConfig, ticket_id: str) -> dict[str, Any]:
     return ctx
 
 
+async def _run_opus_analysis_and_file(
+    a: AnalystConfig,
+    system_prompt: str,
+    name: str,
+    payload: str,
+    out_prefix: str,
+    extra_out: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Run Opus analysis, optionally file proposals, and store the result."""
+    analysis = await asyncio.to_thread(
+        _opus_analysis, a, system_prompt=system_prompt, payload=payload, name=name
+    )
+    filing_result: dict[str, Any] | None = None
+    if analysis.proposals and a.can_file_tickets:
+        filing_result = await asyncio.to_thread(_file_proposals, a, analysis)
+    out: dict[str, Any] = {
+        "enabled": True,
+        "generated_at": datetime.now(UTC).isoformat(),
+        "window_hours": a.window_hours,
+        "summary": analysis.summary,
+        "proposals": [p.model_dump() for p in analysis.proposals],
+        "filing_result": filing_result,
+        **(extra_out or {}),
+    }
+    _targeted_store_path(out_prefix).write_text(json.dumps(out, indent=2))
+    return out
+
+
 async def run_ticket_analyst(config: Config, service: CostService) -> dict[str, Any]:
     """Analyse the single most expensive ticket over its whole lifecycle.
 
@@ -493,11 +521,10 @@ async def run_ticket_analyst(config: Config, service: CostService) -> dict[str, 
         return {"enabled": False, "detail": "analyst.openrouter_key not configured"}
 
     top = await service.top_ticket("all", a.window_hours)
-    now = datetime.now(UTC).isoformat()
     if not top:
         out: dict[str, Any] = {
             "enabled": True,
-            "generated_at": now,
+            "generated_at": datetime.now(UTC).isoformat(),
             "detail": "no ticket sessions in the window",
         }
         _targeted_store_path("ticket").write_text(json.dumps(out, indent=2))
@@ -521,35 +548,23 @@ async def run_ticket_analyst(config: Config, service: CostService) -> dict[str, 
             "description": context.get("description"),
         }
     )[:_TARGET_CHAR_CAP]
-    analysis = await asyncio.to_thread(
-        _opus_analysis,
+    return await _run_opus_analysis_and_file(
         a,
         system_prompt=_TICKET_SYSTEM,
-        payload=payload,
         name="cost-analyst-ticket",
+        payload=payload,
+        out_prefix="ticket",
+        extra_out={
+            "session_id": top["session_id"],
+            "board_id": board_id,
+            "ticket_id": ticket_id,
+            "total_cost": top["cost"],
+            "trace_count": top["count"],
+            "by_stage": top["by_stage"],
+            "traces": top["traces"],
+            "history_available": bool(context.get("history")),
+        },
     )
-    filing_result: dict[str, Any] | None = None
-    if analysis.proposals and a.can_file_tickets:
-        filing_result = await asyncio.to_thread(_file_proposals, a, analysis)
-
-    out = {
-        "enabled": True,
-        "generated_at": now,
-        "window_hours": a.window_hours,
-        "session_id": top["session_id"],
-        "board_id": board_id,
-        "ticket_id": ticket_id,
-        "total_cost": top["cost"],
-        "trace_count": top["count"],
-        "by_stage": top["by_stage"],
-        "traces": top["traces"],
-        "history_available": bool(context.get("history")),
-        "summary": analysis.summary,
-        "proposals": [p.model_dump() for p in analysis.proposals],
-        "filing_result": filing_result,
-    }
-    _targeted_store_path("ticket").write_text(json.dumps(out, indent=2))
-    return out
 
 
 async def run_stage_analyst(config: Config, service: CostService) -> dict[str, Any]:
@@ -563,11 +578,10 @@ async def run_stage_analyst(config: Config, service: CostService) -> dict[str, A
         return {"enabled": False, "detail": "analyst.openrouter_key not configured"}
 
     top = await service.top_stage("all", a.window_hours, sample=a.max_trace_analyses)
-    now = datetime.now(UTC).isoformat()
     if not top:
         out: dict[str, Any] = {
             "enabled": True,
-            "generated_at": now,
+            "generated_at": datetime.now(UTC).isoformat(),
             "detail": "no traces in the window",
         }
         _targeted_store_path("stage").write_text(json.dumps(out, indent=2))
@@ -589,29 +603,17 @@ async def run_stage_analyst(config: Config, service: CostService) -> dict[str, A
             "sample_traces": sampled,
         }
     )[:_TARGET_CHAR_CAP]
-    analysis = await asyncio.to_thread(
-        _opus_analysis,
+    return await _run_opus_analysis_and_file(
         a,
         system_prompt=_STAGE_SYSTEM,
-        payload=payload,
         name="cost-analyst-stage",
+        payload=payload,
+        out_prefix="stage",
+        extra_out={
+            "stage": top["stage"],
+            "total_cost": top["cost"],
+            "pct_of_traced": top["pct_of_traced"],
+            "trace_count": top["count"],
+            "sample_size": len(sampled),
+        },
     )
-    filing_result: dict[str, Any] | None = None
-    if analysis.proposals and a.can_file_tickets:
-        filing_result = await asyncio.to_thread(_file_proposals, a, analysis)
-
-    out = {
-        "enabled": True,
-        "generated_at": now,
-        "window_hours": a.window_hours,
-        "stage": top["stage"],
-        "total_cost": top["cost"],
-        "pct_of_traced": top["pct_of_traced"],
-        "trace_count": top["count"],
-        "sample_size": len(sampled),
-        "summary": analysis.summary,
-        "proposals": [p.model_dump() for p in analysis.proposals],
-        "filing_result": filing_result,
-    }
-    _targeted_store_path("stage").write_text(json.dumps(out, indent=2))
-    return out
