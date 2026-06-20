@@ -67,6 +67,17 @@ class LangfuseClient:
             data: dict[str, Any] = resp.json()
             return data
 
+    # ------------------------------------------------------------------
+    # fetch_traces_window / fetch_trace_detail keep local async HTTP
+    # implementations rather than delegating to the composed
+    # LangfuseReadClient's sync iter_pages().  LangfuseReadClient is a
+    # synchronous class — its iter_pages() calls httpx.Client (sync)
+    # internally, and there is no AsyncLangfuseReadClient.  Cost-monitor
+    # runs under FastAPI / anyio and must use httpx.AsyncClient to avoid
+    # blocking the event loop.  The composed client still contributes
+    # auth_header(), url(), and base_url so the auth/URL layer is shared.
+    # ------------------------------------------------------------------
+
     async def fetch_traces_window(self, hours: float) -> list[dict[str, Any]]:
         """Return all traces with ``timestamp`` within the last *hours*.
 
