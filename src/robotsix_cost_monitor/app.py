@@ -36,6 +36,10 @@ except ImportError:
     pass
 
 
+def _window(hours: int, config: Config) -> int:
+    return hours or config.settings.default_window_hours
+
+
 async def _analyst_loop(cfg: Config, service: CostService, hours: float) -> None:
     """Run all analyses (fleet + most-costly ticket + most-costly stage) every
     *hours* hours until cancelled."""
@@ -109,7 +113,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         project: str = Query("all"),
         hours: int = Query(0, ge=0),
     ) -> dict[str, Any]:
-        h = hours or cfg.settings.default_window_hours
+        h = _window(hours, cfg)
         return await service.summary(project, h)
 
     @app.get("/api/by-agent")
@@ -118,7 +122,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         hours: int = Query(0, ge=0),
         backend: str = Query("all"),
     ) -> list[dict[str, Any]]:
-        h = hours or cfg.settings.default_window_hours
+        h = _window(hours, cfg)
         return await service.by_agent(project, h, backend)
 
     @app.get("/api/by-model")
@@ -126,7 +130,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         project: str = Query("all"),
         hours: int = Query(0, ge=0),
     ) -> list[dict[str, Any]]:
-        h = hours or cfg.settings.default_window_hours
+        h = _window(hours, cfg)
         return await service.by_model(project, h)
 
     @app.get("/api/backend-trend")
@@ -135,7 +139,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         hours: int = Query(0, ge=0),
         backend: str = Query("all"),
     ) -> list[dict[str, Any]]:
-        h = hours or cfg.settings.default_window_hours
+        h = _window(hours, cfg)
         return await service.backend_trend(project, h, backend)
 
     @app.get("/api/trend")
@@ -144,7 +148,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         hours: int = Query(0, ge=0),
         buckets: int = Query(48, ge=1, le=200),
     ) -> list[dict[str, Any]]:
-        h = hours or cfg.settings.default_window_hours
+        h = _window(hours, cfg)
         return await service.trend(project, h, buckets)
 
     @app.get("/api/highlights")
@@ -152,7 +156,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         project: str = Query("all"),
         hours: int = Query(0, ge=0),
     ) -> dict[str, Any]:
-        h = hours or cfg.settings.default_window_hours
+        h = _window(hours, cfg)
         return await service.highlights(project, h)
 
     @app.get("/api/reconcile")
