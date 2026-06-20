@@ -159,15 +159,17 @@ async def build_digest(
     }
 
 
-def load_proposals() -> dict[str, Any]:
-    p = _store_path()
-    if not p.exists():
-        return {"generated_at": None, "proposals": []}
+def _load_json(path: Path, default: dict[str, Any]) -> dict[str, Any]:
+    if not path.exists():
+        return default
     try:
-        data: dict[str, Any] = json.loads(p.read_text())
-        return data
+        return json.loads(path.read_text())
     except (json.JSONDecodeError, OSError):
-        return {"generated_at": None, "proposals": []}
+        return default
+
+
+def load_proposals() -> dict[str, Any]:
+    return _load_json(_store_path(), {"generated_at": None, "proposals": []})
 
 
 def _run_agents(
@@ -432,14 +434,7 @@ def _targeted_store_path(kind: str) -> Path:
 
 def load_targeted_analysis(kind: str) -> dict[str, Any]:
     """Last stored ticket/stage analysis (for the page); empty when none yet."""
-    p = _targeted_store_path(kind)
-    if not p.exists():
-        return {"generated_at": None}
-    try:
-        data: dict[str, Any] = json.loads(p.read_text())
-        return data
-    except (json.JSONDecodeError, OSError):
-        return {"generated_at": None}
+    return _load_json(_targeted_store_path(kind), {"generated_at": None})
 
 
 def _split_session(session_id: str) -> tuple[str, str]:
