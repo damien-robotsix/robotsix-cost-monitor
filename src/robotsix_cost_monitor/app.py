@@ -12,6 +12,7 @@ from typing import Any, cast
 from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+
 from .analyst import (
     build_digest,
     load_proposals,
