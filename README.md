@@ -24,7 +24,7 @@ self-contained (`httpx`).
 ## Setup
 
 ```bash
-uv sync
+uv sync --locked
 cp config/projects.example.yaml config/projects.yaml   # then fill in real keys
 uv run robotsix-cost-monitor serve --host 127.0.0.1 --port 8099
 # open http://127.0.0.1:8099
