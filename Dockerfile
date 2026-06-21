@@ -4,7 +4,7 @@
 # Builder stage: resolve and install the locked dependency set + the project
 # into a self-contained virtual environment the runtime stage simply COPYies.
 # ---------------------------------------------------------------------------
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 # Bring in the uv static binary (pinned to a released version for reproducibility).
 COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /usr/local/bin/uv
@@ -44,7 +44,7 @@ RUN uv export --frozen --no-emit-project --no-hashes --extra analyst > requireme
 # Runtime stage: minimal image with only the prebuilt virtual environment,
 # running as a non-root user.
 # ---------------------------------------------------------------------------
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 # Copy the prebuilt virtual environment (deps + project) from the builder stage.
 COPY --from=builder /opt/venv /opt/venv
