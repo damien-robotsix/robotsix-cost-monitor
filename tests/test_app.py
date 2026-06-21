@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -70,6 +71,45 @@ def test_index_served() -> None:
     r = _empty_app().get("/")
     assert r.status_code == 200
     assert "cost monitor" in r.text
+    # The dashboard renders the last reconcile into this element on load.
+    assert 'id="recon-when"' in r.text
+
+
+def test_reconcile_last_served_from_disk(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The persisted last reconcile is served by ``/api/reconcile/last`` — this is
+    what lets the dashboard show the last run after a page reload or container
+    restart (the file is on the persisted data volume)."""
+    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    recon = tmp_path / "reconcile"
+    recon.mkdir()
+    (recon / "last.json").write_text(
+        json.dumps(
+            {
+                "generated_at": "2026-06-19T15:37:25+00:00",
+                "status": "ok",
+                "results": [
+                    {
+                        "project": "demo",
+                        "configured": True,
+                        "within_tolerance": True,
+                        "provider_delta_usd": 1.0,
+                        "langfuse_cost_usd": 1.0,
+                        "drift_usd": 0.0,
+                    }
+                ],
+            }
+        )
+    )
+
+    r = _empty_app().get("/api/reconcile/last")
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["generated_at"] == "2026-06-19T15:37:25+00:00"
+    assert body["status"] == "ok"
+    assert body["results"][0]["project"] == "demo"
 
 
 def test_reconcile_unconfigured_project() -> None:
