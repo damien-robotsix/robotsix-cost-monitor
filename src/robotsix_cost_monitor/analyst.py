@@ -163,7 +163,7 @@ def _load_json(path: Path, default: dict[str, Any]) -> dict[str, Any]:
     if not path.exists():
         return default
     try:
-        return json.loads(path.read_text())
+        return cast(dict[str, Any], json.loads(path.read_text()))
     except (json.JSONDecodeError, OSError):
         return default
 
@@ -187,7 +187,7 @@ def _run_agents(
     """
     # Lazy imports so the dashboard works without the optional `analyst` extra.
     from robotsix_llmio.config.tier import LEVEL2_DEFAULT
-    from robotsix_llmio.core.factory import get_provider
+    from robotsix_llmio.core.factory import get_provider  # type: ignore[attr-defined]
     from robotsix_llmio.core.run import run_agent
 
     _maybe_setup_tracing(a)
@@ -213,7 +213,7 @@ def _run_agents(
             "str",
             run_agent(
                 ht,
-                lambda h=ht, p=payload: h.run_sync(p).output,
+                lambda h=ht, p=payload: h.run_sync(p).output,  # type: ignore[misc]
                 label="cost-analyst-trace",
                 project=a.langfuse_project_id,
             ),
@@ -267,7 +267,7 @@ def _opus_analysis(
     thinking rejects forced tool_choice), parsed by :func:`_parse_analysis`.
     """
     from robotsix_llmio.config.tier import LEVEL3_DEFAULT
-    from robotsix_llmio.core.factory import get_provider
+    from robotsix_llmio.core.factory import get_provider  # type: ignore[attr-defined]
     from robotsix_llmio.core.run import run_agent
 
     _maybe_setup_tracing(a)
