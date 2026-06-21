@@ -166,35 +166,71 @@ function renderReconcile(rows) {
     .join("");
 }
 
-// Best-effort warning banner from the last (scheduled or manual) reconcile.
-async function loadReconBanner() {
+// Warning banner for the last (scheduled or manual) reconcile — only shown when
+// there's drift. Pure renderer over an /api/reconcile/last payload.
+function renderReconBanner(last) {
   const el = $("recon-banner");
   if (!el) return;
+  if (!last || last.status !== "warning") {
+    el.hidden = true;
+    return;
+  }
+  const bad = (last.results || []).filter(
+    (r) => r.error || r.within_tolerance === false,
+  );
+  const when = last.generated_at
+    ? new Date(last.generated_at).toLocaleString()
+    : "";
+  const items = bad
+    .map((r) =>
+      r.error
+        ? `${esc(r.project)}: ${esc(r.error)}`
+        : `${esc(r.project)}: Δ ${fmt(r.drift_usd)} (provider ${fmt(
+            r.provider_delta_usd,
+          )} vs traced ${fmt(r.langfuse_cost_usd)})`,
+    )
+    .join(" · ");
+  el.innerHTML = `<b>⚠ cost reconciliation drift</b> — ${items} <span class="banner-when">checked ${when}</span>`;
+  el.hidden = false;
+}
+
+function renderReconWhen(last) {
+  const el = $("recon-when");
+  if (!el) return;
+  el.textContent =
+    last && last.generated_at
+      ? "last checked " + new Date(last.generated_at).toLocaleString()
+      : "";
+}
+
+// Refresh the banner + "last checked" label from the persisted last reconcile,
+// without touching the results table (used after a manual, possibly
+// project-scoped, run that already rendered its own rows).
+async function refreshReconMeta() {
   try {
     const last = await getJSON("/api/reconcile/last");
-    if (!last || last.status !== "warning") {
-      el.hidden = true;
-      return;
-    }
-    const bad = (last.results || []).filter(
-      (r) => r.error || r.within_tolerance === false,
-    );
-    const when = last.generated_at
-      ? new Date(last.generated_at).toLocaleString()
-      : "";
-    const items = bad
-      .map((r) =>
-        r.error
-          ? `${esc(r.project)}: ${esc(r.error)}`
-          : `${esc(r.project)}: Δ ${fmt(r.drift_usd)} (provider ${fmt(
-              r.provider_delta_usd,
-            )} vs traced ${fmt(r.langfuse_cost_usd)})`,
-      )
-      .join(" · ");
-    el.innerHTML = `<b>⚠ cost reconciliation drift</b> — ${items} <span class="banner-when">checked ${when}</span>`;
-    el.hidden = false;
+    renderReconBanner(last);
+    renderReconWhen(last);
   } catch (_e) {
-    el.hidden = true;
+    /* best-effort */
+  }
+}
+
+// On page load, render whatever the last (scheduled) reconcile left behind — the
+// banner, the "last checked" time, AND the results table — so the last run is
+// visible after a reload/restart without having to click "run". The table and
+// last.json are volume-persisted, so this survives container restarts.
+async function loadLastReconcile() {
+  let last;
+  try {
+    last = await getJSON("/api/reconcile/last");
+  } catch (_e) {
+    return;
+  }
+  renderReconBanner(last);
+  renderReconWhen(last);
+  if (last && Array.isArray(last.results) && last.results.length) {
+    renderReconcile(last.results);
   }
 }
 
@@ -234,7 +270,7 @@ async function runReconcile() {
   try {
     const rows = await getJSON("/api/reconcile?project=" + $("project").value);
     renderReconcile(rows);
-    await loadReconBanner();
+    await refreshReconMeta();
     setStatus("reconciled " + new Date().toLocaleTimeString());
   } catch (e) {
     setStatus("reconcile error: " + e.message);
@@ -250,5 +286,5 @@ $("reconcile-btn").onclick = runReconcile;
 (async () => {
   await loadProjects();
   await refresh();
-  await loadReconBanner();
+  await loadLastReconcile();
 })();
