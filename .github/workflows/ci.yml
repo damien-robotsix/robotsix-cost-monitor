@@ -11,9 +11,19 @@ concurrency:
 
 jobs:
   ci:
+    # The reusable python-ci.yml's nested `tests` job uploads SARIF, so it
+    # requests `security-events: write`. A caller job MUST grant at least that
+    # or GitHub rejects the reusable-workflow call with a startup_failure
+    # ("nested job 'tests' is requesting 'security-events: write'"). The
+    # `security` job below already does this; the `ci` job was missing it.
+    permissions:
+      contents: read
+      security-events: write
     uses: damien-robotsix/robotsix-mill/.github/workflows/python-ci.yml@a317d51ad25be89194d55f220164819807d549f1 # v0.0.1
     with:
-      python-version: "3.12"
+      # The project requires Python >=3.14 (see pyproject `requires-python`); a
+      # 3.12 runner fails dependency install with "No interpreter found".
+      python-version: "3.14"
       install-extras: "analyst"
       cov-package: "robotsix_cost_monitor"
     secrets: inherit

@@ -389,9 +389,7 @@ async def test_summary_uses_both_caches() -> None:
     models = [_model_row("opus", cost=1.0)]
     svc = _svc(_proj("demo"))
     client = svc._clients["demo"]
-    object.__setattr__(
-        client, "fetch_trace_count_window", AsyncMock(return_value=1)
-    )
+    object.__setattr__(client, "fetch_trace_count_window", AsyncMock(return_value=1))
     object.__setattr__(
         client, "fetch_model_usage_window", AsyncMock(return_value=models)
     )
