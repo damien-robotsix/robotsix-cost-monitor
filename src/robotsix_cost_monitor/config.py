@@ -10,8 +10,8 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import yaml
 from pydantic import BaseModel, Field
+from robotsix_yaml_config import read_yaml_file
 
 
 class ProjectConfig(BaseModel):
@@ -150,5 +150,5 @@ def load_config(path: Path | None = None) -> Config:
             f"config/projects.yaml and fill in your Langfuse keys "
             f"(or set COST_MONITOR_CONFIG)."
         )
-    raw = yaml.safe_load(p.read_text()) or {}
+    raw = read_yaml_file(p)
     return Config.model_validate(raw)
