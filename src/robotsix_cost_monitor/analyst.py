@@ -187,7 +187,7 @@ def _run_agents(
     """
     # Lazy imports so the dashboard works without the optional `analyst` extra.
     from robotsix_llmio.config.tier import LEVEL2_DEFAULT
-    from robotsix_llmio.core.factory import get_provider
+    from robotsix_llmio.core.factory import get_provider_for_identifier
     from robotsix_llmio.core.run import run_agent
 
     _maybe_setup_tracing(a)
@@ -195,7 +195,7 @@ def _run_agents(
     # Level 2 (intermediate): parse each expensive trace into a terse finding,
     # up front (so the orchestrator needs no tools). Provider/model from llmio's
     # tier config (LEVEL2 → openrouter-deepseek/deepseek-v4-pro).
-    trace_provider = _provider_for(LEVEL2_DEFAULT, a, get_provider)
+    trace_provider = _provider_for(LEVEL2_DEFAULT, a, get_provider_for_identifier)
     findings: list[dict[str, Any]] = []
     for c in candidates:
         detail = details.get(c["trace_id"])
@@ -209,14 +209,17 @@ def _run_agents(
             name="cost-analyst-trace",
         )
         payload = json.dumps(detail)[:_TRACE_CHAR_CAP]
-        finding = cast(
-            "str",
-            run_agent(
-                ht,
-                lambda h=ht, p=payload: h.run_sync(p).output,
-                label="cost-analyst-trace",
-                project=a.langfuse_project_id,
-            ),
+
+        # Bind the loop vars via defaults (ruff B023) and annotate the return so
+        # run_agent's generic resolves (a plain lambda can't be inferred here).
+        def _run_trace(handle: Any = ht, p: str = payload) -> str:
+            return str(handle.run_sync(p).output)
+
+        finding = run_agent(
+            ht,
+            _run_trace,
+            label="cost-analyst-trace",
+            project=a.langfuse_project_id,
         )
         findings.append(
             {
@@ -267,11 +270,11 @@ def _opus_analysis(
     thinking rejects forced tool_choice), parsed by :func:`_parse_analysis`.
     """
     from robotsix_llmio.config.tier import LEVEL3_DEFAULT
-    from robotsix_llmio.core.factory import get_provider
+    from robotsix_llmio.core.factory import get_provider_for_identifier
     from robotsix_llmio.core.run import run_agent
 
     _maybe_setup_tracing(a)
-    provider = _provider_for(LEVEL3_DEFAULT, a, get_provider)
+    provider = _provider_for(LEVEL3_DEFAULT, a, get_provider_for_identifier)
     h = provider.build_agent(
         level=3,
         model=a.global_model or None,
@@ -293,13 +296,14 @@ def _opus_analysis(
 def _provider_for(tlc: Any, a: AnalystConfig, get_provider: Any) -> Any:
     """Instantiate the llmio provider for a tier level (``tlc``).
 
-    The transport is taken from llmio's tier config — nothing is hardcoded.
-    Only the OpenRouter transport needs the analyst's API key; the Claude SDK
-    uses the mounted ~/.claude subscription auth.
+    *get_provider* is llmio's ``get_provider_for_identifier``: the provider is
+    resolved from the combined provider-model identifier (``tlc.model``, e.g.
+    ``"claudeSDK-opus"``). Only the OpenRouter transport needs the analyst's API
+    key; the Claude SDK uses the mounted ~/.claude subscription auth.
     """
-    if tlc.provider == "openrouter-deepseek":
-        return get_provider(provider=tlc.provider, api_key=a.openrouter_key)
-    return get_provider(provider=tlc.provider)
+    if tlc.provider == "openrouter":
+        return get_provider(tlc.model, api_key=a.openrouter_key)
+    return get_provider(tlc.model)
 
 
 def _parse_analysis(raw: str) -> Analysis:
