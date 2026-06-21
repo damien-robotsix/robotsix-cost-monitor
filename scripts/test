@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+uv sync --frozen --group dev --group analyst
+uv run pytest --cov=robotsix_cost_monitor --cov-branch --cov-report=term "$@"

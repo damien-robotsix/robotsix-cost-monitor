@@ -1,0 +1,18 @@
+name: Setup Python environment
+description: Checkout repo, install Python, sync uv deps
+inputs:
+  python-version:
+    description: Python version
+    default: "3.12"
+  extras:
+    description: Extra dependency group (e.g. analyst)
+    default: ""
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+    - uses: astral-sh/setup-uv@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+    - run: uv sync --frozen ${{ inputs.extras && format('--group {0}', inputs.extras) || '' }}
+      shell: bash
