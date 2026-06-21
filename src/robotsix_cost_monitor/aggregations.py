@@ -109,10 +109,6 @@ def merge_model_costs(parts: list[list[dict[str, Any]]]) -> list[dict[str, Any]]
     return _model_rows(acc)
 
 
-def total_cost(traces: list[dict[str, Any]]) -> float:
-    return round(sum(_trace_cost(t) for t in traces), 6)
-
-
 def _trace_label(trace: dict[str, Any]) -> str:
     """Display label for a trace in the by-agent view.
 
