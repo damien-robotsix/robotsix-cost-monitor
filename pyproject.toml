@@ -17,7 +17,7 @@ dependencies = [
 # robotsix-llmio drives the level-2/level-3 OpenRouter agents; robotsix-agent-comm
 # is the pull/mailbox client that files board tickets through the central broker.
 analyst = [
-    "robotsix-llmio[openrouter_deepseek,claude_sdk] @ git+https://github.com/damien-robotsix/robotsix-llmio.git@2af509cfbfb6f35e99f02651143dfa265a400a27",
+    "robotsix-llmio[openrouter_deepseek,claude_sdk] @ git+https://github.com/damien-robotsix/robotsix-llmio.git@main",
     "robotsix-agent-comm @ git+https://github.com/damien-robotsix/robotsix-agent-comm.git@main",
 ]
 
