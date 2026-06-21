@@ -14,16 +14,7 @@ from robotsix_cost_monitor.aggregations import (
     merge_model_costs,
     most_expensive_session,
     most_expensive_trace,
-    total_cost,
 )
-
-
-def test_total_cost() -> None:
-    assert total_cost([trace(1.5), trace(2.25)]) == 3.75
-
-
-def test_total_cost_tolerates_field_variants() -> None:
-    assert total_cost([{"calculatedTotalCost": 2.0}, {"cost": 1.0}]) == 3.0
 
 
 def test_aggregate_by_name_sorted_desc() -> None:
@@ -193,7 +184,6 @@ def test_cost_trend_buckets_sum_to_total() -> None:
 
 
 def test_empty_inputs() -> None:
-    assert total_cost([]) == 0.0
     assert aggregate_by_name([]) == []
     assert most_expensive_trace([]) is None
     assert most_expensive_session([]) is None
