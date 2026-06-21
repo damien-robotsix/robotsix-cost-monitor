@@ -1,17 +1,9 @@
 "use strict";
 
-const $ = (id) => document.getElementById(id);
-const fmt = (n) => "$" + (Number(n) || 0).toFixed(n >= 100 ? 0 : 2);
 const qs = () => `?project=${$("project").value}&hours=${$("window").value}`;
 
 function setStatus(msg) {
   $("status").textContent = msg;
-}
-
-async function getJSON(path) {
-  const r = await fetch(path);
-  if (!r.ok) throw new Error(`${path} → ${r.status}`);
-  return r.json();
 }
 
 async function loadProjects() {
@@ -60,8 +52,8 @@ function renderSummary(s, backend, modelRows) {
   $("summary-cards").innerHTML = cards
     .map(
       (c) =>
-        `<div class="card"><div class="label">${c.label}</div>` +
-        `<div class="value">${c.value}</div><div class="sub">${c.sub}</div></div>`
+        `<div class="card"><div class="label">${esc(c.label)}</div>` +
+        `<div class="value">${esc(c.value)}</div><div class="sub">${esc(c.sub)}</div></div>`
     )
     .join("");
 }
@@ -105,7 +97,7 @@ function renderByAgent(rows) {
     rows
       .map(
         (r) =>
-          `<div class="bar-row"><span class="name" title="${r.name}">${r.name}</span>` +
+          `<div class="bar-row"><span class="name" title="${esc(r.name)}">${esc(r.name)}</span>` +
           `<span class="bar-track"><span class="bar-fill" style="width:${(r.cost / max) * 100}%"></span></span>` +
           `<span class="cost">${fmt(r.cost)}</span></div>`
       )
@@ -120,7 +112,7 @@ function renderByModel(rows) {
       .map((r) => {
         const tok = `${(r.total_tokens || 0).toLocaleString()} tokens · ${r.observations} obs`;
         return (
-          `<div class="bar-row"><span class="name" title="${r.model}">${r.model}</span>` +
+          `<div class="bar-row"><span class="name" title="${esc(r.model)}">${esc(r.model)}</span>` +
           `<span class="bar-track"><span class="bar-fill" style="width:${(r.cost / max) * 100}%"></span></span>` +
           `<span class="cost" title="${tok}">${fmt(r.cost)}</span></div>`
         );
@@ -135,12 +127,12 @@ function renderHighlights(h) {
   if (t)
     rows.push(
       `<div class="hl"><div class="k">most expensive trace</div>` +
-        `<div class="v">${t.name || "?"} — ${fmt(t.cost)}<br><span class="k">${t.id || ""}</span></div></div>`
+        `<div class="v">${esc(t.name || "?")} — ${fmt(t.cost)}<br><span class="k">${esc(t.id || "")}</span></div></div>`
     );
   if (s)
     rows.push(
       `<div class="hl"><div class="k">most expensive ticket</div>` +
-        `<div class="v">${s.session_id} — ${fmt(s.cost)} (${s.count} traces)</div></div>`
+        `<div class="v">${esc(s.session_id)} — ${fmt(s.cost)} (${s.count} traces)</div></div>`
     );
   $("highlights").innerHTML = rows.join("") || '<div class="muted">no data</div>';
 }
@@ -149,17 +141,17 @@ function renderReconcile(rows) {
   $("reconcile").innerHTML = rows
     .map((r) => {
       if (!r.configured)
-        return `<div class="recon-row"><span>${r.project}</span><span class="muted" style="grid-column: 2 / -1">no OpenRouter key configured</span></div>`;
+        return `<div class="recon-row"><span>${esc(r.project)}</span><span class="muted" style="grid-column: 2 / -1">no OpenRouter key configured</span></div>`;
       if (r.error)
-        return `<div class="recon-row"><span>${r.project}</span><span class="drift" style="grid-column: 2 / -1">${r.error}</span></div>`;
+        return `<div class="recon-row"><span>${esc(r.project)}</span><span class="drift" style="grid-column: 2 / -1">${esc(r.error)}</span></div>`;
       const bal = r.balance ? `bal ${fmt(r.balance.remaining)}` : "";
       if (r.detail)
-        return `<div class="recon-row"><span>${r.project}</span><span class="muted">${r.detail}</span><span class="muted">${bal}</span><span></span><span></span></div>`;
+        return `<div class="recon-row"><span>${esc(r.project)}</span><span class="muted">${esc(r.detail)}</span><span class="muted">${bal}</span><span></span><span></span></div>`;
       const pill = r.within_tolerance
         ? '<span class="pill ok">clean</span>'
         : '<span class="pill bad">drift</span>';
       return (
-        `<div class="recon-row"><span>${r.project}</span>` +
+        `<div class="recon-row"><span>${esc(r.project)}</span>` +
         `<span class="muted">provider ${fmt(r.provider_delta_usd)}</span>` +
         `<span class="muted">traced ${fmt(r.langfuse_cost_usd)}` +
         (r.langfuse_total_cost_usd != null &&
@@ -193,8 +185,8 @@ async function loadReconBanner() {
     const items = bad
       .map((r) =>
         r.error
-          ? `${r.project}: ${r.error}`
-          : `${r.project}: Δ ${fmt(r.drift_usd)} (provider ${fmt(
+          ? `${esc(r.project)}: ${esc(r.error)}`
+          : `${esc(r.project)}: Δ ${fmt(r.drift_usd)} (provider ${fmt(
               r.provider_delta_usd,
             )} vs traced ${fmt(r.langfuse_cost_usd)})`,
       )
