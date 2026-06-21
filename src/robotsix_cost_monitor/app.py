@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import logging
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -41,22 +42,76 @@ def _window(hours: int, config: Config) -> int:
     return hours or config.settings.default_window_hours
 
 
+def _parse_iso(value: Any) -> datetime | None:
+    """Parse a stored ISO ``generated_at`` to an aware UTC datetime, or None."""
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        dt = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
+
+
+def _last_analyst_run() -> datetime | None:
+    """The most recent ``generated_at`` across the persisted fleet/ticket/stage
+    analyses, or ``None`` when none has run yet.
+
+    Used to resume the analyst cadence across process restarts: the dashboard's
+    scheduler lives in-process and is redeployed often (Watchtower), so a timer
+    that simply sleeps a full interval on every start would keep resetting and
+    the daily analysis would rarely fire."""
+    stamps = (
+        load_proposals().get("generated_at"),
+        load_targeted_analysis("ticket").get("generated_at"),
+        load_targeted_analysis("stage").get("generated_at"),
+    )
+    runs = [dt for dt in (_parse_iso(s) for s in stamps) if dt is not None]
+    return max(runs) if runs else None
+
+
+def _initial_analyst_delay(
+    interval: float, last_run: datetime | None, now: datetime
+) -> float:
+    """Seconds to wait before the first scheduled analysis.
+
+    ``0`` when a full *interval* has already elapsed since *last_run* (or nothing
+    has ever run), else only the remaining time — so the ~daily cadence is stable
+    regardless of how often the container restarts. A *last_run* in the future
+    (clock skew) falls back to a full interval rather than running immediately."""
+    if last_run is None:
+        return 0.0
+    elapsed = (now - last_run).total_seconds()
+    if elapsed < 0:
+        return interval
+    return max(0.0, interval - elapsed)
+
+
 async def _analyst_loop(cfg: Config, service: CostService, hours: float) -> None:
     """Run all analyses (fleet + most-costly ticket + most-costly stage) every
-    *hours* hours until cancelled."""
+    *hours* hours until cancelled.
+
+    The first delay is derived from the last persisted run (not a fresh full
+    sleep) so frequent redeploys don't starve the schedule: if a full interval
+    has already elapsed it runs at once, otherwise it waits only the remainder."""
     interval = max(1.0, hours) * 3600
     analyses = (
         ("fleet", run_analyst),
         ("ticket", run_ticket_analyst),
         ("stage", run_stage_analyst),
     )
+    delay = _initial_analyst_delay(interval, _last_analyst_run(), datetime.now(UTC))
+    logger.info(
+        "analyst scheduler: first run in %.0fs (interval %.0fs)", delay, interval
+    )
     while True:
-        await asyncio.sleep(interval)
+        await asyncio.sleep(delay)
         for label, fn in analyses:
             try:
                 await fn(cfg, service)
             except Exception:  # noqa: BLE001 — a failed run must not kill the loop
                 logger.exception("scheduled %s analysis failed", label)
+        delay = interval
 
 
 async def _reconcile_loop(cfg: Config, hours: float) -> None:
