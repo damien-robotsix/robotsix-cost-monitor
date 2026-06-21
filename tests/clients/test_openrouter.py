@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock
 
 import httpx
 
-from robotsix_cost_monitor.openrouter import OpenRouterClient
+from robotsix_cost_monitor.clients.openrouter import OpenRouterClient
 
 # ---------------------------------------------------------------------------
 # fetch_key_usage

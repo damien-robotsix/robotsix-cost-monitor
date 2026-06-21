@@ -20,8 +20,8 @@ from .aggregations import (
     most_expensive_session,
     most_expensive_trace,
 )
+from .clients.langfuse import LangfuseClient
 from .config import Config, ProjectConfig
-from .langfuse import LangfuseClient
 
 
 class CostService:
