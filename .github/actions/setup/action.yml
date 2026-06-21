@@ -3,7 +3,7 @@ description: Install Python and sync uv deps
 inputs:
   python-version:
     description: Python version
-    default: "3.12"
+    default: "3.14"
   extras:
     description: Extra dependency group (e.g. analyst)
     default: ""
