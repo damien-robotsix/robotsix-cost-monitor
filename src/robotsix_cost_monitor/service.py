@@ -77,18 +77,9 @@ class CostService:
                 out.append((p, []))
         return out
 
-    async def candidate_traces(
-        self, slug: str | None, hours: int, limit: int, *, per_agent: int = 1
+    async def _build_trace_rows(
+        self, slug: str | None, hours: int
     ) -> list[dict[str, Any]]:
-        """Return the cost-analyst's drill-in candidate traces.
-
-        Selection is deterministic and **per agent** (trace name): take the top
-        ``per_agent`` most expensive traces of EACH agent — so a cheaper agent
-        is still inspected instead of being crowded out by the priciest one —
-        then cap the total at ``limit`` (priciest agents win if it overflows).
-        Each candidate carries why it was picked (``rank``, ``pct_of_traced``,
-        ``agent_pct_of_traced``, ``selection_reason``).
-        """
         gathered = await self._gather(slug, hours)
         rows: list[dict[str, Any]] = []
         for p, traces in gathered:
@@ -104,6 +95,21 @@ class CostService:
                         "cost": round(_trace_cost(t), 6),
                     }
                 )
+        return rows
+
+    async def candidate_traces(
+        self, slug: str | None, hours: int, limit: int, *, per_agent: int = 1
+    ) -> list[dict[str, Any]]:
+        """Return the cost-analyst's drill-in candidate traces.
+
+        Selection is deterministic and **per agent** (trace name): take the top
+        ``per_agent`` most expensive traces of EACH agent — so a cheaper agent
+        is still inspected instead of being crowded out by the priciest one —
+        then cap the total at ``limit`` (priciest agents win if it overflows).
+        Each candidate carries why it was picked (``rank``, ``pct_of_traced``,
+        ``agent_pct_of_traced``, ``selection_reason``).
+        """
+        rows = await self._build_trace_rows(slug, hours)
         total = sum(r["cost"] for r in rows) or 1e-9
 
         # Group by agent (trace name) across all projects; take each agent's
@@ -179,20 +185,7 @@ class CostService:
         of its priciest traces (with project) — the basis for the stage-level
         (global) cost analysis. ``None`` if there are no traces.
         """
-        gathered = await self._gather(slug, hours)
-        rows: list[dict[str, Any]] = []
-        for p, traces in gathered:
-            for t in traces:
-                if not t.get("id"):
-                    continue
-                rows.append(
-                    {
-                        "trace_id": t["id"],
-                        "project": p.slug,
-                        "name": t.get("name") or "(unnamed)",
-                        "cost": round(_trace_cost(t), 6),
-                    }
-                )
+        rows = await self._build_trace_rows(slug, hours)
         if not rows:
             return None
         by_name: dict[str, dict[str, float]] = {}
