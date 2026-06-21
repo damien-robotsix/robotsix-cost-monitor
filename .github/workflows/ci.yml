@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   ci:
-    uses: damien-robotsix/robotsix-mill/.github/workflows/python-ci.yml@main
+    uses: damien-robotsix/robotsix-mill/.github/workflows/python-ci.yml@a317d51ad25be89194d55f220164819807d549f1 # v0.0.1
     with:
       python-version: "3.12"
       install-extras: "analyst"
@@ -19,7 +19,7 @@ jobs:
     secrets: inherit
 
   security:
-    uses: damien-robotsix/robotsix-mill/.github/workflows/python-security.yml@main
+    uses: damien-robotsix/robotsix-mill/.github/workflows/python-security.yml@a317d51ad25be89194d55f220164819807d549f1 # v0.0.1
     with:
       install-extras: ""
       trufflehog-pr-diff: true
