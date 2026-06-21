@@ -35,11 +35,11 @@ robotsix_cost_monitor.analyst:
   role: Deterministic cost digest + optional LLM proposal pass
 
 robotsix_cost_monitor.langfuse:
-  path: src/robotsix_cost_monitor/langfuse.py
+  path: src/robotsix_cost_monitor/clients/langfuse.py
   role: Self-contained async Langfuse REST client
 
 robotsix_cost_monitor.openrouter:
-  path: src/robotsix_cost_monitor/openrouter.py
+  path: src/robotsix_cost_monitor/clients/openrouter.py
   role: Self-contained async OpenRouter cost/credit client
 
 robotsix_cost_monitor.web.static.shared:

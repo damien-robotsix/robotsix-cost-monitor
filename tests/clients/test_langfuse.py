@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import HTTPStatusError, Request, Response
 
-from robotsix_cost_monitor.langfuse import (
+from robotsix_cost_monitor.clients.langfuse import (
     _MAX_PAGES,
     _PAGE_LIMIT,
     LangfuseClient,
@@ -104,7 +104,7 @@ async def test_get_returns_json() -> None:
     c = _client()
     mock_client = _async_client_mock(_response(200, {"data": [{"id": "tr-1"}]}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c._get("/api/public/traces", {"limit": 1})
@@ -115,7 +115,7 @@ async def test_get_passes_auth_and_params() -> None:
     c = _client()
     mock_client = _async_client_mock(_response(200, {"data": []}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         await c._get("/api/public/traces", {"page": 2})
@@ -134,7 +134,7 @@ async def test_get_raises_on_http_4xx() -> None:
     c = _client()
     mock_client = _async_client_mock(_error_response(400))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         with pytest.raises(HTTPStatusError):
@@ -145,7 +145,7 @@ async def test_get_raises_on_http_5xx() -> None:
     c = _client()
     mock_client = _async_client_mock(_error_response(503))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         with pytest.raises(HTTPStatusError):
@@ -158,7 +158,7 @@ async def test_get_raises_on_malformed_json() -> None:
     bad_response = Response(200, content=b"not json", request=req)
     mock_client = _async_client_mock(bad_response)
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         with pytest.raises(JSONDecodeError):
@@ -177,7 +177,7 @@ async def test_fetch_traces_single_page() -> None:
         _response(200, {"data": batch, "meta": {"totalPages": 1}})
     )
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_traces_window(hours=24)
@@ -198,7 +198,7 @@ async def test_fetch_traces_multi_page() -> None:
         ]
     )
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_traces_window(hours=24)
@@ -220,7 +220,7 @@ async def test_fetch_traces_total_pages_none_continues_until_empty() -> None:
         ]
     )
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_traces_window(hours=24)
@@ -237,7 +237,7 @@ async def test_fetch_traces_stops_at_partial_page() -> None:
         _response(200, {"data": partial_batch, "meta": {}})
     )
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_traces_window(hours=24)
@@ -258,7 +258,7 @@ async def test_fetch_traces_stops_before_page_cap() -> None:
         ]
     )
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_traces_window(hours=24)
@@ -272,7 +272,7 @@ async def test_fetch_traces_empty_response() -> None:
         _response(200, {"data": [], "meta": {"totalPages": 0}})
     )
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_traces_window(hours=24)
@@ -291,7 +291,7 @@ async def test_fetch_traces_respects_page_cap() -> None:
     mock_client = _async_client_mock()
     mock_client.get = AsyncMock(side_effect=side_effect)
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_traces_window(hours=24)
@@ -309,7 +309,7 @@ async def test_fetch_trace_detail() -> None:
     detail = {"id": "tr-99", "name": "implement", "observations": []}
     mock_client = _async_client_mock(_response(200, detail))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_trace_detail("tr-99")
@@ -328,7 +328,7 @@ async def test_metrics_basic_query() -> None:
     c = _client()
     mock_client = _async_client_mock(_response(200, {"data": [{"sum_totalCost": 1.5}]}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c._metrics(
@@ -350,7 +350,7 @@ async def test_metrics_with_time_dimension() -> None:
     c = _client()
     mock_client = _async_client_mock(_response(200, {"data": []}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         await c._metrics(
@@ -368,7 +368,7 @@ async def test_metrics_without_time_dimension() -> None:
     c = _client()
     mock_client = _async_client_mock(_response(200, {"data": []}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         await c._metrics(
@@ -384,7 +384,7 @@ async def test_metrics_multiple_metrics() -> None:
     c = _client()
     mock_client = _async_client_mock(_response(200, {"data": []}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         await c._metrics(
@@ -406,7 +406,7 @@ async def test_metrics_empty_data_returns_empty_list() -> None:
     c = _client()
     mock_client = _async_client_mock(_response(200, {}))  # no 'data' key
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c._metrics(
@@ -443,7 +443,7 @@ async def test_model_usage_basic_aggregation() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_model_usage_window(hours=24)
@@ -481,7 +481,7 @@ async def test_model_usage_merges_same_model_across_rows() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_model_usage_window(hours=24)
@@ -513,7 +513,7 @@ async def test_model_usage_skips_missing_model_name() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_model_usage_window(hours=24)
@@ -529,7 +529,7 @@ async def test_model_usage_handles_missing_fields() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_model_usage_window(hours=24)
@@ -556,7 +556,7 @@ async def test_model_usage_handles_null_metrics() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_model_usage_window(hours=24)
@@ -578,7 +578,7 @@ async def test_cost_by_backend_groups_by_backend() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_cost_by_backend(hours=24)
@@ -593,7 +593,7 @@ async def test_cost_by_backend_skips_nameless_observations() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_cost_by_backend(hours=24)
@@ -604,7 +604,7 @@ async def test_cost_by_backend_empty() -> None:
     c = _client()
     mock_client = _async_client_mock(_response(200, {"data": []}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_cost_by_backend(hours=24)
@@ -618,7 +618,7 @@ async def test_cost_by_backend_handles_null_cost() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_cost_by_backend(hours=24)
@@ -648,7 +648,7 @@ async def test_backend_cost_window_minute_granularity() -> None:
         )
     )
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         await c.fetch_backend_cost_window(hours=1)
@@ -662,7 +662,7 @@ async def test_backend_cost_window_hour_granularity() -> None:
     c = _client()
     mock_client = _async_client_mock(_response(200, {"data": []}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         await c.fetch_backend_cost_window(hours=24)
@@ -676,7 +676,7 @@ async def test_backend_cost_window_hour_granularity_boundary() -> None:
     c = _client()
     mock_client = _async_client_mock(_response(200, {"data": []}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         await c.fetch_backend_cost_window(hours=72)
@@ -690,7 +690,7 @@ async def test_backend_cost_window_day_granularity() -> None:
     c = _client()
     mock_client = _async_client_mock(_response(200, {"data": []}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         await c.fetch_backend_cost_window(hours=168)
@@ -725,7 +725,7 @@ async def test_backend_cost_window_folds_by_bucket() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_backend_cost_window(hours=24)
@@ -752,7 +752,7 @@ async def test_backend_cost_window_skips_nameless() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_backend_cost_window(hours=24)
@@ -763,7 +763,7 @@ async def test_backend_cost_window_empty() -> None:
     c = _client()
     mock_client = _async_client_mock(_response(200, {"data": []}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_backend_cost_window(hours=24)
@@ -794,7 +794,7 @@ async def test_agent_usage_basic_aggregation() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_agent_usage_window(hours=24)
@@ -833,7 +833,7 @@ async def test_agent_usage_merges_same_stage_backend() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_agent_usage_window(hours=24)
@@ -863,7 +863,7 @@ async def test_agent_usage_splits_stage_across_backends() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_agent_usage_window(hours=24)
@@ -892,7 +892,7 @@ async def test_agent_usage_skips_missing_model_name() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_agent_usage_window(hours=24)
@@ -920,7 +920,7 @@ async def test_agent_usage_skips_missing_trace_name() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_agent_usage_window(hours=24)
@@ -936,7 +936,7 @@ async def test_agent_usage_handles_missing_metric_fields() -> None:
     ]
     mock_client = _async_client_mock(_response(200, {"data": rows}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_agent_usage_window(hours=24)
@@ -949,7 +949,7 @@ async def test_agent_usage_empty() -> None:
     c = _client()
     mock_client = _async_client_mock(_response(200, {"data": []}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         result = await c.fetch_agent_usage_window(hours=24)
@@ -961,7 +961,7 @@ async def test_agent_uses_custom_dimensions() -> None:
     c = _client()
     mock_client = _async_client_mock(_response(200, {"data": []}))
     with patch(
-        "robotsix_cost_monitor.langfuse.httpx.AsyncClient",
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
         return_value=mock_client,
     ):
         await c.fetch_agent_usage_window(hours=24)

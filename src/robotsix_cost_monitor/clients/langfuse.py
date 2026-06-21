@@ -18,7 +18,7 @@ from typing import Any
 
 import httpx
 
-from .aggregations import (
+from ..aggregations import (
     _empty_model_slot,
     _model_rows,
     _utc_now,
