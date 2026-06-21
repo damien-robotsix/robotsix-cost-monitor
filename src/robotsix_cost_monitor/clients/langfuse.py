@@ -1,8 +1,8 @@
 """Langfuse read client for cost-monitor.
 
 One :class:`LangfuseClient` per project. Composes the shared
-:class:`robotsix_llmio.core.LangfuseReadClient` for auth/URL construction
-and adds async HTTP calls plus cost-monitor's domain-specific aggregation
+:class:`robotsix_llmio.core.AsyncLangfuseReadClient` for auth/URL construction
+and async HTTP calls plus cost-monitor's domain-specific aggregation
 methods (``/api/public/metrics`` queries, per-model / per-backend / per-agent
 aggregation). Talks to the Langfuse public REST API (``/api/public/*``).
 
@@ -29,15 +29,12 @@ __all__ = [
     "LangfuseClient",
 ]
 
-_PAGE_LIMIT = 100
-_MAX_PAGES = 100  # safety cap (≤ 10k traces per query)
-
 
 class LangfuseClient:
     """Read-only cost/trace client for a single Langfuse project.
 
-    Composes :class:`LangfuseReadClient` for auth/URL helpers;
-    owns its own async HTTP and domain aggregation.
+    Composes :class:`AsyncLangfuseReadClient` for auth/URL helpers and
+    async REST transport; owns its own domain aggregation.
     """
 
     def __init__(
@@ -49,74 +46,29 @@ class LangfuseClient:
         timeout: float = 30.0,
     ) -> None:
         # Lazy import so the dashboard works without the optional `analyst` extra.
-        from robotsix_llmio.core import LangfuseReadClient
+        from robotsix_llmio.core import AsyncLangfuseReadClient
 
-        self._lf = LangfuseReadClient(
+        self._lf = AsyncLangfuseReadClient(
             public_key=public_key,
             secret_key=secret_key,
             base_url=base_url,
         )
         self._timeout = timeout
 
-    async def _get(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.get(
-                self._lf.url(path),
-                params=params,
-                headers={"Authorization": self._lf.auth_header()},
-            )
-            resp.raise_for_status()
-            data: dict[str, Any] = resp.json()
-            return data
-
-    # ------------------------------------------------------------------
-    # fetch_traces_window / fetch_trace_detail keep local async HTTP
-    # implementations rather than delegating to the composed
-    # LangfuseReadClient's sync iter_pages().  LangfuseReadClient is a
-    # synchronous class — its iter_pages() calls httpx.Client (sync)
-    # internally, and there is no AsyncLangfuseReadClient.  Cost-monitor
-    # runs under FastAPI / anyio and must use httpx.AsyncClient to avoid
-    # blocking the event loop.  The composed client still contributes
-    # auth_header(), url(), and base_url so the auth/URL layer is shared.
-    # ------------------------------------------------------------------
-
     async def fetch_traces_window(self, hours: float) -> list[dict[str, Any]]:
         """Return all traces with ``timestamp`` within the last *hours*.
 
         *hours* may be fractional (reconciliation passes the exact snapshot
-        interval).
-
-        Paginates ``/api/public/traces`` newest-first using ``fromTimestamp``;
-        stops at the window edge or the page cap.
+        interval). Delegates to :meth:`AsyncLangfuseReadClient.fetch_traces_window`.
         """
-        since = _utc_now() - timedelta(hours=hours)
-        from_ts = since.isoformat().replace("+00:00", "Z")
-        out: list[dict[str, Any]] = []
-        for page in range(1, _MAX_PAGES + 1):
-            data = await self._get(
-                "/api/public/traces",
-                {
-                    "fromTimestamp": from_ts,
-                    "limit": _PAGE_LIMIT,
-                    "page": page,
-                    "orderBy": "timestamp.desc",
-                },
-            )
-            batch = data.get("data") or []
-            if not batch:
-                break
-            out.extend(batch)
-            meta = data.get("meta") or {}
-            total_pages = meta.get("totalPages")
-            if total_pages is not None and page >= total_pages:
-                break
-            if len(batch) < _PAGE_LIMIT:
-                break
-        return out
+        return [trace async for trace in self._lf.fetch_traces_window(hours)]
 
     async def fetch_trace_detail(self, trace_id: str) -> dict[str, Any]:
-        """Return a single trace's full detail (including its observations)."""
-        return await self._get(f"/api/public/traces/{trace_id}", {})
+        """Return a single trace's full detail (including its observations).
+
+        Delegates to :meth:`AsyncLangfuseReadClient.fetch_trace_detail`.
+        """
+        return await self._lf.fetch_trace_detail(trace_id)
 
     async def _metrics(
         self,
@@ -147,8 +99,15 @@ class LangfuseClient:
         }
         if time_dimension is not None:
             query["timeDimension"] = time_dimension
-        data = await self._get("/api/public/metrics", {"query": json.dumps(query)})
-        return list(data.get("data") or [])
+        async with httpx.AsyncClient(timeout=self._timeout) as client:
+            resp = await client.get(
+                self._lf.url("/api/public/metrics"),
+                params={"query": json.dumps(query)},
+                headers={"Authorization": self._lf.auth_header()},
+            )
+            resp.raise_for_status()
+            data: dict[str, Any] = resp.json()
+            return list(data.get("data") or [])
 
     async def fetch_agent_usage_window(self, hours: int) -> list[dict[str, Any]]:
         """Per-(stage, backend) cost over the exact last *hours*.

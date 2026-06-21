@@ -1,24 +1,18 @@
 """Unit tests for LangfuseClient (no network).
 
-Covers __init__, _get error paths, pagination, metrics query construction,
-and the derived aggregation methods.
+Covers __init__, fetch_traces_window and fetch_trace_detail delegation,
+metrics query construction, and the derived aggregation methods.
 """
 
 from __future__ import annotations
 
 import json
-from json import JSONDecodeError
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
-import pytest
-from httpx import HTTPStatusError, Request, Response
+from httpx import Request, Response
 
-from robotsix_cost_monitor.clients.langfuse import (
-    _MAX_PAGES,
-    _PAGE_LIMIT,
-    LangfuseClient,
-)
+from robotsix_cost_monitor.clients.langfuse import LangfuseClient
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -42,12 +36,6 @@ def _response(status: int = 200, json_data: object = None) -> Response:
     return resp
 
 
-def _error_response(status: int) -> Response:
-    """Return an error response that raises HTTPStatusError on raise_for_status."""
-    req = Request("GET", "http://localhost/")
-    return Response(status, json={"error": "boom"}, request=req)
-
-
 def _async_client_mock(get_response: object = None) -> AsyncMock:
     """Create an AsyncMock that works with ``async with httpx.AsyncClient(...)``.
 
@@ -67,8 +55,8 @@ def _async_client_mock(get_response: object = None) -> AsyncMock:
 # ---------------------------------------------------------------------------
 
 
-def test_init_composes_langfuse_read_client() -> None:
-    """Verify the composed client's public API reflects the credentials."""
+def test_init_composes_async_langfuse_read_client() -> None:
+    """Verify the composed async client's public API reflects the credentials."""
     c = _client(public_key="pk-a", secret_key="sk-a")
     # auth_header() must produce the correct Basic credential for the
     # supplied public_key / secret_key pair.
@@ -96,207 +84,51 @@ def test_init_custom_timeout() -> None:
 
 
 # ---------------------------------------------------------------------------
-# _get — success
+# fetch_traces_window
 # ---------------------------------------------------------------------------
 
 
-async def test_get_returns_json() -> None:
+async def test_fetch_traces_window_delegates_to_async_client() -> None:
+    """fetch_traces_window delegates to AsyncLangfuseReadClient.fetch_traces_window
+    and collects the async iterator into a list."""
     c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": [{"id": "tr-1"}]}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c._get("/api/public/traces", {"limit": 1})
-    assert result == {"data": [{"id": "tr-1"}]}
+    traces = [{"id": "t1"}, {"id": "t2"}]
 
+    async def _mock_fetch(hours: float):
+        for t in traces:
+            yield t
 
-async def test_get_passes_auth_and_params() -> None:
-    c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": []}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        await c._get("/api/public/traces", {"page": 2})
-    mock_client.get.assert_called_once()
-    call_kwargs = mock_client.get.call_args.kwargs
-    assert call_kwargs["headers"] == {"Authorization": "Basic cGstdGVzdDpzay10ZXN0"}
-    assert call_kwargs["params"] == {"page": 2}
-
-
-# ---------------------------------------------------------------------------
-# _get — error paths
-# ---------------------------------------------------------------------------
-
-
-async def test_get_raises_on_http_4xx() -> None:
-    c = _client()
-    mock_client = _async_client_mock(_error_response(400))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        with pytest.raises(HTTPStatusError):
-            await c._get("/api/public/traces", {})
-
-
-async def test_get_raises_on_http_5xx() -> None:
-    c = _client()
-    mock_client = _async_client_mock(_error_response(503))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        with pytest.raises(HTTPStatusError):
-            await c._get("/api/public/traces", {})
-
-
-async def test_get_raises_on_malformed_json() -> None:
-    c = _client()
-    req = Request("GET", "http://localhost/")
-    bad_response = Response(200, content=b"not json", request=req)
-    mock_client = _async_client_mock(bad_response)
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        with pytest.raises(JSONDecodeError):
-            await c._get("/api/public/traces", {})
-
-
-# ---------------------------------------------------------------------------
-# fetch_traces_window — pagination
-# ---------------------------------------------------------------------------
-
-
-async def test_fetch_traces_single_page() -> None:
-    c = _client()
-    batch = [{"id": "t1"}, {"id": "t2"}]
-    mock_client = _async_client_mock(
-        _response(200, {"data": batch, "meta": {"totalPages": 1}})
-    )
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
+    with patch.object(c._lf, "fetch_traces_window", side_effect=_mock_fetch):
         result = await c.fetch_traces_window(hours=24)
-    assert len(result) == 2
-    assert result == batch
+    assert result == traces
 
 
-async def test_fetch_traces_multi_page() -> None:
+async def test_fetch_traces_window_empty() -> None:
+    """Returns empty list when the async iterator yields nothing."""
     c = _client()
-    page1 = [{"id": f"t{i}"} for i in range(_PAGE_LIMIT)]
-    page2 = [{"id": f"t{i}"} for i in range(_PAGE_LIMIT, 2 * _PAGE_LIMIT)]
 
-    mock_client = _async_client_mock()
-    mock_client.get = AsyncMock(
-        side_effect=[
-            _response(200, {"data": page1, "meta": {"totalPages": 2}}),
-            _response(200, {"data": page2, "meta": {"totalPages": 2}}),
-        ]
-    )
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_traces_window(hours=24)
-    assert len(result) == 2 * _PAGE_LIMIT
-    assert mock_client.get.call_count == 2
+    async def _mock_fetch(hours: float):
+        if False:
+            yield  # never yields
 
-
-async def test_fetch_traces_total_pages_none_continues_until_empty() -> None:
-    """When meta.totalPages is None, pagination continues until empty batch."""
-    c = _client()
-    batch1 = [{"id": f"t{i}"} for i in range(_PAGE_LIMIT)]
-    empty: list[dict[str, Any]] = []
-
-    mock_client = _async_client_mock()
-    mock_client.get = AsyncMock(
-        side_effect=[
-            _response(200, {"data": batch1, "meta": {}}),  # no totalPages
-            _response(200, {"data": empty, "meta": {}}),
-        ]
-    )
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_traces_window(hours=24)
-    assert len(result) == _PAGE_LIMIT
-    assert mock_client.get.call_count == 2
-
-
-async def test_fetch_traces_stops_at_partial_page() -> None:
-    """When a page has fewer than _PAGE_LIMIT items, stop (no more data)."""
-    c = _client()
-    partial_batch = [{"id": "t1"}]  # < _PAGE_LIMIT
-
-    mock_client = _async_client_mock(
-        _response(200, {"data": partial_batch, "meta": {}})
-    )
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_traces_window(hours=24)
-    assert len(result) == 1
-    assert mock_client.get.call_count == 1
-
-
-async def test_fetch_traces_stops_before_page_cap() -> None:
-    """Stops when page >= totalPages even if batches are full."""
-    c = _client()
-    full_batch = [{"id": f"t{i}"} for i in range(_PAGE_LIMIT)]
-
-    mock_client = _async_client_mock()
-    mock_client.get = AsyncMock(
-        side_effect=[
-            _response(200, {"data": full_batch, "meta": {"totalPages": 2}}),
-            _response(200, {"data": full_batch, "meta": {"totalPages": 2}}),
-        ]
-    )
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_traces_window(hours=24)
-    assert len(result) == 2 * _PAGE_LIMIT
-    assert mock_client.get.call_count == 2
-
-
-async def test_fetch_traces_empty_response() -> None:
-    c = _client()
-    mock_client = _async_client_mock(
-        _response(200, {"data": [], "meta": {"totalPages": 0}})
-    )
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
+    with patch.object(c._lf, "fetch_traces_window", side_effect=_mock_fetch):
         result = await c.fetch_traces_window(hours=24)
     assert result == []
 
 
-async def test_fetch_traces_respects_page_cap() -> None:
-    """If the API never returns totalPages and always returns full pages,
-    we stop at _MAX_PAGES to avoid runaway pagination."""
+async def test_fetch_traces_window_passes_hours() -> None:
+    """Verifies hours is forwarded to the composed client."""
     c = _client()
-    full_batch = [{"id": f"t{i}"} for i in range(_PAGE_LIMIT)]
+    mock = Mock()
 
-    side_effect = [
-        _response(200, {"data": full_batch, "meta": {}}) for _ in range(_MAX_PAGES + 5)
-    ]
-    mock_client = _async_client_mock()
-    mock_client.get = AsyncMock(side_effect=side_effect)
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_traces_window(hours=24)
-    assert len(result) == _MAX_PAGES * _PAGE_LIMIT
-    assert mock_client.get.call_count == _MAX_PAGES
+    async def _mock_fetch(hours: float):
+        mock(hours)
+        if False:
+            yield
+
+    with patch.object(c._lf, "fetch_traces_window", side_effect=_mock_fetch):
+        await c.fetch_traces_window(hours=12.5)
+    mock.assert_called_once_with(12.5)
 
 
 # ---------------------------------------------------------------------------
@@ -304,19 +136,15 @@ async def test_fetch_traces_respects_page_cap() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_fetch_trace_detail() -> None:
+async def test_fetch_trace_detail_delegates() -> None:
+    """fetch_trace_detail delegates to AsyncLangfuseReadClient.fetch_trace_detail."""
     c = _client()
     detail = {"id": "tr-99", "name": "implement", "observations": []}
-    mock_client = _async_client_mock(_response(200, detail))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
+    mock = AsyncMock(return_value=detail)
+    with patch.object(c._lf, "fetch_trace_detail", mock):
         result = await c.fetch_trace_detail("tr-99")
     assert result == detail
-    mock_client.get.assert_called_once()
-    url = mock_client.get.call_args.args[0]
-    assert "/api/public/traces/tr-99" in url
+    mock.assert_called_once_with("tr-99")
 
 
 # ---------------------------------------------------------------------------
