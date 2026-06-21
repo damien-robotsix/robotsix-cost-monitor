@@ -68,7 +68,8 @@ class LangfuseClient:
 
         Delegates to :meth:`AsyncLangfuseReadClient.fetch_trace_detail`.
         """
-        return await self._lf.fetch_trace_detail(trace_id)
+        detail: dict[str, Any] = await self._lf.fetch_trace_detail(trace_id)
+        return detail
 
     async def _metrics(
         self,
