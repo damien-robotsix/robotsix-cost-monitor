@@ -10,6 +10,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - run: ruff check src/ tests/
       - run: ruff format --check src/ tests/
@@ -19,6 +20,7 @@ jobs:
     needs: [lint]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
           extras: analyst
@@ -27,8 +29,9 @@ jobs:
   security:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - name: Secret scan (PR diff)
-        uses: trufflesecurity/trufflehog@v3
+        uses: trufflesecurity/trufflehog@main
         with:
           extra_args: --results=verified,unknown
