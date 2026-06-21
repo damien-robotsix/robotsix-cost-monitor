@@ -76,12 +76,14 @@ class LangfuseClient:
         hours: float,
         *,
         metrics: list[dict[str, str]],
+        view: str = "observations",
         dimensions: list[dict[str, str]] | None = None,
         time_dimension: dict[str, str] | None = None,
     ) -> list[dict[str, Any]]:
-        """Run a Langfuse metrics query over the *observations* view for the
-        exact last *hours*, grouped by *dimensions* (defaults to model). Returns
-        the raw ``data`` rows.
+        """Run a Langfuse metrics query over *view* (``observations`` or
+        ``traces``) for the exact last *hours*, grouped by *dimensions* (``None``
+        → group by model; pass ``[]`` for an ungrouped total). Returns the raw
+        ``data`` rows.
 
         ``/api/public/metrics`` aggregates server-side and, unlike the
         daily-metrics endpoint, honors the exact ``from``/``to`` window (the
@@ -90,9 +92,11 @@ class LangfuseClient:
         """
         now = _utc_now()
         query: dict[str, Any] = {
-            "view": "observations",
+            "view": view,
             "metrics": metrics,
-            "dimensions": dimensions or [{"field": "providedModelName"}],
+            "dimensions": (
+                [{"field": "providedModelName"}] if dimensions is None else dimensions
+            ),
             "fromTimestamp": (now - timedelta(hours=hours))
             .isoformat()
             .replace("+00:00", "Z"),
@@ -109,6 +113,21 @@ class LangfuseClient:
             resp.raise_for_status()
             data: dict[str, Any] = resp.json()
             return list(data.get("data") or [])
+
+    async def fetch_trace_count_window(self, hours: float) -> int:
+        """Count traces in the exact last *hours* via a server-side metrics
+        query (``view=traces``, ungrouped ``count``).
+
+        One ``/api/public/metrics`` request — O(1), vs paging every trace just to
+        ``len()`` them (which is ~27s over a week of all-project data).
+        """
+        rows = await self._metrics(
+            hours,
+            view="traces",
+            metrics=[{"measure": "count", "aggregation": "count"}],
+            dimensions=[],
+        )
+        return int(rows[0].get("count_count") or 0) if rows else 0
 
     async def fetch_agent_usage_window(self, hours: int) -> list[dict[str, Any]]:
         """Per-(stage, backend) cost over the exact last *hours*.

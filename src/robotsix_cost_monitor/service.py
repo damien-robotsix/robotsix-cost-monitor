@@ -49,6 +49,8 @@ class CostService:
         self._agent_usage_cache: dict[
             tuple[str, int], tuple[list[dict[str, Any]], float]
         ] = {}
+        # cache: (slug, hours) -> (trace_count, monotonic_deadline)
+        self._trace_count_cache: dict[tuple[str, int], tuple[int, float]] = {}
 
     def _projects(self, slug: str | None) -> list[ProjectConfig]:
         if slug and slug != "all":
@@ -65,6 +67,21 @@ class CostService:
         ttl = self.config.settings.cache_ttl_seconds
         self._cache[key] = (traces, time.monotonic() + ttl)
         return traces
+
+    async def _trace_count(self, project: ProjectConfig, hours: int) -> int:
+        """Trace count for the window via a server-side metrics query (cached).
+
+        Avoids paging every raw trace just to ``len()`` them — the headline
+        ``summary`` only needs the count, not the trace bodies.
+        """
+        key = (project.slug, hours)
+        hit = self._trace_count_cache.get(key)
+        if hit and hit[1] > time.monotonic():
+            return hit[0]
+        count = await self._clients[project.slug].fetch_trace_count_window(hours)
+        ttl = self.config.settings.cache_ttl_seconds
+        self._trace_count_cache[key] = (count, time.monotonic() + ttl)
+        return count
 
     async def _gather(
         self, slug: str | None, hours: int
@@ -221,7 +238,8 @@ class CostService:
         Cost is observation-based (the same window-accurate metrics source as the
         by-model / by-backend breakdowns), so the headline total, the per-model
         rows, and the per-backend totals all reconcile — a backend can never
-        exceed the total. ``trace_count`` still comes from the trace list.
+        exceed the total. ``trace_count`` comes from a server-side ``view=traces``
+        count metric (not by paging every trace), so this stays fast.
         """
         per_project: list[dict[str, Any]] = []
         total = 0.0
@@ -231,7 +249,7 @@ class CostService:
             except Exception:  # noqa: BLE001 — a dead project must not 500 the page
                 models = []
             try:
-                trace_count = len(await self._traces(p, hours))
+                trace_count = await self._trace_count(p, hours)
             except Exception:  # noqa: BLE001
                 trace_count = 0
             cost = round(sum(m["cost"] for m in models), 6)

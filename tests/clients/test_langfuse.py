@@ -174,6 +174,49 @@ async def test_metrics_basic_query() -> None:
     assert "toTimestamp" in query
 
 
+async def test_metrics_honors_explicit_view_and_empty_dimensions() -> None:
+    c = _client()
+    mock_client = _async_client_mock(_response(200, {"data": []}))
+    with patch(
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
+        return_value=mock_client,
+    ):
+        await c._metrics(
+            24,
+            metrics=[{"measure": "count", "aggregation": "count"}],
+            view="traces",
+            dimensions=[],
+        )
+    query = json.loads(mock_client.get.call_args.kwargs["params"]["query"])
+    assert query["view"] == "traces"
+    assert query["dimensions"] == []  # explicit [] is honored, not defaulted
+
+
+async def test_fetch_trace_count_window_uses_traces_count_metric() -> None:
+    c = _client()
+    mock_client = _async_client_mock(_response(200, {"data": [{"count_count": 5266}]}))
+    with patch(
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
+        return_value=mock_client,
+    ):
+        count = await c.fetch_trace_count_window(168)
+    assert count == 5266
+    query = json.loads(mock_client.get.call_args.kwargs["params"]["query"])
+    assert query["view"] == "traces"
+    assert query["metrics"] == [{"measure": "count", "aggregation": "count"}]
+    assert query["dimensions"] == []
+
+
+async def test_fetch_trace_count_window_empty_data_is_zero() -> None:
+    c = _client()
+    mock_client = _async_client_mock(_response(200, {"data": []}))
+    with patch(
+        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
+        return_value=mock_client,
+    ):
+        assert await c.fetch_trace_count_window(24) == 0
+
+
 async def test_metrics_with_time_dimension() -> None:
     c = _client()
     mock_client = _async_client_mock(_response(200, {"data": []}))
