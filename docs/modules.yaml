@@ -41,3 +41,7 @@ robotsix_cost_monitor.langfuse:
 robotsix_cost_monitor.openrouter:
   path: src/robotsix_cost_monitor/openrouter.py
   role: Self-contained async OpenRouter cost/credit client
+
+robotsix_cost_monitor.web.static.shared:
+  path: src/robotsix_cost_monitor/web/static/shared.js
+  role: Shared JS helpers for cost-monitor UI pages (getJSON, fmt, esc, $)
