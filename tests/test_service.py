@@ -112,7 +112,9 @@ async def test_single_project_summary() -> None:
     models = [_model_row(cost=2.5)]
     svc = _svc(_proj("demo"))
     object.__setattr__(
-        svc._clients["demo"], "fetch_traces_window", AsyncMock(return_value=traces)
+        svc._clients["demo"],
+        "fetch_trace_count_window",
+        AsyncMock(return_value=len(traces)),
     )
     object.__setattr__(
         svc._clients["demo"], "fetch_model_usage_window", AsyncMock(return_value=models)
@@ -383,24 +385,25 @@ async def test_backend_cost_cache_expiry() -> None:
 
 
 async def test_summary_uses_both_caches() -> None:
-    """summary() hits _model_usage and _traces; each should cache independently."""
-    traces = [trace(1.0)]
+    """summary() hits _model_usage and _trace_count; each should cache independently."""
     models = [_model_row("opus", cost=1.0)]
     svc = _svc(_proj("demo"))
     client = svc._clients["demo"]
-    object.__setattr__(client, "fetch_traces_window", AsyncMock(return_value=traces))
+    object.__setattr__(
+        client, "fetch_trace_count_window", AsyncMock(return_value=1)
+    )
     object.__setattr__(
         client, "fetch_model_usage_window", AsyncMock(return_value=models)
     )
 
     # First call populates both caches
     await svc.summary("demo", 24)
-    assert client.fetch_traces_window.call_count == 1  # type: ignore[attr-defined]
+    assert client.fetch_trace_count_window.call_count == 1  # type: ignore[attr-defined]
     assert client.fetch_model_usage_window.call_count == 1  # type: ignore[attr-defined]
 
     # Second call hits both caches
     await svc.summary("demo", 24)
-    assert client.fetch_traces_window.call_count == 1  # type: ignore[attr-defined]
+    assert client.fetch_trace_count_window.call_count == 1  # type: ignore[attr-defined]
     assert client.fetch_model_usage_window.call_count == 1  # type: ignore[attr-defined]
 
 
