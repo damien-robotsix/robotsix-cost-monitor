@@ -21,7 +21,9 @@ jobs:
       security-events: write
     uses: damien-robotsix/robotsix-mill/.github/workflows/python-ci.yml@a317d51ad25be89194d55f220164819807d549f1 # v0.0.1
     with:
-      python-version: "3.12"
+      # The project requires Python >=3.14 (see pyproject `requires-python`); a
+      # 3.12 runner fails dependency install with "No interpreter found".
+      python-version: "3.14"
       install-extras: "analyst"
       cov-package: "robotsix_cost_monitor"
     secrets: inherit
