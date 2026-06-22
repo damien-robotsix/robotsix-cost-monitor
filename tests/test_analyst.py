@@ -213,7 +213,7 @@ async def test_no_filing_when_broker_unconfigured(
 async def test_build_digest_shape() -> None:
     svc = _FakeService()
     cfg = _config()
-    digest = await analyst_mod.build_digest(svc, 24, cfg)
+    digest = await analyst_mod.build_digest(svc, 24, cfg)  # type: ignore[arg-type]
     assert digest["window_hours"] == 24
     assert digest["total_cost"] == 12.0
     assert isinstance(digest["stages"], list)
