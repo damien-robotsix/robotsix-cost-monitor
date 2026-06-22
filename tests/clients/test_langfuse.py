@@ -75,12 +75,12 @@ def test_init_strips_trailing_slash_from_base_url() -> None:
 
 def test_init_uses_default_timeout() -> None:
     c = _client()
-    assert c._timeout == 30.0  # type: ignore[attr-defined]
+    assert c._timeout == 30.0
 
 
 def test_init_custom_timeout() -> None:
     c = _client(timeout=10.0)
-    assert c._timeout == 10.0  # type: ignore[attr-defined]
+    assert c._timeout == 10.0
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +94,7 @@ async def test_fetch_traces_window_delegates_to_async_client() -> None:
     c = _client()
     traces = [{"id": "t1"}, {"id": "t2"}]
 
-    async def _mock_fetch(hours: float):
+    async def _mock_fetch(hours: float):  # type: ignore[no-untyped-def]
         for t in traces:
             yield t
 
@@ -107,7 +107,7 @@ async def test_fetch_traces_window_empty() -> None:
     """Returns empty list when the async iterator yields nothing."""
     c = _client()
 
-    async def _mock_fetch(hours: float):
+    async def _mock_fetch(hours: float):  # type: ignore[no-untyped-def]
         if False:
             yield  # never yields
 
@@ -121,7 +121,7 @@ async def test_fetch_traces_window_passes_hours() -> None:
     c = _client()
     mock = Mock()
 
-    async def _mock_fetch(hours: float):
+    async def _mock_fetch(hours: float):  # type: ignore[no-untyped-def]
         mock(hours)
         if False:
             yield
