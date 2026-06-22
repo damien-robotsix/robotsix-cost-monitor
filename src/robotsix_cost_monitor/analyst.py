@@ -330,24 +330,10 @@ def _file_proposals(a: AnalystConfig, analysis: Analysis) -> dict[str, Any]:
     Synchronous (the agent-comm pull client is sync); the caller runs it in a
     thread. Returns the manager's reply body, or an ``error`` entry.
     """
-    from robotsix_agent_comm.sdk.agent import Agent
-    from robotsix_agent_comm.transport.brokered import create_transport_pair
-
-    # Only reached when can_file_tickets is True (host + token are set); the
-    # ``or ""`` just narrows str | None → str for the type checker.
-    registry, transport = create_transport_pair(
-        "brokered",
-        broker_host=a.broker_host or "",
-        broker_port=a.broker_port,
-        broker_scheme=a.broker_scheme,
-        broker_token=a.broker_token or "",
-    )
     # The board MANAGER (an LLM agent, generous timeout) owns ticket creation:
     # it decides which proposals warrant tickets, refines them, dedupes against
     # existing tickets, and sets the source. We just report the findings.
-    agent = Agent(
-        "cost-analyst", registry, transport=transport, pull=True, timeout=240.0
-    )
+    agent = _brokered_agent(a, timeout=240.0)
     lines = "\n".join(
         f"{i}. {p.title}\n   rationale: {p.rationale}"
         + (f"\n   est. saving: {p.estimated_saving}" if p.estimated_saving else "")
@@ -377,6 +363,23 @@ def _file_proposals(a: AnalystConfig, analysis: Analysis) -> dict[str, Any]:
         return {"filed": False, "error": str(exc)}
     body = getattr(reply, "body", None)
     return {"filed": True, "reply": body}
+
+
+def _brokered_agent(a: AnalystConfig, timeout: float = 240.0) -> Agent:  # noqa: F821
+    """Create a brokered-transport Agent for the cost-analyst identity."""
+    from robotsix_agent_comm.sdk.agent import Agent
+    from robotsix_agent_comm.transport.brokered import create_transport_pair
+
+    registry, transport = create_transport_pair(
+        "brokered",
+        broker_host=a.broker_host or "",
+        broker_port=a.broker_port,
+        broker_scheme=a.broker_scheme,
+        broker_token=a.broker_token or "",
+    )
+    return Agent(
+        "cost-analyst", registry, transport=transport, pull=True, timeout=timeout
+    )
 
 
 async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
@@ -453,19 +456,7 @@ def _fetch_ticket_context(a: AnalystConfig, ticket_id: str) -> dict[str, Any]:
     """Read a ticket's board context (ticket + history + description) via the
     broker's read-only responder ops. Best-effort — missing pieces are skipped.
     """
-    from robotsix_agent_comm.sdk.agent import Agent
-    from robotsix_agent_comm.transport.brokered import create_transport_pair
-
-    registry, transport = create_transport_pair(
-        "brokered",
-        broker_host=a.broker_host or "",
-        broker_port=a.broker_port,
-        broker_scheme=a.broker_scheme,
-        broker_token=a.broker_token or "",
-    )
-    agent = Agent(
-        "cost-analyst", registry, transport=transport, pull=True, timeout=30.0
-    )
+    agent = _brokered_agent(a, timeout=30.0)
     ctx: dict[str, Any] = {}
     try:
         with agent:
