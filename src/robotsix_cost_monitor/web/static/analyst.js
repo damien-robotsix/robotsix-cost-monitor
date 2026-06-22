@@ -1,23 +1,25 @@
 "use strict";
 
-const setStatus = (m) => {
+import { $, fmt, esc, getJSON } from "./shared.js";
+
+export const setStatus = (m) => {
   $("status").textContent = m;
 };
 
-function card(label, value, sub) {
+export function card(label, value, sub) {
   return `<div class="card"><div class="label">${esc(label)}</div><div class="value">${esc(
     value,
   )}</div><div class="sub">${esc(sub)}</div></div>`;
 }
 
-function managerReply(rr) {
+export function managerReply(rr) {
   if (!rr) return "";
   if (rr.reply && rr.reply.reply) return rr.reply.reply; // manager NL reply
   if (rr.error) return rr.error;
   return "";
 }
 
-function render(run) {
+export function render(run) {
   if (!run || run.enabled === false || !run.generated_at) {
     $("run-meta").innerHTML = card(
       "last run",
@@ -101,7 +103,7 @@ function render(run) {
   }
 }
 
-async function load() {
+export async function load() {
   try {
     render(await getJSON("/api/analyst/proposals"));
     setStatus("showing last run");
@@ -110,7 +112,7 @@ async function load() {
   }
 }
 
-async function run() {
+export async function run() {
   const btn = $("run-btn");
   btn.disabled = true;
   setStatus("running analysis… this can take a couple of minutes");
@@ -128,7 +130,7 @@ async function run() {
 
 // --- targeted analyses (most costly ticket / stage) ---
 
-function proposalsHTML(props) {
+export function proposalsHTML(props) {
   if (!props || !props.length) return "<p class='muted'>no proposals</p>";
   return props
     .map(
@@ -144,13 +146,13 @@ function proposalsHTML(props) {
     .join("");
 }
 
-function filingHTML(fr) {
+export function filingHTML(fr) {
   if (!fr) return "";
   const reply = managerReply(fr);
   return `<div class="item-body muted"><b>board manager:</b> ${esc(reply || fr.error || "")}</div>`;
 }
 
-function renderTargeted(id, run, headerHTML) {
+export function renderTargeted(id, run, headerHTML) {
   const el = $(id);
   if (!run || !run.generated_at) {
     el.innerHTML = "<p class='muted'>not run yet — press “analyze”</p>";
@@ -167,7 +169,7 @@ function renderTargeted(id, run, headerHTML) {
     ${filingHTML(run.filing_result)}`;
 }
 
-function ticketHeader(run) {
+export function ticketHeader(run) {
   const stages = (run.by_stage || [])
     .map((s) => `${esc(s.name)} ${fmt(s.cost)}`)
     .join(" · ");
@@ -179,7 +181,7 @@ function ticketHeader(run) {
     ${stages ? `<div class="item-body muted">by stage: ${stages}</div>` : ""}`;
 }
 
-function stageHeader(run) {
+export function stageHeader(run) {
   return `
     <div class="item-head">
       <span>${esc(run.stage || "")}</span>
@@ -187,8 +189,8 @@ function stageHeader(run) {
     </div>`;
 }
 
-function makeTargeted(kind, btnId, containerId, headerFn) {
-  const load = async () => {
+export function makeTargeted(kind, btnId, containerId, headerFn) {
+  const loadFn = async () => {
     try {
       renderTargeted(containerId, await getJSON(`/api/analyst/${kind}`), headerFn);
     } catch (e) {
@@ -210,13 +212,16 @@ function makeTargeted(kind, btnId, containerId, headerFn) {
       btn.disabled = false;
     }
   });
-  return load;
+  return loadFn;
 }
 
-const loadTicket = makeTargeted("ticket", "ticket-btn", "ticket-analysis", ticketHeader);
-const loadStage = makeTargeted("stage", "stage-btn", "stage-analysis", stageHeader);
+// --- bootstrap (guarded: skipped under Node/Vitest import) ---
+if (typeof document !== "undefined" && document.getElementById("run-btn")) {
+  const loadTicket = makeTargeted("ticket", "ticket-btn", "ticket-analysis", ticketHeader);
+  const loadStage = makeTargeted("stage", "stage-btn", "stage-analysis", stageHeader);
 
-$("run-btn").addEventListener("click", run);
-load();
-loadTicket();
-loadStage();
+  $("run-btn").addEventListener("click", run);
+  load();
+  loadTicket();
+  loadStage();
+}
