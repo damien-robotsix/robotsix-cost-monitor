@@ -46,6 +46,11 @@ modules:
       - src/robotsix_cost_monitor/analyst.py
     role: Deterministic cost digest + optional LLM proposal pass
 
+  - id: robotsix_cost_monitor.clients
+    paths:
+      - src/robotsix_cost_monitor/clients/__init__.py
+    role: Package init for the external API clients sub-package (Langfuse, OpenRouter)
+
   - id: robotsix_cost_monitor.langfuse
     paths:
       - src/robotsix_cost_monitor/clients/langfuse.py
