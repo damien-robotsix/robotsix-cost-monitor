@@ -18,9 +18,12 @@ import json
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from robotsix_agent_comm.sdk.agent import Agent
 
 from .config import AnalystConfig, Config, data_dir
 from .service import CostService
