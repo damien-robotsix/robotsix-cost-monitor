@@ -64,9 +64,7 @@ class _FakeService:
     async def trace_detail(self, project: str, trace_id: str) -> dict[str, Any]:
         return {"id": trace_id, "observations": []}
 
-    async def top_ticket(
-        self, slug: str | None, hours: int
-    ) -> dict[str, Any] | None:
+    async def top_ticket(self, slug: str | None, hours: int) -> dict[str, Any] | None:
         return {
             "session_id": "demo · 20250101T000000Z-test-1a2b",
             "cost": 45.0,
@@ -116,7 +114,9 @@ class TestSplitSession:
 
 
 class TestLoadTargetedAnalysis:
-    def test_no_file_returns_default(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_no_file_returns_default(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
         result = analyst_mod.load_targeted_analysis("ticket")
         assert result == {"generated_at": None}
@@ -132,7 +132,9 @@ class TestLoadTargetedAnalysis:
         assert result["generated_at"] == "2025-01-01T00:00:00Z"
         assert result["summary"] == "ok"
 
-    def test_invalid_json_returns_default(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_invalid_json_returns_default(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
         d = tmp_path / "analyst"
         d.mkdir()
@@ -240,7 +242,8 @@ async def test_run_ticket_analyst_no_top_ticket(
     object.__setattr__(svc, "top_ticket", AsyncMock(return_value=None))
 
     out = await analyst_mod.run_ticket_analyst(
-        _config(openrouter_key="sk-x"), svc  # type: ignore[arg-type]
+        _config(openrouter_key="sk-x"),
+        svc,  # type: ignore[arg-type]
     )
     assert out["enabled"] is True
     assert out["detail"] == "no ticket sessions in the window"
@@ -270,12 +273,11 @@ async def test_run_ticket_analyst_normal(
             **(extra_out or {}),
         }
 
-    monkeypatch.setattr(
-        analyst_mod, "_run_opus_analysis_and_file", _fake_opus_and_file
-    )
+    monkeypatch.setattr(analyst_mod, "_run_opus_analysis_and_file", _fake_opus_and_file)
 
     out = await analyst_mod.run_ticket_analyst(
-        _config(openrouter_key="sk-x"), _FakeService()  # type: ignore[arg-type]
+        _config(openrouter_key="sk-x"),
+        _FakeService(),  # type: ignore[arg-type]
     )
     assert out["enabled"] is True
     assert out["summary"] == "test summary"
@@ -289,7 +291,8 @@ async def test_run_ticket_analyst_no_board_context_when_no_broker(
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
 
     async def _fake_opus_and_file(
-        a: Any, **kw: Any,
+        a: Any,
+        **kw: Any,
     ) -> dict[str, Any]:
         return {
             "enabled": True,
@@ -300,13 +303,12 @@ async def test_run_ticket_analyst_no_board_context_when_no_broker(
             "history_available": kw.get("extra_out", {}).get("history_available", None),
         }
 
-    monkeypatch.setattr(
-        analyst_mod, "_run_opus_analysis_and_file", _fake_opus_and_file
-    )
+    monkeypatch.setattr(analyst_mod, "_run_opus_analysis_and_file", _fake_opus_and_file)
 
     # openrouter_key set but no broker → context fetch skipped, history_available=False
     out = await analyst_mod.run_ticket_analyst(
-        _config(openrouter_key="sk-x"), _FakeService()  # type: ignore[arg-type]
+        _config(openrouter_key="sk-x"),
+        _FakeService(),  # type: ignore[arg-type]
     )
     assert out["history_available"] is False
 
@@ -328,7 +330,8 @@ async def test_run_stage_analyst_no_top_stage(
     object.__setattr__(svc, "top_stage", AsyncMock(return_value=None))
 
     out = await analyst_mod.run_stage_analyst(
-        _config(openrouter_key="sk-x"), svc  # type: ignore[arg-type]
+        _config(openrouter_key="sk-x"),
+        svc,  # type: ignore[arg-type]
     )
     assert out["enabled"] is True
     assert out["detail"] == "no traces in the window"
@@ -358,12 +361,11 @@ async def test_run_stage_analyst_normal(
             **(extra_out or {}),
         }
 
-    monkeypatch.setattr(
-        analyst_mod, "_run_opus_analysis_and_file", _fake_opus_and_file
-    )
+    monkeypatch.setattr(analyst_mod, "_run_opus_analysis_and_file", _fake_opus_and_file)
 
     out = await analyst_mod.run_stage_analyst(
-        _config(openrouter_key="sk-x"), _FakeService()  # type: ignore[arg-type]
+        _config(openrouter_key="sk-x"),
+        _FakeService(),  # type: ignore[arg-type]
     )
     assert out["enabled"] is True
     assert out["summary"] == "stage summary"
@@ -371,7 +373,9 @@ async def test_run_stage_analyst_normal(
     assert out["sample_size"] == 2
 
 
-def test_load_proposals_no_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_proposals_no_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
     result = analyst_mod.load_proposals()
     assert result == {"generated_at": None, "proposals": []}
@@ -508,7 +512,9 @@ class TestMaybeSetupTracing:
         # Should not raise; no langfuse keys → noop
         analyst_mod._maybe_setup_tracing(a)
 
-    def test_calls_setup_when_keys_present(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_calls_setup_when_keys_present(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         a = _config(
             openrouter_key="sk-x",
             langfuse_public_key="pk-test",
