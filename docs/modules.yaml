@@ -1,55 +1,72 @@
 # Module taxonomy for robotsix-cost-monitor
-# Each entry lists the dotted Python module name, its file path, and a one-line
+# Each entry lists the dotted Python module name, its file paths, and a one-line
 # description of its role.
 
-robotsix_cost_monitor:
-  path: src/robotsix_cost_monitor/__init__.py
-  role: Package root (version + re-exports)
+modules:
+  - id: robotsix_cost_monitor
+    paths:
+      - src/robotsix_cost_monitor/__init__.py
+    role: Package root (version + re-exports)
 
-robotsix_cost_monitor.aggregations:
-  path: src/robotsix_cost_monitor/aggregations.py
-  role: Pure cost-aggregation and transformation functions over trace dicts (no I/O)
+  - id: robotsix_cost_monitor.aggregations
+    paths:
+      - src/robotsix_cost_monitor/aggregations.py
+    role: Pure cost-aggregation and transformation functions over trace dicts (no I/O)
 
-robotsix_cost_monitor.app:
-  path: src/robotsix_cost_monitor/app.py
-  role: FastAPI app factory, server-rendered UI, static files
+  - id: robotsix_cost_monitor.app
+    paths:
+      - src/robotsix_cost_monitor/app.py
+      - src/robotsix_cost_monitor/web/index.html
+      - src/robotsix_cost_monitor/web/static/dashboard.js
+      - src/robotsix_cost_monitor/web/static/dashboard.css
+    role: FastAPI app factory, server-rendered UI, static files
 
-robotsix_cost_monitor.cli:
-  path: src/robotsix_cost_monitor/cli.py
-  role: CLI entrypoint (serve, summary, reconcile)
+  - id: robotsix_cost_monitor.cli
+    paths:
+      - src/robotsix_cost_monitor/cli.py
+    role: CLI entrypoint (serve, summary, reconcile)
 
-robotsix_cost_monitor.config:
-  path: src/robotsix_cost_monitor/config.py
-  role: YAML config models + loader (config/projects.yaml)
+  - id: robotsix_cost_monitor.config
+    paths:
+      - src/robotsix_cost_monitor/config.py
+    role: YAML config models + loader (config/projects.yaml)
 
-robotsix_cost_monitor.service:
-  path: src/robotsix_cost_monitor/service.py
-  role: Cross-project cost aggregation with TTL cache
+  - id: robotsix_cost_monitor.service
+    paths:
+      - src/robotsix_cost_monitor/service.py
+    role: Cross-project cost aggregation with TTL cache
 
-robotsix_cost_monitor.reconcile:
-  path: src/robotsix_cost_monitor/reconcile.py
-  role: OpenRouter ↔ Langfuse cost reconciliation via snapshots
+  - id: robotsix_cost_monitor.reconcile
+    paths:
+      - src/robotsix_cost_monitor/reconcile.py
+    role: OpenRouter ↔ Langfuse cost reconciliation via snapshots
 
-robotsix_cost_monitor.analyst:
-  path: src/robotsix_cost_monitor/analyst.py
-  role: Deterministic cost digest + optional LLM proposal pass
+  - id: robotsix_cost_monitor.analyst
+    paths:
+      - src/robotsix_cost_monitor/analyst.py
+    role: Deterministic cost digest + optional LLM proposal pass
 
-robotsix_cost_monitor.langfuse:
-  path: src/robotsix_cost_monitor/clients/langfuse.py
-  role: Self-contained async Langfuse REST client
+  - id: robotsix_cost_monitor.langfuse
+    paths:
+      - src/robotsix_cost_monitor/clients/langfuse.py
+    role: Self-contained async Langfuse REST client
 
-robotsix_cost_monitor.openrouter:
-  path: src/robotsix_cost_monitor/clients/openrouter.py
-  role: Self-contained async OpenRouter cost/credit client
+  - id: robotsix_cost_monitor.openrouter
+    paths:
+      - src/robotsix_cost_monitor/clients/openrouter.py
+    role: Self-contained async OpenRouter cost/credit client
 
-robotsix_cost_monitor.web.static.shared:
-  path: src/robotsix_cost_monitor/web/static/shared.js
-  role: Shared JS helpers for cost-monitor UI pages (getJSON, fmt, esc, $)
+  - id: robotsix_cost_monitor.web.static.shared
+    paths:
+      - src/robotsix_cost_monitor/web/static/shared.js
+    role: Shared JS helpers for cost-monitor UI pages (getJSON, fmt, esc, $)
 
-robotsix_cost_monitor.web.analyst:
-  path: src/robotsix_cost_monitor/web/analyst.html
-  role: HTML template for the analyst UI page
+  - id: robotsix_cost_monitor.web.analyst
+    paths:
+      - src/robotsix_cost_monitor/web/analyst.html
+    role: HTML template for the analyst UI page
 
-robotsix_cost_monitor.web.static.analyst:
-  path: src/robotsix_cost_monitor/web/static/analyst.js
-  role: Client-side JS for analyst dashboard (fetches /api/analyst/* endpoints)
+  - id: robotsix_cost_monitor.web.static.analyst
+    paths:
+      - src/robotsix_cost_monitor/web/static/analyst.js
+    role: Client-side JS for analyst dashboard (fetches /api/analyst/* endpoints)
