@@ -1,12 +1,14 @@
 "use strict";
 
+import { $, fmt, esc, getJSON } from "./shared.js";
+
 const qs = () => `?project=${$("project").value}&hours=${$("window").value}`;
 
-function setStatus(msg) {
+export function setStatus(msg) {
   $("status").textContent = msg;
 }
 
-async function loadProjects() {
+export async function loadProjects() {
   const projects = await getJSON("/api/projects");
   const sel = $("project");
   for (const p of projects) {
@@ -17,7 +19,7 @@ async function loadProjects() {
   }
 }
 
-function populateBackends(modelRows) {
+export function populateBackends(modelRows) {
   const sel = $("backend");
   const cur = sel.value;
   const set = new Set(modelRows.map((r) => r.backend).filter(Boolean));
@@ -31,7 +33,7 @@ function populateBackends(modelRows) {
   sel.value = cur;
 }
 
-function renderSummary(s, backend, modelRows) {
+export function renderSummary(s, backend, modelRows) {
   let cards;
   if (backend && backend !== "all") {
     // Day-granular backend total from the per-model metrics (see by-model).
@@ -58,7 +60,7 @@ function renderSummary(s, backend, modelRows) {
     .join("");
 }
 
-function renderTrend(points) {
+export function renderTrend(points) {
   const canvas = $("trend");
   const ctx = canvas.getContext("2d");
   const W = (canvas.width = canvas.clientWidth);
@@ -91,7 +93,7 @@ function renderTrend(points) {
   ctx.stroke();
 }
 
-function renderByAgent(rows) {
+export function renderByAgent(rows) {
   const max = Math.max(...rows.map((r) => r.cost), 1e-9);
   $("by-agent").innerHTML =
     rows
@@ -104,7 +106,7 @@ function renderByAgent(rows) {
       .join("") || '<div class="muted">no data</div>';
 }
 
-function renderByModel(rows) {
+export function renderByModel(rows) {
   const max = Math.max(...rows.map((r) => r.cost), 1e-9);
   $("by-model").innerHTML =
     rows
@@ -120,7 +122,7 @@ function renderByModel(rows) {
       .join("") || '<div class="muted">no data</div>';
 }
 
-function renderHighlights(h) {
+export function renderHighlights(h) {
   const t = h.most_expensive_trace;
   const s = h.most_expensive_session;
   const rows = [];
@@ -137,7 +139,7 @@ function renderHighlights(h) {
   $("highlights").innerHTML = rows.join("") || '<div class="muted">no data</div>';
 }
 
-function renderReconcile(rows) {
+export function renderReconcile(rows) {
   $("reconcile").innerHTML = rows
     .map((r) => {
       if (!r.configured)
@@ -168,7 +170,7 @@ function renderReconcile(rows) {
 
 // Warning banner for the last (scheduled or manual) reconcile — only shown when
 // there's drift. Pure renderer over an /api/reconcile/last payload.
-function renderReconBanner(last) {
+export function renderReconBanner(last) {
   const el = $("recon-banner");
   if (!el) return;
   if (!last || last.status !== "warning") {
@@ -194,7 +196,7 @@ function renderReconBanner(last) {
   el.hidden = false;
 }
 
-function renderReconWhen(last) {
+export function renderReconWhen(last) {
   const el = $("recon-when");
   if (!el) return;
   el.textContent =
@@ -206,7 +208,7 @@ function renderReconWhen(last) {
 // Refresh the banner + "last checked" label from the persisted last reconcile,
 // without touching the results table (used after a manual, possibly
 // project-scoped, run that already rendered its own rows).
-async function refreshReconMeta() {
+export async function refreshReconMeta() {
   try {
     const last = await getJSON("/api/reconcile/last");
     renderReconBanner(last);
@@ -220,7 +222,7 @@ async function refreshReconMeta() {
 // banner, the "last checked" time, AND the results table — so the last run is
 // visible after a reload/restart without having to click "run". The table and
 // last.json are volume-persisted, so this survives container restarts.
-async function loadLastReconcile() {
+export async function loadLastReconcile() {
   let last;
   try {
     last = await getJSON("/api/reconcile/last");
@@ -234,7 +236,7 @@ async function loadLastReconcile() {
   }
 }
 
-async function refresh() {
+export async function refresh() {
   setStatus("loading…");
   try {
     const backend = $("backend").value;
@@ -265,7 +267,7 @@ async function refresh() {
   }
 }
 
-async function runReconcile() {
+export async function runReconcile() {
   setStatus("reconciling…");
   try {
     const rows = await getJSON("/api/reconcile?project=" + $("project").value);
@@ -277,14 +279,17 @@ async function runReconcile() {
   }
 }
 
-$("refresh").onclick = refresh;
-$("project").onchange = refresh;
-$("backend").onchange = refresh;
-$("window").onchange = refresh;
-$("reconcile-btn").onclick = runReconcile;
+// --- bootstrap (guarded: skipped under Node/Vitest import) ---
+if (typeof document !== "undefined" && document.getElementById("refresh")) {
+  $("refresh").onclick = refresh;
+  $("project").onchange = refresh;
+  $("backend").onchange = refresh;
+  $("window").onchange = refresh;
+  $("reconcile-btn").onclick = runReconcile;
 
-(async () => {
-  await loadProjects();
-  await refresh();
-  await loadLastReconcile();
-})();
+  (async () => {
+    await loadProjects();
+    await refresh();
+    await loadLastReconcile();
+  })();
+}
