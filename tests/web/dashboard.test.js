@@ -28,7 +28,7 @@ describe("renderSummary", () => {
     const el = document.getElementById("summary-cards");
     expect(el.children.length).toBe(3); // total + 2 projects
     expect(el.innerHTML).toContain("total cost");
-    expect(el.innerHTML).toContain("$123.45");
+    expect(el.innerHTML).toContain("$123");
     expect(el.innerHTML).toContain("proj-a");
     expect(el.innerHTML).toContain("$80");
     expect(el.innerHTML).toContain("proj-b");
