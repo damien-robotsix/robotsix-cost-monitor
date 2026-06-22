@@ -9,7 +9,7 @@ dependencies = [
     "uvicorn[standard]>=0.34",
     "httpx>=0.28",
     "pydantic>=2.10",
-    "robotsix-yaml-config @ git+https://github.com/damien-robotsix/robotsix-yaml-config.git@main",
+    "robotsix-yaml-config @ git+https://github.com/damien-robotsix/robotsix-yaml-config.git@0b62ebafb01fe3f5aca8ca03c9cf281d49d2c637",
 ]
 
 [project.optional-dependencies]
@@ -17,8 +17,8 @@ dependencies = [
 # robotsix-llmio drives the level-2/level-3 OpenRouter agents; robotsix-agent-comm
 # is the pull/mailbox client that files board tickets through the central broker.
 analyst = [
-    "robotsix-llmio[openrouter_deepseek,claude_sdk] @ git+https://github.com/damien-robotsix/robotsix-llmio.git@main",
-    "robotsix-agent-comm @ git+https://github.com/damien-robotsix/robotsix-agent-comm.git@main",
+    "robotsix-llmio[openrouter_deepseek,claude_sdk] @ git+https://github.com/damien-robotsix/robotsix-llmio.git@596f52f7c9a1b151608b8cd1a04f5000d1a6fa8e",
+    "robotsix-agent-comm @ git+https://github.com/damien-robotsix/robotsix-agent-comm.git@f80b9b64491c3dafb0f2070a103d0f1e0077bf45",
 ]
 
 [project.scripts]
