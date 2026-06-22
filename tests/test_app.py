@@ -32,6 +32,41 @@ def test_summary_empty_is_zero() -> None:
     assert body["window_hours"] == 24
 
 
+def test_summary_unknown_project_returns_404() -> None:
+    """An unknown project slug returns 404 with a structured error envelope."""
+    r = _empty_app().get("/api/summary?project=nonexistent")
+    assert r.status_code == 404
+    body = r.json()
+    assert body["error"]["code"] == "HTTP_ERROR"
+    assert "nonexistent" in body["error"]["detail"]
+
+
+def test_summary_project_all_returns_200_when_no_projects() -> None:
+    """?project=all is always valid — returns 200 even with zero projects."""
+    r = _empty_app().get("/api/summary?project=all")
+    assert r.status_code == 200
+
+
+def test_unknown_project_across_endpoints() -> None:
+    """Every project-scoped endpoint returns 404 for an unknown slug."""
+    c = _empty_app()
+    endpoints = [
+        "/api/summary?project=nope",
+        "/api/by-agent?project=nope",
+        "/api/by-model?project=nope",
+        "/api/backend-trend?project=nope&backend=openrouter",
+        "/api/trend?project=nope",
+        "/api/highlights?project=nope",
+        "/api/reconcile?project=nope",
+    ]
+    for ep in endpoints:
+        r = c.get(ep)
+        assert r.status_code == 404, f"{ep} returned {r.status_code}"
+        body = r.json()
+        assert body["error"]["code"] == "HTTP_ERROR"
+        assert "nope" in body["error"]["detail"]
+
+
 def test_by_agent_and_trend_empty() -> None:
     c = _empty_app()
     assert c.get("/api/by-agent?hours=24").json() == []

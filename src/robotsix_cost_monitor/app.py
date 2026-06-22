@@ -10,8 +10,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
-from fastapi import FastAPI, Query
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .analyst import (
@@ -156,6 +157,47 @@ def create_app(config: Config | None = None) -> FastAPI:
     app.state.config = cfg
     app.state.service = service
 
+    @app.exception_handler(RequestValidationError)
+    async def validation_handler(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        """Return a consistent 422 envelope with field-level errors."""
+        errors = [
+            {
+                "field": " → ".join(str(loc) for loc in e["loc"] if loc != "body"),
+                "message": e["msg"],
+                "code": e.get("type", "validation_error"),
+            }
+            for e in exc.errors()
+        ]
+        return JSONResponse(
+            status_code=422,
+            content={"error": {"code": "VALIDATION_ERROR", "details": errors}},
+        )
+
+    @app.exception_handler(HTTPException)
+    async def http_exception_handler(
+        request: Request, exc: HTTPException
+    ) -> JSONResponse:
+        """Wrap HTTPException in a consistent JSON envelope."""
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"error": {"code": "HTTP_ERROR", "detail": exc.detail}},
+        )
+
+    @app.exception_handler(Exception)
+    async def unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
+        """Catch-all: log the full traceback, return sanitized 500."""
+        logger.exception(
+            "Unhandled exception on %s %s", request.method, request.url.path
+        )
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": {"code": "INTERNAL_ERROR", "detail": "Internal Server Error"}
+            },
+        )
+
     @app.get("/health")
     def health() -> dict[str, Any]:
         return {"status": "ok", "projects": [p.name for p in cfg.projects]}
@@ -170,6 +212,10 @@ def create_app(config: Config | None = None) -> FastAPI:
         hours: int = Query(0, ge=0),
     ) -> dict[str, Any]:
         h = _window(hours, cfg)
+        if project != "all" and not cfg.project(project):
+            raise HTTPException(
+                status_code=404, detail=f"Unknown project slug: {project}"
+            )
         return await service.summary(project, h)
 
     @app.get("/api/by-agent")
@@ -179,6 +225,10 @@ def create_app(config: Config | None = None) -> FastAPI:
         backend: str = Query("all"),
     ) -> list[dict[str, Any]]:
         h = _window(hours, cfg)
+        if project != "all" and not cfg.project(project):
+            raise HTTPException(
+                status_code=404, detail=f"Unknown project slug: {project}"
+            )
         return await service.by_agent(project, h, backend)
 
     @app.get("/api/by-model")
@@ -187,6 +237,10 @@ def create_app(config: Config | None = None) -> FastAPI:
         hours: int = Query(0, ge=0),
     ) -> list[dict[str, Any]]:
         h = _window(hours, cfg)
+        if project != "all" and not cfg.project(project):
+            raise HTTPException(
+                status_code=404, detail=f"Unknown project slug: {project}"
+            )
         return await service.by_model(project, h)
 
     @app.get("/api/backend-trend")
@@ -196,6 +250,10 @@ def create_app(config: Config | None = None) -> FastAPI:
         backend: str = Query("all"),
     ) -> list[dict[str, Any]]:
         h = _window(hours, cfg)
+        if project != "all" and not cfg.project(project):
+            raise HTTPException(
+                status_code=404, detail=f"Unknown project slug: {project}"
+            )
         return await service.backend_trend(project, h, backend)
 
     @app.get("/api/trend")
@@ -205,6 +263,10 @@ def create_app(config: Config | None = None) -> FastAPI:
         buckets: int = Query(48, ge=1, le=200),
     ) -> list[dict[str, Any]]:
         h = _window(hours, cfg)
+        if project != "all" and not cfg.project(project):
+            raise HTTPException(
+                status_code=404, detail=f"Unknown project slug: {project}"
+            )
         return await service.trend(project, h, buckets)
 
     @app.get("/api/highlights")
@@ -213,12 +275,20 @@ def create_app(config: Config | None = None) -> FastAPI:
         hours: int = Query(0, ge=0),
     ) -> dict[str, Any]:
         h = _window(hours, cfg)
+        if project != "all" and not cfg.project(project):
+            raise HTTPException(
+                status_code=404, detail=f"Unknown project slug: {project}"
+            )
         return await service.highlights(project, h)
 
     @app.get("/api/reconcile")
     async def reconcile(project: str = Query("all")) -> list[dict[str, Any]]:
         # Running all projects persists last.json (banner + scheduler share it);
         # a single-project run is a transient check that doesn't overwrite it.
+        if project != "all" and not cfg.project(project):
+            raise HTTPException(
+                status_code=404, detail=f"Unknown project slug: {project}"
+            )
         if project == "all":
             out = await reconcile_all(cfg)
             return cast("list[dict[str, Any]]", out["results"])
