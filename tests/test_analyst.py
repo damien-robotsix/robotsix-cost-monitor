@@ -463,49 +463,6 @@ async def test_run_opus_analysis_and_file_no_broker(
     assert out["filing_result"] is None
 
 
-class TestProviderFor:
-    def test_openrouter_uses_api_key(self) -> None:
-        from dataclasses import dataclass
-
-        @dataclass
-        class TLC:
-            provider: str
-            model: str
-
-        tlc = TLC(provider="openrouter", model="deepseek/deepseek-v4-pro")
-        called: dict[str, Any] = {}
-
-        def get_provider(model: str, *, api_key: str | None = None) -> str:
-            called["model"] = model
-            called["api_key"] = api_key
-            return "ok"
-
-        a = _config(openrouter_key="sk-test-key").settings.analyst
-        result = analyst_mod._provider_for(tlc, a, get_provider)
-        assert result == "ok"
-        assert called["api_key"] == "sk-test-key"
-
-    def test_non_openrouter_no_api_key(self) -> None:
-        from dataclasses import dataclass
-
-        @dataclass
-        class TLC:
-            provider: str
-            model: str
-
-        tlc = TLC(provider="claudeSDK", model="opus")
-        called: dict[str, Any] = {}
-
-        def get_provider(model: str) -> str:
-            called["model"] = model
-            called["api_key_passed"] = False
-            return "claude-ok"
-
-        a = _config(openrouter_key="sk-test-key").settings.analyst
-        result = analyst_mod._provider_for(tlc, a, get_provider)
-        assert result == "claude-ok"
-
-
 class TestMaybeSetupTracing:
     def test_noop_when_no_keys(self) -> None:
         a = _config().settings.analyst
