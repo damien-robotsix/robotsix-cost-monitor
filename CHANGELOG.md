@@ -1,5 +1,13 @@
 ## 0.0.0 (unreleased)
 
+- **Extracted route and exception handlers into `routes.py`.** All HTTP route
+  handlers and exception handlers previously inline in `create_app()` now live in
+  `src/robotsix_cost_monitor/routes.py` behind a module-level `router = APIRouter()`.
+  Route handlers use FastAPI dependency injection (`Depends(get_config)`,
+  `Depends(get_service)`) instead of closures over `create_app` locals. The
+  `create_app` factory is reduced to ~70 lines and assembles the app via
+  `register_exception_handlers(app)` + `app.include_router(router)`.
+
 - **Added `dependency-hygiene` job to CI.** A new `dependency-hygiene` CI job
   runs `deptry .` against the full dependency tree (`--all-extras`), failing on
   unused, missing, or misclassified dependencies.

@@ -4,6 +4,8 @@
 
 ::: robotsix_cost_monitor.app
 
+::: robotsix_cost_monitor.routes
+
 ::: robotsix_cost_monitor.cli
 
 ::: robotsix_cost_monitor.config
