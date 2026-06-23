@@ -17,8 +17,7 @@
 │   ├── analyst.py              #   Optional LLM cost-analyst (robotsix-llmio + agent-comm)
 │   ├── aggregations.py         #   Pure cost-aggregation functions (no I/O)
 │   ├── clients/
-│   │   ├── langfuse.py         #   Self-contained async Langfuse REST client (httpx)
-│   │   └── openrouter.py       #   Self-contained async OpenRouter client (httpx)
+│   │   └── langfuse.py         #   Self-contained async Langfuse REST client (httpx)
 │   └── web/                    #   Server-rendered dashboard UI
 │       ├── index.html          #     Main dashboard page
 │       ├── analyst.html        #     Analyst results page
@@ -80,7 +79,7 @@ Reconciliation works by **snapshotting** OpenRouter's cumulative per-key
 usage (OpenRouter has no per-window cost endpoint):
 
 1. `reconcile_project()` fetches the key's current cumulative usage via
-   `OpenRouterClient.fetch_key_usage()`.
+   `OpenRouterKeyCostSource.fetch_key_usage()` (from `robotsix-llmio`).
 2. It diffs against the **prior snapshot** (stored under
    `.data/reconcile/<slug>.json`) to get `provider_delta_usd` — the
    OpenRouter spend in the interval.
@@ -129,9 +128,9 @@ CLI commands work without it. It requires two packages installed via the
 
 ## Key invariants
 
-- **No `robotsix-llmio` dependency in the base install.** The Langfuse and
-  OpenRouter clients are self-contained (`httpx` only). The analyst extra is
-  installed separately.
+- **No `robotsix-llmio` dependency in the base install.** The Langfuse client is
+  self-contained (`httpx` only). The OpenRouter client is imported from `robotsix-llmio`
+  (analyst extra). The analyst extra is installed separately.
 - **Reconciliation is idempotent.** Running it twice back-to-back with no
   intervening spend must produce `provider_delta_usd ≈ 0` and
   `within_tolerance: true`.
