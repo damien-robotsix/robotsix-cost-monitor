@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import logging
+import os
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import structlog
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
@@ -26,15 +27,31 @@ from .routes import register_exception_handlers, router
 from .service import CostService
 
 _WEB = Path(__file__).resolve().parent / "web"
-logger = logging.getLogger(__name__)
 
-# Lazy import so the dashboard works without the optional `analyst` extra.
-try:
-    from robotsix_llmio.logging import setup_logging
 
-    setup_logging(loggers=["robotsix_cost_monitor"], fmt="json")
-except ImportError:
-    pass
+def _configure_logging() -> None:
+    """Configure structlog: JSON/console output with request-ID enrichment."""
+    fmt = os.environ.get("LOG_FORMAT", "json" if os.environ.get("CI") else "console")
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.PositionalArgumentsFormatter(),
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.dict_tracebacks,
+            structlog.processors.JSONRenderer()
+            if fmt == "json"
+            else structlog.dev.ConsoleRenderer(),
+        ],
+        wrapper_class=structlog.stdlib.BoundLogger,
+        context_class=dict,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
+
+
+_configure_logging()
+logger = structlog.get_logger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -169,6 +186,10 @@ def create_app(config: Config | None = None) -> FastAPI:
     app = FastAPI(title="robotsix-cost-monitor", version="0.1.0", lifespan=lifespan)
     app.state.config = cfg
     app.state.service = service
+
+    from asgi_correlation_id import CorrelationIdMiddleware
+
+    app.add_middleware(CorrelationIdMiddleware)
 
     register_exception_handlers(app)
     app.include_router(router)

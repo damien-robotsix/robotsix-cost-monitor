@@ -7,10 +7,10 @@ from ``app.state``.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import Any, cast
 
+import structlog
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -28,7 +28,7 @@ from .reconcile import load_last_reconcile, reconcile_all, reconcile_project
 from .service import CostService
 
 _WEB = Path(__file__).resolve().parent / "web"
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 router = APIRouter()
 

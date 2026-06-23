@@ -1,5 +1,13 @@
 ## 0.0.0 (unreleased)
 
+- **Adopted `structlog` as the first-party structured logging layer**, replacing
+  the optional `robotsix_llmio.logging.setup_logging` fallback. All loggers now
+  use `structlog.get_logger(__name__)` with `stdlib.LoggerFactory` bridging so
+  stdlib handlers (OTel/Sentry) continue to work. Added `asgi-correlation-id`
+  middleware (`CorrelationIdMiddleware`) for `X-Request-ID` propagation across
+  every log entry. The `LOG_FORMAT` environment variable controls output format
+  (`json` for production, `console` for dev).
+
 - **Extracted route and exception handlers into `routes.py`.** All HTTP route
   handlers and exception handlers previously inline in `create_app()` now live in
   `src/robotsix_cost_monitor/routes.py` behind a module-level `router = APIRouter()`.

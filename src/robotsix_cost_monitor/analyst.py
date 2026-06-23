@@ -15,11 +15,11 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
-import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+import structlog
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 from .config import AnalystConfig, Config, data_dir
 from .service import CostService
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 #: Cap a single trace's serialized detail handed to the trace agent.
 _TRACE_CHAR_CAP = 24_000
