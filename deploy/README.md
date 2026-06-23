@@ -63,14 +63,14 @@ includes the `analyst` extra (the `openai` client), so no rebuild is needed.
 
 ### 3a. Fix bind-mount ownership
 
-The container runs as UID 10001 (`appuser`), but files you create on the host
-are owned by your login user. Give UID 10001 ownership so the container can read
+The container runs as UID 1001 (`appuser`), but files you create on the host
+are owned by your login user. Give UID 1001 ownership so the container can read
 its config and write runtime state (reconciliation snapshots, analyst
 proposals):
 
 ```sh
-sudo chown 10001:10001 config/projects.yaml
-sudo chown -R 10001:10001 data
+sudo chown 1001:1001 config/projects.yaml
+sudo chown -R 1001:1001 data
 chmod 600 config/projects.yaml      # contains credentials
 ```
 
