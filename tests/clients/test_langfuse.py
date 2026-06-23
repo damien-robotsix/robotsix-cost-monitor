@@ -89,7 +89,7 @@ def test_init_custom_timeout() -> None:
 
 
 async def test_fetch_traces_window_delegates_to_async_client() -> None:
-    """fetch_traces_window delegates to AsyncLangfuseReadClient.fetch_traces_window
+    """fetch_traces_window delegates to _LangfuseRESTClient.fetch_traces_window
     and collects the async iterator into a list."""
     c = _client()
     traces = [{"id": "t1"}, {"id": "t2"}]
@@ -137,7 +137,7 @@ async def test_fetch_traces_window_passes_hours() -> None:
 
 
 async def test_fetch_trace_detail_delegates() -> None:
-    """fetch_trace_detail delegates to AsyncLangfuseReadClient.fetch_trace_detail."""
+    """fetch_trace_detail delegates to _LangfuseRESTClient.fetch_trace_detail."""
     c = _client()
     detail = {"id": "tr-99", "name": "implement", "observations": []}
     mock = AsyncMock(return_value=detail)
