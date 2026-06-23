@@ -17,5 +17,3 @@
 ::: robotsix_cost_monitor.analyst
 
 ::: robotsix_cost_monitor.clients.langfuse
-
-::: robotsix_cost_monitor.clients.openrouter

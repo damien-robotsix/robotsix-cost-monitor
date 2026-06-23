@@ -6,10 +6,11 @@ import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from conftest import _proj
+from robotsix_llmio.openrouter import KeyUsage
 
 from robotsix_cost_monitor.config import Settings
 from robotsix_cost_monitor.reconcile import (
@@ -77,9 +78,9 @@ async def test_no_openrouter_key() -> None:
 async def test_openrouter_fetch_failure() -> None:
     """OpenRouterKey fetch_key_usage raises → result has error, no snapshot saved."""
     proj = _proj("demo")
-    with patch("robotsix_cost_monitor.reconcile.OpenRouterClient") as orc_cls:
+    with patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls:
         mock_orc = orc_cls.return_value
-        mock_orc.fetch_key_usage = AsyncMock(side_effect=RuntimeError("boom"))
+        mock_orc.fetch_key_usage = Mock(side_effect=RuntimeError("boom"))
 
         result = await reconcile_project(proj, _settings())
 
@@ -92,25 +93,13 @@ async def test_first_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
 
     proj = _proj("demo")
-    with patch("robotsix_cost_monitor.reconcile.OpenRouterClient") as orc_cls:
+    with patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls:
         mock_orc = orc_cls.return_value
-        mock_orc.fetch_key_usage = AsyncMock(return_value=12.5)
-        mock_orc.fetch_credits = AsyncMock(
-            return_value={
-                "total_credits": 100.0,
-                "total_usage": 30.0,
-                "remaining": 70.0,
-            }
-        )
+        mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=12.5))
 
         result = await reconcile_project(proj, _settings())
 
     assert result["configured"] is True
-    assert result["balance"] == {
-        "total_credits": 100.0,
-        "total_usage": 30.0,
-        "remaining": 70.0,
-    }
     assert "first snapshot recorded" in result["detail"]
     assert "drift_usd" not in result
 
@@ -138,18 +127,11 @@ async def test_second_call_within_tolerance(
 
     with (
         patch("robotsix_cost_monitor.reconcile.datetime", _FrozenNow(now)),
-        patch("robotsix_cost_monitor.reconcile.OpenRouterClient") as orc_cls,
+        patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls,
         patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
     ):
         mock_orc = orc_cls.return_value
-        mock_orc.fetch_key_usage = AsyncMock(return_value=15.0)
-        mock_orc.fetch_credits = AsyncMock(
-            return_value={
-                "total_credits": 100.0,
-                "total_usage": 15.0,
-                "remaining": 85.0,
-            }
-        )
+        mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=15.0))
 
         mock_lf = lf_cls.return_value
         mock_lf.fetch_cost_by_backend = AsyncMock(return_value={"openrouter": 5.0})
@@ -180,12 +162,11 @@ async def test_drift_exceeds_tolerance(
 
     with (
         patch("robotsix_cost_monitor.reconcile.datetime", _FrozenNow(now)),
-        patch("robotsix_cost_monitor.reconcile.OpenRouterClient") as orc_cls,
+        patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls,
         patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
     ):
         mock_orc = orc_cls.return_value
-        mock_orc.fetch_key_usage = AsyncMock(return_value=20.0)
-        mock_orc.fetch_credits = AsyncMock(return_value={})
+        mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=20.0))
 
         mock_lf = lf_cls.return_value
         mock_lf.fetch_cost_by_backend = AsyncMock(return_value={"openrouter": 3.0})
@@ -217,12 +198,11 @@ async def test_negative_interval_treated_as_zero(
 
     with (
         patch("robotsix_cost_monitor.reconcile.datetime", _FrozenNow(now)),
-        patch("robotsix_cost_monitor.reconcile.OpenRouterClient") as orc_cls,
+        patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls,
         patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
     ):
         mock_orc = orc_cls.return_value
-        mock_orc.fetch_key_usage = AsyncMock(return_value=8.0)
-        mock_orc.fetch_credits = AsyncMock(return_value={})
+        mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=8.0))
 
         mock_lf = lf_cls.return_value
         mock_lf.fetch_cost_by_backend = AsyncMock(return_value={})
@@ -235,27 +215,6 @@ async def test_negative_interval_treated_as_zero(
     assert result["langfuse_cost_usd"] == 0.0
 
 
-async def test_openrouter_credits_fetch_failure_ignored(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Credits fetch failure is suppressed — reconcile still succeeds."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-
-    proj = _proj("demo")
-
-    with patch("robotsix_cost_monitor.reconcile.OpenRouterClient") as orc_cls:
-        mock_orc = orc_cls.return_value
-        mock_orc.fetch_key_usage = AsyncMock(return_value=5.0)
-        mock_orc.fetch_credits = AsyncMock(side_effect=RuntimeError("credits-down"))
-
-        result = await reconcile_project(proj, _settings())
-
-    # Credits failure is suppressed — no error, no balance key
-    assert "error" not in result
-    assert "balance" not in result
-    assert "first snapshot recorded" in result["detail"]
-
-
 async def test_missing_snapshot_file_treated_as_first(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -264,9 +223,9 @@ async def test_missing_snapshot_file_treated_as_first(
 
     # _load_snapshot is tested directly below; here we verify the integration
     proj = _proj("demo")
-    with patch("robotsix_cost_monitor.reconcile.OpenRouterClient") as orc_cls:
+    with patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls:
         mock_orc = orc_cls.return_value
-        mock_orc.fetch_key_usage = AsyncMock(return_value=1.0)
+        mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=1.0))
 
         result = await reconcile_project(proj, _settings())
 

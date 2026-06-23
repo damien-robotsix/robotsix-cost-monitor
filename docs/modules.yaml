@@ -61,11 +61,6 @@ modules:
       - src/robotsix_cost_monitor/clients/langfuse.py
     role: Self-contained async Langfuse REST client
 
-  - id: robotsix_cost_monitor.openrouter
-    paths:
-      - src/robotsix_cost_monitor/clients/openrouter.py
-    role: Self-contained async OpenRouter cost/credit client
-
   - id: robotsix_cost_monitor.web.static.shared
     paths:
       - src/robotsix_cost_monitor/web/static/shared.js

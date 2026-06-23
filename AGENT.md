@@ -98,18 +98,17 @@ Used by `src/robotsix_cost_monitor/clients/langfuse.py` (`LangfuseClient._lf`).
 All Langfuse HTTP transport is delegated to this shared client. Never
 instantiate a second Langfuse client or call the Langfuse REST API directly.
 
-## OpenRouter client (`src/robotsix_cost_monitor/clients/openrouter.py`)
+## OpenRouter client (`robotsix-llmio`)
 
-`OpenRouterClient` is a **self-contained**, read-only async HTTP client that
-wraps two OpenRouter endpoints:
+`OpenRouterKeyCostSource` is a sync OpenRouter client imported from `robotsix_llmio.openrouter`
+(part of the optional `[analyst]` extra). It wraps the per-key usage endpoint:
 
-- `GET /credits` — account-level balance (shared across all keys)
-- `GET /key` — per-key cumulative usage (the reconciliation basis)
+- `GET /auth/key` — per-key cumulative usage (the reconciliation basis), returned as
+  a `KeyUsage(usage, limit, label)` dataclass.
 
-It depends only on `httpx` and the stdlib. It does **not** delegate to
-`robotsix-llmio`. This is a **known extraction target** — agents should NOT
-expand it. New OpenRouter endpoints or features should go into `robotsix-llmio`
-instead.
+The local `robotsix_cost_monitor.clients.openrouter.OpenRouterClient` has been deleted
+in favour of this shared client. New OpenRouter endpoints or features should go into
+`robotsix-llmio`.
 
 ## Data directory convention
 
