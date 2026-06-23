@@ -50,6 +50,12 @@ packages = ["src/robotsix_cost_monitor"]
 [tool.hatch.metadata]
 allow-direct-references = true
 
+[tool.uv]
+# GHSA-4xgf-cpjx-pc3j: pydantic-settings <2.14.2 allows symlink traversal
+# outside secrets_dir.  Force the fixed version for all transitive dependants
+# (currently mcp → claude-agent-sdk → robotsix-llmio[claude_sdk]).
+constraint-dependencies = ["pydantic-settings>=2.14.2"]
+
 [tool.ruff]
 line-length = 88
 target-version = "py312"
