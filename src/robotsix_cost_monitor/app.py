@@ -39,6 +39,11 @@ except ImportError:
     pass
 
 
+def _require_project(project: str, cfg: Config) -> None:
+    if project != "all" and not cfg.project(project):
+        raise HTTPException(status_code=404, detail=f"Unknown project slug: {project}")
+
+
 def _window(hours: int, config: Config) -> int:
     return hours or config.settings.default_window_hours
 
@@ -212,10 +217,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         hours: int = Query(0, ge=0),
     ) -> dict[str, Any]:
         h = _window(hours, cfg)
-        if project != "all" and not cfg.project(project):
-            raise HTTPException(
-                status_code=404, detail=f"Unknown project slug: {project}"
-            )
+        _require_project(project, cfg)
         return await service.summary(project, h)
 
     @app.get("/api/by-agent")
@@ -225,10 +227,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         backend: str = Query("all"),
     ) -> list[dict[str, Any]]:
         h = _window(hours, cfg)
-        if project != "all" and not cfg.project(project):
-            raise HTTPException(
-                status_code=404, detail=f"Unknown project slug: {project}"
-            )
+        _require_project(project, cfg)
         return await service.by_agent(project, h, backend)
 
     @app.get("/api/by-model")
@@ -237,10 +236,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         hours: int = Query(0, ge=0),
     ) -> list[dict[str, Any]]:
         h = _window(hours, cfg)
-        if project != "all" and not cfg.project(project):
-            raise HTTPException(
-                status_code=404, detail=f"Unknown project slug: {project}"
-            )
+        _require_project(project, cfg)
         return await service.by_model(project, h)
 
     @app.get("/api/backend-trend")
@@ -250,10 +246,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         backend: str = Query("all"),
     ) -> list[dict[str, Any]]:
         h = _window(hours, cfg)
-        if project != "all" and not cfg.project(project):
-            raise HTTPException(
-                status_code=404, detail=f"Unknown project slug: {project}"
-            )
+        _require_project(project, cfg)
         return await service.backend_trend(project, h, backend)
 
     @app.get("/api/trend")
@@ -263,10 +256,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         buckets: int = Query(48, ge=1, le=200),
     ) -> list[dict[str, Any]]:
         h = _window(hours, cfg)
-        if project != "all" and not cfg.project(project):
-            raise HTTPException(
-                status_code=404, detail=f"Unknown project slug: {project}"
-            )
+        _require_project(project, cfg)
         return await service.trend(project, h, buckets)
 
     @app.get("/api/highlights")
@@ -275,20 +265,14 @@ def create_app(config: Config | None = None) -> FastAPI:
         hours: int = Query(0, ge=0),
     ) -> dict[str, Any]:
         h = _window(hours, cfg)
-        if project != "all" and not cfg.project(project):
-            raise HTTPException(
-                status_code=404, detail=f"Unknown project slug: {project}"
-            )
+        _require_project(project, cfg)
         return await service.highlights(project, h)
 
     @app.get("/api/reconcile")
     async def reconcile(project: str = Query("all")) -> list[dict[str, Any]]:
         # Running all projects persists last.json (banner + scheduler share it);
         # a single-project run is a transient check that doesn't overwrite it.
-        if project != "all" and not cfg.project(project):
-            raise HTTPException(
-                status_code=404, detail=f"Unknown project slug: {project}"
-            )
+        _require_project(project, cfg)
         if project == "all":
             out = await reconcile_all(cfg)
             return cast("list[dict[str, Any]]", out["results"])
