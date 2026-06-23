@@ -8,15 +8,12 @@ import logging
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
-from fastapi import FastAPI, HTTPException, Query, Request
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from .analyst import (
-    build_digest,
     load_proposals,
     load_targeted_analysis,
     run_analyst,
@@ -24,7 +21,8 @@ from .analyst import (
     run_ticket_analyst,
 )
 from .config import Config, load_config
-from .reconcile import load_last_reconcile, reconcile_all, reconcile_project
+from .reconcile import reconcile_all
+from .routes import register_exception_handlers, router
 from .service import CostService
 
 _WEB = Path(__file__).resolve().parent / "web"
@@ -39,13 +37,9 @@ except ImportError:
     pass
 
 
-def _require_project(project: str, cfg: Config) -> None:
-    if project != "all" and not cfg.project(project):
-        raise HTTPException(status_code=404, detail=f"Unknown project slug: {project}")
-
-
-def _window(hours: int, config: Config) -> int:
-    return hours or config.settings.default_window_hours
+# ---------------------------------------------------------------------------
+# Scheduler helpers (tested directly — keep in this module)
+# ---------------------------------------------------------------------------
 
 
 def _parse_iso(value: Any) -> datetime | None:
@@ -132,7 +126,21 @@ async def _reconcile_loop(cfg: Config, hours: float) -> None:
         await asyncio.sleep(interval)
 
 
+# ---------------------------------------------------------------------------
+# App factory
+# ---------------------------------------------------------------------------
+
+
 def create_app(config: Config | None = None) -> FastAPI:
+    """Assemble the FastAPI application.
+
+    Loads the project :class:`~robotsix_cost_monitor.config.Config` (when *config*
+    is ``None``, reads from the path given by ``COST_MONITOR_CONFIG``), builds a
+    :class:`~robotsix_cost_monitor.service.CostService`, wires the lifespan
+    (analyst and reconciliation background loops), mounts the route handlers from
+    :mod:`robotsix_cost_monitor.routes`, registers exception handlers, and serves
+    the static web assets.
+    """
     cfg = config or load_config()
     service = CostService(cfg)
 
@@ -162,163 +170,8 @@ def create_app(config: Config | None = None) -> FastAPI:
     app.state.config = cfg
     app.state.service = service
 
-    @app.exception_handler(RequestValidationError)
-    async def validation_handler(
-        request: Request, exc: RequestValidationError
-    ) -> JSONResponse:
-        """Return a consistent 422 envelope with field-level errors."""
-        errors = [
-            {
-                "field": " → ".join(str(loc) for loc in e["loc"] if loc != "body"),
-                "message": e["msg"],
-                "code": e.get("type", "validation_error"),
-            }
-            for e in exc.errors()
-        ]
-        return JSONResponse(
-            status_code=422,
-            content={"error": {"code": "VALIDATION_ERROR", "details": errors}},
-        )
-
-    @app.exception_handler(HTTPException)
-    async def http_exception_handler(
-        request: Request, exc: HTTPException
-    ) -> JSONResponse:
-        """Wrap HTTPException in a consistent JSON envelope."""
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={"error": {"code": "HTTP_ERROR", "detail": exc.detail}},
-        )
-
-    @app.exception_handler(Exception)
-    async def unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
-        """Catch-all: log the full traceback, return sanitized 500."""
-        logger.exception(
-            "Unhandled exception on %s %s", request.method, request.url.path
-        )
-        return JSONResponse(
-            status_code=500,
-            content={
-                "error": {"code": "INTERNAL_ERROR", "detail": "Internal Server Error"}
-            },
-        )
-
-    @app.get("/health")
-    def health() -> dict[str, Any]:
-        return {"status": "ok", "projects": [p.name for p in cfg.projects]}
-
-    @app.get("/api/projects")
-    def projects() -> list[dict[str, str]]:
-        return [{"name": p.name, "slug": p.slug} for p in cfg.projects]
-
-    @app.get("/api/summary")
-    async def summary(
-        project: str = Query("all"),
-        hours: int = Query(0, ge=0),
-    ) -> dict[str, Any]:
-        h = _window(hours, cfg)
-        _require_project(project, cfg)
-        return await service.summary(project, h)
-
-    @app.get("/api/by-agent")
-    async def by_agent(
-        project: str = Query("all"),
-        hours: int = Query(0, ge=0),
-        backend: str = Query("all"),
-    ) -> list[dict[str, Any]]:
-        h = _window(hours, cfg)
-        _require_project(project, cfg)
-        return await service.by_agent(project, h, backend)
-
-    @app.get("/api/by-model")
-    async def by_model(
-        project: str = Query("all"),
-        hours: int = Query(0, ge=0),
-    ) -> list[dict[str, Any]]:
-        h = _window(hours, cfg)
-        _require_project(project, cfg)
-        return await service.by_model(project, h)
-
-    @app.get("/api/backend-trend")
-    async def backend_trend(
-        project: str = Query("all"),
-        hours: int = Query(0, ge=0),
-        backend: str = Query("all"),
-    ) -> list[dict[str, Any]]:
-        h = _window(hours, cfg)
-        _require_project(project, cfg)
-        return await service.backend_trend(project, h, backend)
-
-    @app.get("/api/trend")
-    async def trend(
-        project: str = Query("all"),
-        hours: int = Query(0, ge=0),
-        buckets: int = Query(48, ge=1, le=200),
-    ) -> list[dict[str, Any]]:
-        h = _window(hours, cfg)
-        _require_project(project, cfg)
-        return await service.trend(project, h, buckets)
-
-    @app.get("/api/highlights")
-    async def highlights(
-        project: str = Query("all"),
-        hours: int = Query(0, ge=0),
-    ) -> dict[str, Any]:
-        h = _window(hours, cfg)
-        _require_project(project, cfg)
-        return await service.highlights(project, h)
-
-    @app.get("/api/reconcile")
-    async def reconcile(project: str = Query("all")) -> list[dict[str, Any]]:
-        # Running all projects persists last.json (banner + scheduler share it);
-        # a single-project run is a transient check that doesn't overwrite it.
-        _require_project(project, cfg)
-        if project == "all":
-            out = await reconcile_all(cfg)
-            return cast("list[dict[str, Any]]", out["results"])
-        targets = [p for p in cfg.projects if p.slug == project]
-        return [await reconcile_project(p, cfg.settings) for p in targets]
-
-    @app.get("/api/reconcile/last")
-    def reconcile_last() -> dict[str, Any]:
-        return load_last_reconcile()
-
-    @app.get("/api/analyst/digest")
-    async def analyst_digest(hours: int = Query(0, ge=0)) -> dict[str, Any]:
-        h = hours or cfg.settings.analyst.window_hours
-        return await build_digest(service, h, cfg)
-
-    @app.get("/api/analyst/proposals")
-    def analyst_proposals() -> dict[str, Any]:
-        return load_proposals()
-
-    @app.post("/api/analyst/run")
-    async def analyst_run() -> dict[str, Any]:
-        return await run_analyst(cfg, service)
-
-    @app.get("/api/analyst/ticket")
-    def analyst_ticket() -> dict[str, Any]:
-        return load_targeted_analysis("ticket")
-
-    @app.post("/api/analyst/ticket-run")
-    async def analyst_ticket_run() -> dict[str, Any]:
-        return await run_ticket_analyst(cfg, service)
-
-    @app.get("/api/analyst/stage")
-    def analyst_stage() -> dict[str, Any]:
-        return load_targeted_analysis("stage")
-
-    @app.post("/api/analyst/stage-run")
-    async def analyst_stage_run() -> dict[str, Any]:
-        return await run_stage_analyst(cfg, service)
-
-    @app.get("/", response_class=HTMLResponse)
-    def index() -> str:
-        return (_WEB / "index.html").read_text()
-
-    @app.get("/analyst", response_class=HTMLResponse)
-    def analyst_page() -> str:
-        return (_WEB / "analyst.html").read_text()
+    register_exception_handlers(app)
+    app.include_router(router)
 
     if (_WEB / "static").is_dir():
         app.mount("/static", StaticFiles(directory=_WEB / "static"), name="static")
