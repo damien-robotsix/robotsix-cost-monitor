@@ -4,6 +4,11 @@
   that validated a project slug against the config now delegate to a shared
   `_require_project(project, cfg)` function, eliminating ~21 lines of
   duplicated control-flow logic.
+- **Added `ARCHITECTURE.md` and `CONTRIBUTING.md`.** The architecture doc
+  covers directory layout, data flow, background loop lifecycle, the optional
+  `analyst` extra, and key invariants. The contributing doc covers dev setup,
+  test/lint/type-check commands, PR workflow, and the git-dependency upgrade
+  process. Both are linked from `README.md`.
 
 - **Vendored `LangfuseClient` REST helper.** The `LangfuseClient` now uses a
   small, self-contained `_LangfuseRESTClient` instead of importing from the
