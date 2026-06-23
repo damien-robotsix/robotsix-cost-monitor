@@ -1,5 +1,9 @@
 ## 0.0.0 (unreleased)
 
+- **Added `dependency-hygiene` job to CI.** A new `dependency-hygiene` CI job
+  runs `deptry .` against the full dependency tree (`--all-extras`), failing on
+  unused, missing, or misclassified dependencies.
+
 - **Extracted `_require_project` helper in `app.py`.** Seven route handlers
   that validated a project slug against the config now delegate to a shared
   `_require_project(project, cfg)` function, eliminating ~21 lines of
