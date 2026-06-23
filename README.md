@@ -49,6 +49,16 @@ uv run robotsix-cost-monitor reconcile [--project SLUG]
 `/api/reconcile`, `/api/analyst/digest`, `/api/analyst/proposals`,
 `POST /api/analyst/run` — all accept `?project=<slug>|all&hours=<N>`.
 
+## Architecture
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the directory layout, data flow,
+background loop lifecycle, optional `analyst` extra, and key invariants.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup, running tests/lint,
+PR workflow, and the git-dependency upgrade process.
+
 ## Development
 
 ```bash
