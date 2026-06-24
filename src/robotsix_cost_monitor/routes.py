@@ -150,6 +150,18 @@ async def by_agent(
     return await service.by_agent(project, h, backend)
 
 
+@router.get("/api/by-agent-segmented")
+async def by_agent_segmented(
+    project: str = Query("all"),
+    hours: int = Query(0, ge=0),
+    cfg: Config = Depends(get_config),
+    service: CostService = Depends(get_service),
+) -> list[dict[str, Any]]:
+    h = _window(hours, cfg)
+    _require_project(project, cfg)
+    return await service.by_agent_segmented(project, h)
+
+
 @router.get("/api/by-model")
 async def by_model(
     project: str = Query("all"),

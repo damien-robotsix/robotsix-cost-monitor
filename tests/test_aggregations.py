@@ -7,6 +7,7 @@ from helpers import trace
 from robotsix_cost_monitor.aggregations import (
     aggregate_by_name,
     aggregate_by_name_backend,
+    aggregate_by_name_split,
     aggregate_by_session,
     backend_cost_series,
     backend_for_model,
@@ -261,3 +262,144 @@ def test_aggregate_by_name_backend_handles_null_cost() -> None:
     result = aggregate_by_name_backend(rows, "claude-sdk")
     assert result[0]["cost"] == 0.0
     assert result[0]["count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# aggregate_by_name_split
+# ---------------------------------------------------------------------------
+
+
+def test_aggregate_by_name_split_both_pools() -> None:
+    """Stage with both backends → correct per-pool costs and counts."""
+    rows = [
+        {"name": "implement", "backend": "openrouter", "cost": 10.0, "count": 5},
+        {"name": "implement", "backend": "claude-sdk", "cost": 40.0, "count": 20},
+    ]
+    result = aggregate_by_name_split(rows)
+    assert len(result) == 1
+    r = result[0]
+    assert r["name"] == "implement"
+    assert r["openrouter_cost"] == 10.0
+    assert r["subscription_cost"] == 40.0
+    assert r["total_cost"] == 50.0
+    assert r["openrouter_count"] == 5
+    assert r["subscription_count"] == 20
+
+
+def test_aggregate_by_name_split_subscription_only() -> None:
+    """Stage with only claude-sdk rows (refine-like) → openrouter_cost is 0."""
+    rows = [
+        {"name": "refine", "backend": "claude-sdk", "cost": 51.15, "count": 183},
+    ]
+    result = aggregate_by_name_split(rows)
+    assert len(result) == 1
+    r = result[0]
+    assert r["name"] == "refine"
+    assert r["openrouter_cost"] == 0.0
+    assert r["subscription_cost"] == 51.15
+    assert r["total_cost"] == 51.15
+    assert r["openrouter_count"] == 0
+    assert r["subscription_count"] == 183
+
+
+def test_aggregate_by_name_split_openrouter_only() -> None:
+    """Stage with only openrouter rows."""
+    rows = [
+        {"name": "spec_review", "backend": "openrouter", "cost": 0.0002, "count": 1},
+    ]
+    result = aggregate_by_name_split(rows)
+    assert len(result) == 1
+    r = result[0]
+    assert r["name"] == "spec_review"
+    assert r["openrouter_cost"] == 0.0002
+    assert r["subscription_cost"] == 0.0
+    assert r["total_cost"] == 0.0002
+    assert r["subscription_count"] == 0
+
+
+def test_aggregate_by_name_split_merges_across_projects() -> None:
+    """Multiple rows for the same stage (from different projects) are summed within each pool."""
+    rows = [
+        {"name": "implement", "backend": "openrouter", "cost": 1.5, "count": 2},
+        {"name": "implement", "backend": "openrouter", "cost": 2.5, "count": 3},
+        {"name": "implement", "backend": "claude-sdk", "cost": 0.5, "count": 1},
+    ]
+    result = aggregate_by_name_split(rows)
+    assert len(result) == 1
+    r = result[0]
+    assert r["name"] == "implement"
+    assert r["openrouter_cost"] == 4.0  # 1.5 + 2.5
+    assert r["subscription_cost"] == 0.5
+    assert r["openrouter_count"] == 5  # 2 + 3
+    assert r["subscription_count"] == 1
+
+
+def test_aggregate_by_name_split_sort_order() -> None:
+    """Primary sort by openrouter_cost desc, tie-break total_cost desc.
+
+    A high-subscription/low-marginal stage (refine-like) ranks BELOW a
+    high-marginal stage, confirming the ranking is by marginal cash.
+    """
+    rows = [
+        # refine: heavy Claude-SDK, trivial OpenRouter
+        {"name": "refine", "backend": "claude-sdk", "cost": 51.15, "count": 183},
+        {"name": "refine", "backend": "openrouter", "cost": 0.0002, "count": 1},
+        # implement: moderate both pools
+        {"name": "implement", "backend": "openrouter", "cost": 5.0, "count": 10},
+        {"name": "implement", "backend": "claude-sdk", "cost": 12.0, "count": 20},
+        # review: only moderate openrouter
+        {"name": "review", "backend": "openrouter", "cost": 3.0, "count": 5},
+    ]
+    result = aggregate_by_name_split(rows)
+    assert len(result) == 3
+    # implement has highest openrouter_cost (5.0) → first
+    assert result[0]["name"] == "implement"
+    assert result[0]["openrouter_cost"] == 5.0
+    # review has second-highest openrouter_cost (3.0) → second
+    assert result[1]["name"] == "review"
+    assert result[1]["openrouter_cost"] == 3.0
+    # refine has lowest openrouter_cost (0.0002) despite highest total_cost → last
+    assert result[2]["name"] == "refine"
+    assert result[2]["openrouter_cost"] == 0.0002
+    assert result[2]["total_cost"] == 51.1502
+
+
+def test_aggregate_by_name_split_rounding() -> None:
+    """Costs are rounded to 6 decimals."""
+    rows = [
+        {
+            "name": "implement",
+            "backend": "openrouter",
+            "cost": 1.0 / 3.0,
+            "count": 1,
+        },
+        {
+            "name": "implement",
+            "backend": "claude-sdk",
+            "cost": 1.0 / 7.0,
+            "count": 1,
+        },
+    ]
+    result = aggregate_by_name_split(rows)
+    r = result[0]
+    assert r["openrouter_cost"] == round(1.0 / 3.0, 6)
+    assert r["subscription_cost"] == round(1.0 / 7.0, 6)
+    assert r["total_cost"] == round(1.0 / 3.0 + 1.0 / 7.0, 6)
+
+
+def test_aggregate_by_name_split_empty_rows() -> None:
+    assert aggregate_by_name_split([]) == []
+
+
+def test_aggregate_by_name_split_handles_null_cost() -> None:
+    rows = [
+        {"name": "review", "backend": "openrouter", "cost": None, "count": 1},
+        {"name": "review", "backend": "claude-sdk", "cost": None, "count": 2},
+    ]
+    result = aggregate_by_name_split(rows)
+    r = result[0]
+    assert r["openrouter_cost"] == 0.0
+    assert r["subscription_cost"] == 0.0
+    assert r["total_cost"] == 0.0
+    assert r["openrouter_count"] == 1
+    assert r["subscription_count"] == 2

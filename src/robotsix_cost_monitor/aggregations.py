@@ -224,6 +224,69 @@ def aggregate_by_name_backend(
     ]
 
 
+def aggregate_by_name_split(
+    rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Segment per-(stage, backend) observation rows into per-stage
+    OpenRouter-marginal vs subscription-estimated pools.
+
+    ``rows`` are pre-flattened dicts (each with at least ``name``, ``backend``,
+    ``cost`` and ``count``).  Multiple projects' rows can be passed together —
+    they are summed by stage name.
+
+    Returns one dict per stage::
+
+        {"name": str,
+         "openrouter_cost": float, "subscription_cost": float, "total_cost": float,
+         "openrouter_count": int, "subscription_count": int}
+
+    where ``total_cost = openrouter_cost + subscription_cost``.  All costs are
+    rounded to 6 decimals.  Sorted by ``openrouter_cost`` descending (primary),
+    ``total_cost`` descending (tie-break) so stages are ranked by marginal cash.
+    """
+    acc: dict[str, dict[str, float]] = {}
+    for r in rows:
+        name = r["name"]
+        backend = r.get("backend", "")
+        slot = acc.setdefault(
+            name,
+            {
+                "openrouter_cost": 0.0,
+                "subscription_cost": 0.0,
+                "openrouter_count": 0.0,
+                "subscription_count": 0.0,
+            },
+        )
+        cost = float(r.get("cost") or 0.0)
+        count = float(r.get("count") or 0.0)
+        if backend == "openrouter":
+            slot["openrouter_cost"] += cost
+            slot["openrouter_count"] += count
+        elif backend == "claude-sdk":
+            slot["subscription_cost"] += cost
+            slot["subscription_count"] += count
+
+    ordered = sorted(
+        acc.items(),
+        key=lambda kv: (
+            kv[1]["openrouter_cost"],
+            kv[1]["openrouter_cost"] + kv[1]["subscription_cost"],
+        ),
+        reverse=True,
+    )
+    return [
+        {
+            "name": n,
+            "openrouter_cost": round(v["openrouter_cost"], 6),
+            "subscription_cost": round(v["subscription_cost"], 6),
+            "total_cost": round(v["openrouter_cost"] + v["subscription_cost"], 6),
+            "openrouter_count": int(v["openrouter_count"]),
+            "subscription_count": int(v["subscription_count"]),
+        }
+        for n, v in ordered
+    ]
+
+
 def most_expensive_trace(traces: list[dict[str, Any]]) -> dict[str, Any] | None:
     if not traces:
         return None
