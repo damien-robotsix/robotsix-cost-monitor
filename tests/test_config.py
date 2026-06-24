@@ -96,6 +96,21 @@ def test_analyst_empty_strings_are_falsy() -> None:
     assert cfg.can_file_tickets is False
 
 
+def test_example_yaml_max_trace_analyses_matches_code_default() -> None:
+    """The example config must ship with the same max_trace_analyses as the
+    Pydantic default, so users who copy it verbatim get the intended cap."""
+    from pathlib import Path
+
+    from robotsix_yaml_config import read_yaml_file
+
+    from robotsix_cost_monitor.config import Config
+
+    raw = read_yaml_file(Path("config/projects.example.yaml"))
+    config = Config.model_validate(raw)
+    assert config.settings.analyst is not None
+    assert config.settings.analyst.max_trace_analyses == 12
+
+
 def test_analyst_field_defaults() -> None:
     cfg = AnalystConfig()
     assert cfg.window_hours == 24

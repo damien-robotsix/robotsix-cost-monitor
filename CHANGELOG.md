@@ -6,6 +6,10 @@
   encapsulates the key-lookup, monotonic-deadline check, TTL-based caching
   pattern. This removes ~22 lines of duplicate boilerplate and makes future
   cache-behaviour changes (e.g. stale-while-revalidate) local to one method.
+- **Fixed example config `max_trace_analyses` drift.** The committed
+  `config/projects.example.yaml` now sets `max_trace_analyses: 12`, matching the
+  Pydantic default in `AnalystConfig`. A regression test loads the example YAML
+  and asserts the value equals the code default to prevent future drift.
 
 - **Dashboard renders segmented per-stage cost by backend.** The
   "cost by agent / stage" panel now fetches `/api/by-agent-segmented` and

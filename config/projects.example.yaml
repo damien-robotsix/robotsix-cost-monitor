@@ -37,7 +37,7 @@ settings:
     trace_model: null           # level-3 model (null → llmio tier-3 default)
     window_hours: 24
     top_stages: 8
-    max_trace_analyses: 5       # how many top-cost traces the L3 agent may open
+    max_trace_analyses: 12      # how many top-cost traces the L3 agent may open
     schedule_hours: 0           # >0 → run automatically on this cadence
     # Ticket filing through the central agent-comm broker (optional).
     broker_host: null           # e.g. ai-broker.robotsix.net
