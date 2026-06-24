@@ -1237,7 +1237,7 @@ wheels = [
 [[package]]
 name = "robotsix-agent-comm"
 version = "0.1.0"
-source = { git = "https://github.com/damien-robotsix/robotsix-agent-comm.git?rev=f80b9b64491c3dafb0f2070a103d0f1e0077bf45#f80b9b64491c3dafb0f2070a103d0f1e0077bf45" }
+source = { git = "https://github.com/damien-robotsix/robotsix-agent-comm.git?rev=c57e9d7483f3e283d3e421cd24b60f0a442971c9#c57e9d7483f3e283d3e421cd24b60f0a442971c9" }
 
 [[package]]
 name = "robotsix-cost-monitor"
@@ -1279,7 +1279,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "pydantic", specifier = ">=2.10" },
-    { name = "robotsix-agent-comm", marker = "extra == 'analyst'", git = "https://github.com/damien-robotsix/robotsix-agent-comm.git?rev=f80b9b64491c3dafb0f2070a103d0f1e0077bf45" },
+    { name = "robotsix-agent-comm", marker = "extra == 'analyst'", git = "https://github.com/damien-robotsix/robotsix-agent-comm.git?rev=c57e9d7483f3e283d3e421cd24b60f0a442971c9" },
     { name = "robotsix-llmio", extras = ["openrouter-deepseek", "claude-sdk"], marker = "extra == 'analyst'", git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=2fd2be4dcf7f0a44e91012fd1167517e5e09180e" },
     { name = "robotsix-yaml-config", git = "https://github.com/damien-robotsix/robotsix-yaml-config.git?rev=0b62ebafb01fe3f5aca8ca03c9cf281d49d2c637" },
     { name = "structlog", specifier = ">=24.1" },
