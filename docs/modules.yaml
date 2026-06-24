@@ -75,3 +75,8 @@ modules:
     paths:
       - src/robotsix_cost_monitor/web/static/analyst.js
     role: Client-side JS for analyst dashboard (fetches /api/analyst/* endpoints)
+
+  - id: tests.test_routes
+    paths:
+      - tests/test_routes.py
+    role: Unit tests for route helpers, dependency providers, exception handlers, and route edge cases

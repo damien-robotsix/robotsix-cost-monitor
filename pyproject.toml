@@ -68,6 +68,7 @@ ignore = ["S101"]  # assert in tests
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S", "E501"]
+"tests/test_routes.py" = ["S", "E501", "I001", "E402"]
 "vulture_whitelist.py" = ["B018", "F821"]
 "src/robotsix_cost_monitor/routes.py" = ["B008"]
 
