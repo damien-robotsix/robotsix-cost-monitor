@@ -103,8 +103,12 @@ instantiate a second Langfuse client or call the Langfuse REST API directly.
 `OpenRouterKeyCostSource` is a sync OpenRouter client imported from `robotsix_llmio.openrouter`
 (part of the optional `[analyst]` extra). It wraps the per-key usage endpoint:
 
-- `GET /auth/key` — per-key cumulative usage (the reconciliation basis), returned as
-  a `KeyUsage(usage, limit, label)` dataclass.
+- `fetch_key_usage()` → `KeyUsage` — per-key cumulative usage (the reconciliation basis),
+  returned as a `KeyUsage(usage, limit, label)` dataclass. Called via `asyncio.to_thread`
+  to avoid blocking the event loop.
+- Account credits are fetched separately via a direct `httpx` async call to
+  `GET /api/v1/credits` (`_fetch_credits` helper), populating `result["balance"]`
+  with `total_credits`, `total_usage`, and `remaining`.
 
 The local `robotsix_cost_monitor.clients.openrouter.OpenRouterClient` has been deleted
 in favour of this shared client. New OpenRouter endpoints or features should go into

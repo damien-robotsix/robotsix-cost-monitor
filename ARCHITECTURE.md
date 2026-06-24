@@ -79,7 +79,9 @@ Reconciliation works by **snapshotting** OpenRouter's cumulative per-key
 usage (OpenRouter has no per-window cost endpoint):
 
 1. `reconcile_project()` fetches the key's current cumulative usage via
-   `OpenRouterKeyCostSource.fetch_key_usage()` (from `robotsix-llmio`).
+   `OpenRouterKeyCostSource.fetch_key_usage()` (called via `asyncio.to_thread`)
+   and the account-level credit balance via a direct `httpx` call to
+   `GET /api/v1/credits` (`_fetch_credits` helper).
 2. It diffs against the **prior snapshot** (stored under
    `.data/reconcile/<slug>.json`) to get `provider_delta_usd` — the
    OpenRouter spend in the interval.

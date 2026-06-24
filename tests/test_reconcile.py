@@ -76,7 +76,7 @@ async def test_no_openrouter_key() -> None:
 
 
 async def test_openrouter_fetch_failure() -> None:
-    """OpenRouterKey fetch_key_usage raises → result has error, no snapshot saved."""
+    """OpenRouterKeyCostSource fetch_key_usage raises → result has error, no snapshot saved."""
     proj = _proj("demo")
     with patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls:
         mock_orc = orc_cls.return_value
@@ -88,12 +88,50 @@ async def test_openrouter_fetch_failure() -> None:
     assert "balance" not in result  # credits fetch is skipped after usage failure
 
 
+async def test_openrouter_credits_fetch_failure_ignored(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Credits fetch failure is suppressed — reconcile still succeeds."""
+    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+
+    proj = _proj("demo")
+
+    with (
+        patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls,
+        patch(
+            "robotsix_cost_monitor.reconcile._fetch_credits",
+            AsyncMock(side_effect=RuntimeError("credits-down")),
+        ),
+    ):
+        mock_orc = orc_cls.return_value
+        mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=5.0))
+
+        result = await reconcile_project(proj, _settings())
+
+    # Credits failure is suppressed — no error, no balance key
+    assert "error" not in result
+    assert "balance" not in result
+    assert "first snapshot recorded" in result["detail"]
+
+
 async def test_first_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """No prior snapshot → records first snapshot, no drift fields."""
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
 
     proj = _proj("demo")
-    with patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls:
+    with (
+        patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls,
+        patch(
+            "robotsix_cost_monitor.reconcile._fetch_credits",
+            AsyncMock(
+                return_value={
+                    "total_credits": 100.0,
+                    "total_usage": 30.0,
+                    "remaining": 70.0,
+                }
+            ),
+        ),
+    ):
         mock_orc = orc_cls.return_value
         mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=12.5))
 
@@ -102,6 +140,11 @@ async def test_first_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     assert result["configured"] is True
     assert "first snapshot recorded" in result["detail"]
     assert "drift_usd" not in result
+    assert result["balance"] == {
+        "total_credits": 100.0,
+        "total_usage": 30.0,
+        "remaining": 70.0,
+    }
 
     # Verify snapshot was saved
     snap_path = tmp_path / "reconcile" / "demo.json"
@@ -129,6 +172,16 @@ async def test_second_call_within_tolerance(
         patch("robotsix_cost_monitor.reconcile.datetime", _FrozenNow(now)),
         patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls,
         patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
+        patch(
+            "robotsix_cost_monitor.reconcile._fetch_credits",
+            AsyncMock(
+                return_value={
+                    "total_credits": 50.0,
+                    "total_usage": 20.0,
+                    "remaining": 30.0,
+                }
+            ),
+        ),
     ):
         mock_orc = orc_cls.return_value
         mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=15.0))
@@ -164,6 +217,16 @@ async def test_drift_exceeds_tolerance(
         patch("robotsix_cost_monitor.reconcile.datetime", _FrozenNow(now)),
         patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls,
         patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
+        patch(
+            "robotsix_cost_monitor.reconcile._fetch_credits",
+            AsyncMock(
+                return_value={
+                    "total_credits": 100.0,
+                    "total_usage": 0.0,
+                    "remaining": 100.0,
+                }
+            ),
+        ),
     ):
         mock_orc = orc_cls.return_value
         mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=20.0))
@@ -200,6 +263,16 @@ async def test_negative_interval_treated_as_zero(
         patch("robotsix_cost_monitor.reconcile.datetime", _FrozenNow(now)),
         patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls,
         patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
+        patch(
+            "robotsix_cost_monitor.reconcile._fetch_credits",
+            AsyncMock(
+                return_value={
+                    "total_credits": 50.0,
+                    "total_usage": 10.0,
+                    "remaining": 40.0,
+                }
+            ),
+        ),
     ):
         mock_orc = orc_cls.return_value
         mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=8.0))
@@ -223,7 +296,19 @@ async def test_missing_snapshot_file_treated_as_first(
 
     # _load_snapshot is tested directly below; here we verify the integration
     proj = _proj("demo")
-    with patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls:
+    with (
+        patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls,
+        patch(
+            "robotsix_cost_monitor.reconcile._fetch_credits",
+            AsyncMock(
+                return_value={
+                    "total_credits": 10.0,
+                    "total_usage": 2.0,
+                    "remaining": 8.0,
+                }
+            ),
+        ),
+    ):
         mock_orc = orc_cls.return_value
         mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=1.0))
 

@@ -1,5 +1,12 @@
 ## 0.0.0 (unreleased)
 
+- **Restored OpenRouter account-level credit balance in reconciliation.**
+  `reconcile.py` now uses the sync `OpenRouterKeyCostSource` from `robotsix-llmio`
+  (called via `asyncio.to_thread`) and fetches the per-account credit balance via
+  a direct `httpx` call to `GET /api/v1/credits`, populating `result["balance"]` so the
+  dashboard's per-project balance badge (`r.balance.remaining`) renders correctly.
+  A credits-fetch failure is silently suppressed and does not fail reconciliation.
+
 - **Added `zizmor` GitHub Actions security audit to CI.** A new
   `workflow-audit` job in `.github/workflows/ci.yml` runs `uvx zizmor
   --min-severity medium .github/workflows/` on every PR to detect
