@@ -22,7 +22,14 @@ from fastapi.testclient import TestClient
 # ``robotsix_cost_monitor.routes`` (which transitively imports
 # ``robotsix_cost_monitor.reconcile`` → ``robotsix_llmio.openrouter``).
 # This keeps the test suite runnable without the ``analyst`` extra.
+#
+# Save and restore the original sys.modules entries so that other test
+# modules (e.g. test_analyst.py) that need the real robotsix_llmio are
+# not broken by this mock leaking across the whole session.
 # ---------------------------------------------------------------------------
+_orig_llmio = sys.modules.get("robotsix_llmio")
+_orig_llmio_openrouter = sys.modules.get("robotsix_llmio.openrouter")
+
 _llmio = MagicMock()
 _llmio_openrouter = MagicMock()
 _llmio_openrouter.OpenRouterKeyCostSource = MagicMock()
@@ -42,6 +49,16 @@ from robotsix_cost_monitor.routes import (  # noqa: E402
     validation_handler,
 )
 from conftest import _config, _proj  # noqa: E402
+
+# Restore the original sys.modules entries so the mock does not leak.
+if _orig_llmio is not None:
+    sys.modules["robotsix_llmio"] = _orig_llmio
+else:
+    sys.modules.pop("robotsix_llmio", None)
+if _orig_llmio_openrouter is not None:
+    sys.modules["robotsix_llmio.openrouter"] = _orig_llmio_openrouter
+else:
+    sys.modules.pop("robotsix_llmio.openrouter", None)
 
 
 # ---------------------------------------------------------------------------
