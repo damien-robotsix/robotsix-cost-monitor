@@ -1,5 +1,13 @@
 ## 0.0.0 (unreleased)
 
+- **Dashboard renders segmented per-stage cost by backend.** The
+  "cost by agent / stage" panel now fetches `/api/by-agent-segmented` and
+  shows each stage's OpenRouter marginal cost as the primary figure with a
+  separate, visually de-emphasized column for the subscription-estimated
+  (Claude-SDK fixed) cost. A legend in the panel header explains the two
+  pools to prevent conflation of fixed-subscription estimates with marginal
+  cash. Added `renderByAgentSegmented` export with vitest/jsdom test coverage.
+
 - **Added segmented per-stage cost aggregation by backend.** The new
   `GET /api/by-agent-segmented` endpoint splits each stage's cost into
   OpenRouter marginal (pay-per-token) and Claude-SDK subscription-estimated
