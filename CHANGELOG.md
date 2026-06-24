@@ -1,5 +1,13 @@
 ## 0.0.0 (unreleased)
 
+- **Fixed `dict_tracebacks`/`ConsoleRenderer` incompatibility in structlog config.**
+  `_configure_logging()` now uses `format_exc_info` (string output) when the
+  format is `console` and `dict_tracebacks` (structured output) only when the
+  format is `json`.  This prevents a `TypeError` inside `ConsoleRenderer` when
+  `logger.exception()` is called with an active exception.  Also moved the
+  `_configure_logging()` call from module level into `create_app()` to avoid
+  global side-effects on import.
+
 - **Restored OpenRouter account-level credit balance in reconciliation.**
   `reconcile.py` now uses the sync `OpenRouterKeyCostSource` from `robotsix-llmio`
   (called via `asyncio.to_thread`) and fetches the per-account credit balance via
