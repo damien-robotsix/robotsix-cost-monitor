@@ -38,7 +38,9 @@ def _configure_logging() -> None:
             structlog.stdlib.add_log_level,
             structlog.stdlib.PositionalArgumentsFormatter(),
             structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.dict_tracebacks,
+            structlog.processors.dict_tracebacks
+            if fmt == "json"
+            else structlog.processors.format_exc_info,
             structlog.processors.JSONRenderer()
             if fmt == "json"
             else structlog.dev.ConsoleRenderer(),
@@ -50,7 +52,6 @@ def _configure_logging() -> None:
     )
 
 
-_configure_logging()
 logger = structlog.get_logger(__name__)
 
 
@@ -158,6 +159,8 @@ def create_app(config: Config | None = None) -> FastAPI:
     :mod:`robotsix_cost_monitor.routes`, registers exception handlers, and serves
     the static web assets.
     """
+    _configure_logging()
+
     cfg = config or load_config()
     service = CostService(cfg)
 
