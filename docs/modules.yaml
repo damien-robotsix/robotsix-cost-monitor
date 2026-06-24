@@ -87,3 +87,13 @@ modules:
     paths:
       - tests/web/shared.test.js
     role: Vitest unit tests for shared JS helpers (shared.js)
+
+  - id: tests.conftest
+    paths:
+      - tests/conftest.py
+    role: Shared pytest fixtures and factory helpers (event_loop, _proj, _config, _mock_client)
+
+  - id: tests.helpers
+    paths:
+      - tests/helpers.py
+    role: Pure data-builder helper for test trace dicts (trace())
