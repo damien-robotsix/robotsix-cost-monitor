@@ -1,5 +1,9 @@
 ## 0.0.0 (unreleased)
 
+- **Registered JS test files in module taxonomy.** Added `tests.web.analyst`,
+  `tests.web.dashboard`, and `tests.web.shared` entries to `docs/modules.yaml`
+  for the Vitest test files under `tests/web/`.
+
 - **Integrated `googleapis/release-please-action` for automated version management.**
   Added `release-please-config.json` and `.github/workflows/release-please.yml` to
   auto-create Release PRs that bump the version in `pyproject.toml` and

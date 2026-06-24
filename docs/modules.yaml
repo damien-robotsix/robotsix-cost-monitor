@@ -72,3 +72,18 @@ modules:
     paths:
       - tests/test_routes.py
     role: Unit tests for route helpers, dependency providers, exception handlers, and route edge cases
+
+  - id: tests.web.analyst
+    paths:
+      - tests/web/analyst.test.js
+    role: Vitest unit tests for the analyst UI (analyst.js)
+
+  - id: tests.web.dashboard
+    paths:
+      - tests/web/dashboard.test.js
+    role: Vitest unit tests for the dashboard UI (dashboard.js)
+
+  - id: tests.web.shared
+    paths:
+      - tests/web/shared.test.js
+    role: Vitest unit tests for shared JS helpers (shared.js)
