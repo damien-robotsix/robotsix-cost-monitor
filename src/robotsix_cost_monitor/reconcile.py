@@ -8,11 +8,14 @@ interval. Drift above the tolerance is flagged.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import httpx
 from robotsix_llmio.openrouter import OpenRouterKeyCostSource
 
 from .clients.langfuse import LangfuseClient
@@ -50,6 +53,21 @@ def _hours_between(a: datetime, b: datetime) -> float:
     return max(0.0, (b - a).total_seconds() / 3600.0)
 
 
+async def _fetch_credits(api_key: str) -> dict[str, float]:
+    """Fetch account-level credit balance from OpenRouter (informational)."""
+    url = "https://openrouter.ai/api/v1/credits"
+    headers = {"Authorization": f"Bearer {api_key}"}
+    async with httpx.AsyncClient(timeout=20.0) as client:
+        resp = await client.get(url, headers=headers)
+        resp.raise_for_status()
+        data = resp.json().get("data") or {}
+        return {
+            "total_credits": float(data.get("total_credits", 0) or 0),
+            "total_usage": float(data.get("total_usage", 0) or 0),
+            "remaining": float(data.get("remaining", 0) or 0),
+        }
+
+
 async def reconcile_project(
     project: ProjectConfig, settings: Settings
 ) -> dict[str, Any]:
@@ -57,8 +75,8 @@ async def reconcile_project(
 
     Snapshots the key's cumulative usage and diffs against the previous
     snapshot; compares the provider delta to the Langfuse traced cost over the
-    same interval. Returns a status dict. The snapshot is updated on every
-    call.
+    same interval. Returns a status dict (also includes the remaining
+    balance). The snapshot is updated on every call.
     """
     now = datetime.now(UTC)
     result: dict[str, Any] = {
@@ -75,10 +93,15 @@ async def reconcile_project(
     # Per-KEY cumulative usage is the reconciliation basis (isolates this
     # consumer even when several keys share one OpenRouter account).
     try:
-        cumulative = orc.fetch_key_usage().usage
+        cumulative = (await asyncio.to_thread(orc.fetch_key_usage)).usage
     except Exception as exc:  # noqa: BLE001 — surface as status, not a crash
         result["error"] = f"OpenRouter fetch failed: {exc}"
         return result
+
+    # Account-level remaining balance — informational only (shared balance pool).
+    # Optional: a balance fetch failure must not fail the reconcile.
+    with contextlib.suppress(Exception):
+        result["balance"] = await _fetch_credits(project.openrouter_key)
 
     prior = _load_snapshot(project.slug)
     _save_snapshot(project.slug, cumulative, now)

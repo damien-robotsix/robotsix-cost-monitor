@@ -1280,7 +1280,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28" },
     { name = "pydantic", specifier = ">=2.10" },
     { name = "robotsix-agent-comm", marker = "extra == 'analyst'", git = "https://github.com/damien-robotsix/robotsix-agent-comm.git?rev=f80b9b64491c3dafb0f2070a103d0f1e0077bf45" },
-    { name = "robotsix-llmio", extras = ["openrouter-deepseek", "claude-sdk"], marker = "extra == 'analyst'", git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=28b23a84800366d8a6dfe97f04354100c248298f" },
+    { name = "robotsix-llmio", extras = ["openrouter-deepseek", "claude-sdk"], marker = "extra == 'analyst'", git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=2fd2be4dcf7f0a44e91012fd1167517e5e09180e" },
     { name = "robotsix-yaml-config", git = "https://github.com/damien-robotsix/robotsix-yaml-config.git?rev=0b62ebafb01fe3f5aca8ca03c9cf281d49d2c637" },
     { name = "structlog", specifier = ">=24.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34" },
@@ -1304,7 +1304,7 @@ docs = [
 [[package]]
 name = "robotsix-llmio"
 version = "0.1.0"
-source = { git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=28b23a84800366d8a6dfe97f04354100c248298f#28b23a84800366d8a6dfe97f04354100c248298f" }
+source = { git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=2fd2be4dcf7f0a44e91012fd1167517e5e09180e#2fd2be4dcf7f0a44e91012fd1167517e5e09180e" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic-ai-slim" },
