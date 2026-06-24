@@ -8,7 +8,8 @@ dashboard needs — per-project and aggregated across all projects.
 from __future__ import annotations
 
 import time
-from typing import Any
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar
 
 from .aggregations import (
     _trace_cost,
@@ -23,6 +24,8 @@ from .aggregations import (
 )
 from .clients.langfuse import LangfuseClient
 from .config import Config, ProjectConfig
+
+_T = TypeVar("_T")
 
 
 class CostService:
@@ -59,15 +62,29 @@ class CostService:
             return [p] if p else []
         return list(self.config.projects)
 
-    async def _traces(self, project: ProjectConfig, hours: int) -> list[dict[str, Any]]:
+    async def _cached_fetch(
+        self,
+        project: ProjectConfig,
+        hours: int,
+        cache_dict: dict[tuple[str, int], tuple[_T, float]],
+        fetch_fn: Callable[[int], Awaitable[_T]],
+    ) -> _T:
         key = (project.slug, hours)
-        hit = self._cache.get(key)
+        hit = cache_dict.get(key)
         if hit and hit[1] > time.monotonic():
             return hit[0]
-        traces = await self._clients[project.slug].fetch_traces_window(hours)
+        result = await fetch_fn(hours)
         ttl = self.config.settings.cache_ttl_seconds
-        self._cache[key] = (traces, time.monotonic() + ttl)
-        return traces
+        cache_dict[key] = (result, time.monotonic() + ttl)
+        return result
+
+    async def _traces(self, project: ProjectConfig, hours: int) -> list[dict[str, Any]]:
+        return await self._cached_fetch(
+            project,
+            hours,
+            self._cache,
+            lambda h: self._clients[project.slug].fetch_traces_window(h),
+        )
 
     async def _trace_count(self, project: ProjectConfig, hours: int) -> int:
         """Trace count for the window via a server-side metrics query (cached).
@@ -75,14 +92,12 @@ class CostService:
         Avoids paging every raw trace just to ``len()`` them — the headline
         ``summary`` only needs the count, not the trace bodies.
         """
-        key = (project.slug, hours)
-        hit = self._trace_count_cache.get(key)
-        if hit and hit[1] > time.monotonic():
-            return hit[0]
-        count = await self._clients[project.slug].fetch_trace_count_window(hours)
-        ttl = self.config.settings.cache_ttl_seconds
-        self._trace_count_cache[key] = (count, time.monotonic() + ttl)
-        return count
+        return await self._cached_fetch(
+            project,
+            hours,
+            self._trace_count_cache,
+            lambda h: self._clients[project.slug].fetch_trace_count_window(h),
+        )
 
     async def _gather(
         self, slug: str | None, hours: int
@@ -321,14 +336,12 @@ class CostService:
     async def _model_usage(
         self, project: ProjectConfig, hours: int
     ) -> list[dict[str, Any]]:
-        key = (project.slug, hours)
-        hit = self._model_cache.get(key)
-        if hit and hit[1] > time.monotonic():
-            return hit[0]
-        rows = await self._clients[project.slug].fetch_model_usage_window(hours)
-        ttl = self.config.settings.cache_ttl_seconds
-        self._model_cache[key] = (rows, time.monotonic() + ttl)
-        return rows
+        return await self._cached_fetch(
+            project,
+            hours,
+            self._model_cache,
+            lambda h: self._clients[project.slug].fetch_model_usage_window(h),
+        )
 
     async def by_model(self, slug: str | None, hours: int) -> list[dict[str, Any]]:
         """Cost + token usage by model, merged across selected projects.
@@ -345,26 +358,22 @@ class CostService:
     async def _backend_cost(
         self, project: ProjectConfig, hours: int
     ) -> dict[str, dict[str, float]]:
-        key = (project.slug, hours)
-        hit = self._backend_cache.get(key)
-        if hit and hit[1] > time.monotonic():
-            return hit[0]
-        data = await self._clients[project.slug].fetch_backend_cost_window(hours)
-        ttl = self.config.settings.cache_ttl_seconds
-        self._backend_cache[key] = (data, time.monotonic() + ttl)
-        return data
+        return await self._cached_fetch(
+            project,
+            hours,
+            self._backend_cache,
+            lambda h: self._clients[project.slug].fetch_backend_cost_window(h),
+        )
 
     async def _agent_usage(
         self, project: ProjectConfig, hours: int
     ) -> list[dict[str, Any]]:
-        key = (project.slug, hours)
-        hit = self._agent_usage_cache.get(key)
-        if hit and hit[1] > time.monotonic():
-            return hit[0]
-        rows = await self._clients[project.slug].fetch_agent_usage_window(hours)
-        ttl = self.config.settings.cache_ttl_seconds
-        self._agent_usage_cache[key] = (rows, time.monotonic() + ttl)
-        return rows
+        return await self._cached_fetch(
+            project,
+            hours,
+            self._agent_usage_cache,
+            lambda h: self._clients[project.slug].fetch_agent_usage_window(h),
+        )
 
     async def backend_trend(
         self, slug: str | None, hours: int, backend: str
