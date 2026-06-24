@@ -432,9 +432,9 @@ def test_internal_error_returns_sanitized_envelope() -> None:
     """Force a 500 via a mock service that raises an unhandled exception."""
     svc = Mock()
     svc.summary = AsyncMock(side_effect=RuntimeError("crash"))
-    r = _client(
-        _config(_proj("Demo")), svc, raise_server_exceptions=False
-    ).get("/api/summary?hours=24")
+    r = _client(_config(_proj("Demo")), svc, raise_server_exceptions=False).get(
+        "/api/summary?hours=24"
+    )
     assert r.status_code == 500
     body = r.json()
     assert body["error"]["code"] == "INTERNAL_ERROR"
