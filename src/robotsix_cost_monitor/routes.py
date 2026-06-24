@@ -117,11 +117,13 @@ def register_exception_handlers(app: FastAPI) -> None:
 
 @router.get("/health")
 def health(cfg: Config = Depends(get_config)) -> dict[str, Any]:
+    """GET /health — health check returning status and project names."""
     return {"status": "ok", "projects": [p.name for p in cfg.projects]}
 
 
 @router.get("/api/projects")
 def projects(cfg: Config = Depends(get_config)) -> list[dict[str, str]]:
+    """GET /api/projects — list all configured projects with name and slug."""
     return [{"name": p.name, "slug": p.slug} for p in cfg.projects]
 
 
@@ -132,6 +134,7 @@ async def summary(
     cfg: Config = Depends(get_config),
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
+    """GET /api/summary — total cost and per-project totals for the window."""
     h = _window(hours, cfg)
     _require_project(project, cfg)
     return await service.summary(project, h)
@@ -145,6 +148,7 @@ async def by_agent(
     cfg: Config = Depends(get_config),
     service: CostService = Depends(get_service),
 ) -> list[dict[str, Any]]:
+    """GET /api/by-agent — cost breakdown by agent name for a project and window."""
     h = _window(hours, cfg)
     _require_project(project, cfg)
     return await service.by_agent(project, h, backend)
@@ -157,6 +161,7 @@ async def by_agent_segmented(
     cfg: Config = Depends(get_config),
     service: CostService = Depends(get_service),
 ) -> list[dict[str, Any]]:
+    """GET /api/by-agent-segmented — agent costs segmented by model and backend."""
     h = _window(hours, cfg)
     _require_project(project, cfg)
     return await service.by_agent_segmented(project, h)
@@ -169,6 +174,7 @@ async def by_model(
     cfg: Config = Depends(get_config),
     service: CostService = Depends(get_service),
 ) -> list[dict[str, Any]]:
+    """GET /api/by-model — cost breakdown by model for a project and window."""
     h = _window(hours, cfg)
     _require_project(project, cfg)
     return await service.by_model(project, h)
@@ -182,6 +188,7 @@ async def backend_trend(
     cfg: Config = Depends(get_config),
     service: CostService = Depends(get_service),
 ) -> list[dict[str, Any]]:
+    """GET /api/backend-trend — cost trend per backend for a project and window."""
     h = _window(hours, cfg)
     _require_project(project, cfg)
     return await service.backend_trend(project, h, backend)
@@ -195,6 +202,7 @@ async def trend(
     cfg: Config = Depends(get_config),
     service: CostService = Depends(get_service),
 ) -> list[dict[str, Any]]:
+    """GET /api/trend — cost trend series bucketed by time for a project and window."""
     h = _window(hours, cfg)
     _require_project(project, cfg)
     return await service.trend(project, h, buckets)
@@ -207,6 +215,7 @@ async def highlights(
     cfg: Config = Depends(get_config),
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
+    """GET /api/highlights — summaries (total, change, top agents) for the window."""
     h = _window(hours, cfg)
     _require_project(project, cfg)
     return await service.highlights(project, h)
@@ -217,6 +226,7 @@ async def reconcile(
     project: str = Query("all"),
     cfg: Config = Depends(get_config),
 ) -> list[dict[str, Any]]:
+    """GET /api/reconcile — reconcile OpenRouter usage against Langfuse traced costs."""
     # Running all projects persists last.json (banner + scheduler share it);
     # a single-project run is a transient check that doesn't overwrite it.
     _require_project(project, cfg)
@@ -229,6 +239,7 @@ async def reconcile(
 
 @router.get("/api/reconcile/last")
 def reconcile_last() -> dict[str, Any]:
+    """GET /api/reconcile/last — return the most recent reconciliation result."""
     return load_last_reconcile()
 
 
@@ -238,12 +249,14 @@ async def analyst_digest(
     cfg: Config = Depends(get_config),
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
+    """GET /api/analyst/digest — build a cost-analysis digest from recent trace data."""
     h = hours or cfg.settings.analyst.window_hours
     return await build_digest(service, h, cfg)
 
 
 @router.get("/api/analyst/proposals")
 def analyst_proposals() -> dict[str, Any]:
+    """GET /api/analyst/proposals — load saved cost-reduction proposals."""
     return load_proposals()
 
 
@@ -252,11 +265,13 @@ async def analyst_run(
     cfg: Config = Depends(get_config),
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
+    """POST /api/analyst/run — trigger a full cost-analyst analysis run."""
     return await run_analyst(cfg, service)
 
 
 @router.get("/api/analyst/ticket")
 def analyst_ticket() -> dict[str, Any]:
+    """GET /api/analyst/ticket — load the saved ticket-level targeted analysis."""
     return load_targeted_analysis("ticket")
 
 
@@ -265,11 +280,13 @@ async def analyst_ticket_run(
     cfg: Config = Depends(get_config),
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
+    """POST /api/analyst/ticket-run — trigger a ticket-level targeted analysis."""
     return await run_ticket_analyst(cfg, service)
 
 
 @router.get("/api/analyst/stage")
 def analyst_stage() -> dict[str, Any]:
+    """GET /api/analyst/stage — load the saved stage-level targeted analysis."""
     return load_targeted_analysis("stage")
 
 
@@ -278,14 +295,17 @@ async def analyst_stage_run(
     cfg: Config = Depends(get_config),
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
+    """POST /api/analyst/stage-run — trigger a stage-level targeted analysis."""
     return await run_stage_analyst(cfg, service)
 
 
 @router.get("/", response_class=HTMLResponse)
 def index() -> str:
+    """GET / — serve the main dashboard HTML page."""
     return (_WEB / "index.html").read_text()
 
 
 @router.get("/analyst", response_class=HTMLResponse)
 def analyst_page() -> str:
+    """GET /analyst — serve the analyst dashboard HTML page."""
     return (_WEB / "analyst.html").read_text()

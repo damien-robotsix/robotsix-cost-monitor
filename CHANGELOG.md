@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- **Added docstrings to all 20 FastAPI route handlers.**  Each handler in
+  `src/robotsix_cost_monitor/routes.py` now carries a one-line docstring
+  describing its purpose and URL, improving mkdocstrings output and IDE hover
+  help.
+
 - **Consolidated analyst web modules in `docs/modules.yaml`.**
   Merged `robotsix_cost_monitor.web.analyst` and `robotsix_cost_monitor.web.static.analyst`
   into `robotsix_cost_monitor.analyst`, matching the `robotsix_cost_monitor.app` pattern
