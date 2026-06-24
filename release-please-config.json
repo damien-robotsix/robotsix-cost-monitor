@@ -1,0 +1,9 @@
+{
+  "packages": {
+    ".": {
+      "release-type": "python",
+      "include-component-in-tag": false,
+      "extra-files": ["src/robotsix_cost_monitor/__init__.py"]
+    }
+  }
+}

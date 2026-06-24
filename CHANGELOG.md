@@ -1,5 +1,13 @@
 ## 0.0.0 (unreleased)
 
+- **Integrated `googleapis/release-please-action` for automated version management.**
+  Added `release-please-config.json` and `.github/workflows/release-please.yml` to
+  auto-create Release PRs that bump the version in `pyproject.toml` and
+  `src/robotsix_cost_monitor/__init__.py`, update `CHANGELOG.md` from conventional
+  commits, and generate `v*` tags on merge.  Added a `conventional-pre-commit`
+  hook to `.pre-commit-config.yaml` and documented the commit-message convention
+  in `CONTRIBUTING.md`.
+
 - **Replaced hand-rolled brokered request pattern with `BrokeredRequester`.**
   The `_brokered_agent()` factory and manual `agent.send_request()` +
   `reply.body` extraction in `_file_proposals()` and `_fetch_ticket_context()`
