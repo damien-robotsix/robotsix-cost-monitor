@@ -3,6 +3,7 @@ import {
   renderSummary,
   renderTrend,
   renderByAgent,
+  renderByAgentSegmented,
   renderByModel,
   renderReconcile,
   renderHighlights,
@@ -142,6 +143,64 @@ describe("renderByAgent", () => {
   it("renders no data placeholder for empty rows", () => {
     fixture('<div id="by-agent"></div>');
     renderByAgent([]);
+    const el = document.getElementById("by-agent");
+    expect(el.innerHTML).toContain("no data");
+    expect(el.querySelector(".muted")).not.toBeNull();
+  });
+});
+
+describe("renderByAgentSegmented", () => {
+  it("renders openrouter and subscription costs as distinct columns", () => {
+    fixture('<div id="by-agent"></div>');
+    const rows = [
+      { name: "plan", openrouter_cost: 2.5, subscription_cost: 0, openrouter_count: 10, subscription_count: 0, total_cost: 2.5 },
+      { name: "refine", openrouter_cost: 0.0003, subscription_cost: 51.15, openrouter_count: 183, subscription_count: 183, total_cost: 51.1503 },
+    ];
+    renderByAgentSegmented(rows);
+    const el = document.getElementById("by-agent");
+    expect(el.children.length).toBe(2);
+
+    // First row should be plan (higher openrouter_cost, so ranked first)
+    expect(el.children[0].innerHTML).toContain("plan");
+    expect(el.children[0].innerHTML).toContain("$2.50");
+    // plan has no subscription cost
+    expect(el.children[0].innerHTML).toContain("est. (fixed subscription)");
+    expect(el.children[0].innerHTML).toContain("$0.00");
+
+    // Second row should be refine
+    expect(el.children[1].innerHTML).toContain("refine");
+    expect(el.children[1].innerHTML).toContain("$0.00"); // openrouter_cost ~0
+    expect(el.children[1].innerHTML).toContain("est. (fixed subscription)");
+    expect(el.children[1].innerHTML).toContain("$51.15");
+  });
+
+  it("preserves input ordering (openrouter_cost desc)", () => {
+    fixture('<div id="by-agent"></div>');
+    const rows = [
+      { name: "c", openrouter_cost: 1, subscription_cost: 0, openrouter_count: 1, subscription_count: 0, total_cost: 1 },
+      { name: "a", openrouter_cost: 3, subscription_cost: 0, openrouter_count: 1, subscription_count: 0, total_cost: 3 },
+      { name: "b", openrouter_cost: 2, subscription_cost: 0, openrouter_count: 1, subscription_count: 0, total_cost: 2 },
+    ];
+    renderByAgentSegmented(rows);
+    const el = document.getElementById("by-agent");
+    const names = [...el.children].map((c) => c.querySelector(".name").textContent);
+    // Input order is preserved (backend already sorts; renderer renders as-is)
+    expect(names).toEqual(["c", "a", "b"]);
+  });
+
+  it("escapes agent names", () => {
+    fixture('<div id="by-agent"></div>');
+    renderByAgentSegmented([
+      { name: "<script>alert(1)</script>", openrouter_cost: 0, subscription_cost: 1, openrouter_count: 0, subscription_count: 1, total_cost: 1 },
+    ]);
+    const el = document.getElementById("by-agent");
+    expect(el.innerHTML).not.toContain("<script>");
+    expect(el.innerHTML).toContain("&lt;script&gt;");
+  });
+
+  it("renders no data placeholder for empty rows", () => {
+    fixture('<div id="by-agent"></div>');
+    renderByAgentSegmented([]);
     const el = document.getElementById("by-agent");
     expect(el.innerHTML).toContain("no data");
     expect(el.querySelector(".muted")).not.toBeNull();

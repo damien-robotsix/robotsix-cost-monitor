@@ -106,6 +106,22 @@ export function renderByAgent(rows) {
       .join("") || '<div class="muted">no data</div>';
 }
 
+export function renderByAgentSegmented(rows) {
+  const max = Math.max(...rows.map((r) => r.openrouter_cost || 0), 1e-9);
+  $("by-agent").innerHTML =
+    rows
+      .map(
+        (r) =>
+          `<div class="bar-row" style="grid-template-columns:140px 1fr 80px 140px">` +
+          `<span class="name">${esc(r.name)}</span>` +
+          `<span class="bar-track"><span class="bar-fill" style="width:${((r.openrouter_cost || 0) / max) * 100}%"></span></span>` +
+          `<span class="cost">${fmt(r.openrouter_cost)}</span>` +
+          `<span style="text-align:right;font-size:11px;color:var(--muted)">est. (fixed subscription)&nbsp;${fmt(r.subscription_cost)}</span>` +
+          `</div>`
+      )
+      .join("") || '<div class="muted">no data</div>';
+}
+
 export function renderByModel(rows) {
   const max = Math.max(...rows.map((r) => r.cost), 1e-9);
   $("by-model").innerHTML =
@@ -249,7 +265,7 @@ export async function refresh() {
     const [s, trend, agents, models, hi] = await Promise.all([
       getJSON("/api/summary" + qs()),
       getJSON(trendPath),
-      getJSON("/api/by-agent" + qs() + "&backend=" + encodeURIComponent(backend)),
+      getJSON("/api/by-agent-segmented" + qs()),
       getJSON("/api/by-model" + qs()),
       getJSON("/api/highlights" + qs()),
     ]);
@@ -258,7 +274,7 @@ export async function refresh() {
       backend === "all" ? models : models.filter((m) => m.backend === backend);
     renderSummary(s, backend, modelRows);
     renderTrend(trend);
-    renderByAgent(agents);
+    renderByAgentSegmented(agents);
     renderByModel(modelRows);
     renderHighlights(hi);
     setStatus("updated " + new Date().toLocaleTimeString());
