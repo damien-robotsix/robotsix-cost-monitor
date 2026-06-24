@@ -12,4 +12,4 @@ permissions:
 jobs:
   bump:
     uses: damien-robotsix/robotsix-mill/.github/workflows/deps-bump.yml@a317d51ad25be89194d55f220164819807d549f1 # v0.0.1
-    secrets: inherit
+    secrets: inherit  # zizmor: ignore[secrets-inherit] -- reusable workflow needs full secret access
