@@ -44,7 +44,9 @@ modules:
   - id: robotsix_cost_monitor.analyst
     paths:
       - src/robotsix_cost_monitor/analyst.py
-    role: Deterministic cost digest + optional LLM proposal pass
+      - src/robotsix_cost_monitor/web/analyst.html
+      - src/robotsix_cost_monitor/web/static/analyst.js
+    role: Deterministic cost digest + optional LLM proposal pass and analyst UI
 
   - id: robotsix_cost_monitor.routes
     paths:
@@ -65,16 +67,6 @@ modules:
     paths:
       - src/robotsix_cost_monitor/web/static/shared.js
     role: Shared JS helpers for cost-monitor UI pages (getJSON, fmt, esc, $)
-
-  - id: robotsix_cost_monitor.web.analyst
-    paths:
-      - src/robotsix_cost_monitor/web/analyst.html
-    role: HTML template for the analyst UI page
-
-  - id: robotsix_cost_monitor.web.static.analyst
-    paths:
-      - src/robotsix_cost_monitor/web/static/analyst.js
-    role: Client-side JS for analyst dashboard (fetches /api/analyst/* endpoints)
 
   - id: tests.test_routes
     paths:

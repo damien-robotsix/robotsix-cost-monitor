@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- **Consolidated analyst web modules in `docs/modules.yaml`.**
+  Merged `robotsix_cost_monitor.web.analyst` and `robotsix_cost_monitor.web.static.analyst`
+  into `robotsix_cost_monitor.analyst`, matching the `robotsix_cost_monitor.app` pattern
+  where one module owns both Python source and frontend web assets.
+
 - **Fixed `dict_tracebacks`/`ConsoleRenderer` incompatibility in structlog config.**
   `_configure_logging()` now uses `format_exc_info` (string output) when the
   format is `console` and `dict_tracebacks` (structured output) only when the
