@@ -1,5 +1,11 @@
 ## 0.0.0 (unreleased)
 
+- **Added `zizmor` GitHub Actions security audit to CI.** A new
+  `workflow-audit` job in `.github/workflows/ci.yml` runs `uvx zizmor
+  --min-severity medium .github/workflows/` on every PR to detect
+  unpinned action refs, template injection, excessive permissions, and
+  other GitHub Actions security issues.
+
 - **Extracted shared cache-access helper in `CostService`.** Five private
   methods (`_traces`, `_trace_count`, `_model_usage`, `_backend_cost`,
   `_agent_usage`) now delegate to a single `_cached_fetch` helper that
