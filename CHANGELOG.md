@@ -1,5 +1,12 @@
 ## 0.0.0 (unreleased)
 
+- **Extracted shared cache-access helper in `CostService`.** Five private
+  methods (`_traces`, `_trace_count`, `_model_usage`, `_backend_cost`,
+  `_agent_usage`) now delegate to a single `_cached_fetch` helper that
+  encapsulates the key-lookup, monotonic-deadline check, TTL-based caching
+  pattern. This removes ~22 lines of duplicate boilerplate and makes future
+  cache-behaviour changes (e.g. stale-while-revalidate) local to one method.
+
 - **Dashboard renders segmented per-stage cost by backend.** The
   "cost by agent / stage" panel now fetches `/api/by-agent-segmented` and
   shows each stage's OpenRouter marginal cost as the primary figure with a
