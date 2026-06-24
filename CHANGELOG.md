@@ -4,6 +4,10 @@
   `tests.web.dashboard`, and `tests.web.shared` entries to `docs/modules.yaml`
   for the Vitest test files under `tests/web/`.
 
+- **Registered `tests/conftest.py` and `tests/helpers.py` in `docs/modules.yaml`.**
+  Added `tests.conftest` and `tests.helpers` module entries for shared test
+  infrastructure (fixtures, factories, data builders).
+
 - **Integrated `googleapis/release-please-action` for automated version management.**
   Added `release-please-config.json` and `.github/workflows/release-please.yml` to
   auto-create Release PRs that bump the version in `pyproject.toml` and
