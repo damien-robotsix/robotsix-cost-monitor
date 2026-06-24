@@ -51,6 +51,18 @@ uv run vulture src/ vulture_whitelist.py   # Dead-code analysis
 
 CI runs all of these on every PR. Fix issues before pushing.
 
+## Commit messages
+
+We follow [Conventional Commits](https://www.conventionalcommits.org/)
+(`feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`, `ci:`, etc.).
+release-please parses these for automated changelog generation and semver
+version bumps. Breaking changes should include a `BREAKING CHANGE:` footer
+or append `!` to the type (e.g. `feat!: ...`).
+
+A `commit-msg` hook is available via pre-commit to validate messages
+locally. See `.pre-commit-config.yaml` for the `conventional-pre-commit`
+hook.
+
 ## PR workflow
 
 1. Create a feature branch off `main`.
