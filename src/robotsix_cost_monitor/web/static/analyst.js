@@ -14,7 +14,8 @@ export function card(label, value, sub) {
 
 export function managerReply(rr) {
   if (!rr) return "";
-  if (rr.reply && rr.reply.reply) return rr.reply.reply; // manager NL reply
+  if (rr.reply && rr.reply.reply) return rr.reply.reply; // manager NL reply (legacy dict body)
+  if (typeof rr.reply === "string") return rr.reply;      // BrokeredRequester returns string
   if (rr.error) return rr.error;
   return "";
 }

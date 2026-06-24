@@ -1,5 +1,13 @@
 ## 0.0.0 (unreleased)
 
+- **Replaced hand-rolled brokered request pattern with `BrokeredRequester`.**
+  The `_brokered_agent()` factory and manual `agent.send_request()` +
+  `reply.body` extraction in `_file_proposals()` and `_fetch_ticket_context()`
+  are replaced by `BrokeredRequester` from `robotsix_agent_comm.sdk.brokered_request`,
+  which encapsulates transport-pair creation, request, reply unwrapping, and
+  teardown in one `request()` call.  Pinned `robotsix-agent-comm` to a newer
+  commit that includes this class.
+
 - **Added docstrings to all 20 FastAPI route handlers.**  Each handler in
   `src/robotsix_cost_monitor/routes.py` now carries a one-line docstring
   describing its purpose and URL, improving mkdocstrings output and IDE hover

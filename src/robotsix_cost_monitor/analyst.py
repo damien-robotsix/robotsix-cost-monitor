@@ -17,13 +17,10 @@ import contextlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 import structlog
 from pydantic import BaseModel
-
-if TYPE_CHECKING:
-    from robotsix_agent_comm.sdk.agent import Agent
 
 from .config import AnalystConfig, Config, data_dir
 from .service import CostService
@@ -317,10 +314,17 @@ def _file_proposals(a: AnalystConfig, analysis: Analysis) -> dict[str, Any]:
     Synchronous (the agent-comm pull client is sync); the caller runs it in a
     thread. Returns the manager's reply body, or an ``error`` entry.
     """
-    # The board MANAGER (an LLM agent, generous timeout) owns ticket creation:
-    # it decides which proposals warrant tickets, refines them, dedupes against
-    # existing tickets, and sets the source. We just report the findings.
-    agent = _brokered_agent(a, timeout=240.0)
+    from robotsix_agent_comm.sdk.brokered_request import BrokeredRequester
+
+    requester = BrokeredRequester(
+        "cost-analyst",
+        a.board_manager_id,
+        broker_host=a.broker_host or "",
+        broker_port=a.broker_port,
+        broker_scheme=a.broker_scheme,
+        broker_token=a.broker_token or "",
+        timeout=240.0,
+    )
     lines = "\n".join(
         f"{i}. {p.title}\n   rationale: {p.rationale}"
         + (f"\n   est. saving: {p.estimated_saving}" if p.estimated_saving else "")
@@ -339,34 +343,14 @@ def _file_proposals(a: AnalystConfig, analysis: Analysis) -> dict[str, Any]:
         "maps to)."
     )
     try:
-        with agent:
-            reply = agent.send_request(
-                a.board_manager_id,
-                {"message": message, "repo_id": a.board_repo_id},
-                timeout=240.0,
-            )
+        reply = requester.request(
+            {"message": message, "repo_id": a.board_repo_id},
+            timeout=240.0,
+        )
     except Exception as exc:  # noqa: BLE001 — surface as status, not a crash
         logger.warning("proposal filing failed: %s", exc)
         return {"filed": False, "error": str(exc)}
-    body = getattr(reply, "body", None)
-    return {"filed": True, "reply": body}
-
-
-def _brokered_agent(a: AnalystConfig, timeout: float = 240.0) -> Agent:  # noqa: F821
-    """Create a brokered-transport Agent for the cost-analyst identity."""
-    from robotsix_agent_comm.sdk.agent import Agent
-    from robotsix_agent_comm.transport.brokered import create_transport_pair
-
-    registry, transport = create_transport_pair(
-        "brokered",
-        broker_host=a.broker_host or "",
-        broker_port=a.broker_port,
-        broker_scheme=a.broker_scheme,
-        broker_token=a.broker_token or "",
-    )
-    return Agent(
-        "cost-analyst", registry, transport=transport, pull=True, timeout=timeout
-    )
+    return {"filed": True, "reply": reply}
 
 
 async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
@@ -443,22 +427,30 @@ def _fetch_ticket_context(a: AnalystConfig, ticket_id: str) -> dict[str, Any]:
     """Read a ticket's board context (ticket + history + description) via the
     broker's read-only responder ops. Best-effort — missing pieces are skipped.
     """
-    agent = _brokered_agent(a, timeout=30.0)
+    from robotsix_agent_comm.sdk.brokered_request import BrokeredRequester
+
+    requester = BrokeredRequester(
+        "cost-analyst",
+        a.board_agent_id,
+        broker_host=a.broker_host or "",
+        broker_port=a.broker_port,
+        broker_scheme=a.broker_scheme,
+        broker_token=a.broker_token or "",
+        timeout=30.0,
+        default_reply="",
+    )
     ctx: dict[str, Any] = {}
     try:
-        with agent:
-            for key, op in (
-                ("ticket", "get_ticket"),
-                ("history", "history"),
-                ("description", "description"),
-            ):
-                with contextlib.suppress(Exception):
-                    reply = agent.send_request(
-                        a.board_agent_id,
-                        {"op": op, "args": {"ticket_id": ticket_id}},
-                        timeout=30.0,
-                    )
-                    ctx[key] = getattr(reply, "body", None)
+        for key, op in (
+            ("ticket", "get_ticket"),
+            ("history", "history"),
+            ("description", "description"),
+        ):
+            with contextlib.suppress(Exception):
+                ctx[key] = requester.request(
+                    {"op": op, "args": {"ticket_id": ticket_id}},
+                    timeout=30.0,
+                )
     except Exception as exc:  # noqa: BLE001 — context is optional
         logger.warning("ticket context fetch failed: %s", exc)
     return ctx
