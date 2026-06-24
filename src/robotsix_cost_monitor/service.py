@@ -14,6 +14,7 @@ from .aggregations import (
     _trace_cost,
     aggregate_by_name,
     aggregate_by_name_backend,
+    aggregate_by_name_split,
     backend_cost_series,
     cost_trend,
     merge_model_costs,
@@ -294,6 +295,28 @@ class CostService:
                 parts.append([])
         all_rows: list[dict[str, Any]] = [r for part in parts for r in part]
         return aggregate_by_name_backend(all_rows, backend)
+
+    async def by_agent_segmented(
+        self, slug: str | None, hours: int
+    ) -> list[dict[str, Any]]:
+        """Cost by stage, split into OpenRouter-marginal and subscription-estimated
+        pools.
+
+        Each returned row is a stage with its cost (and trace count) attributed to
+        each serving backend, keeping fixed-subscription estimates (Claude-SDK)
+        separate from pay-per-token marginal cash (OpenRouter).  This makes it
+        impossible to conflate the two pools — e.g. the ``refine`` stage's heavy
+        Claude-SDK subscription usage (~$51) will no longer swamp the marginal
+        rankings.
+        """
+        parts: list[list[dict[str, Any]]] = []
+        for p in self._projects(slug):
+            try:
+                parts.append(await self._agent_usage(p, hours))
+            except Exception:  # noqa: BLE001 — a dead project must not 500 the page
+                parts.append([])
+        all_rows: list[dict[str, Any]] = [r for part in parts for r in part]
+        return aggregate_by_name_split(all_rows)
 
     async def _model_usage(
         self, project: ProjectConfig, hours: int

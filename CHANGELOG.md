@@ -1,5 +1,13 @@
 ## 0.0.0 (unreleased)
 
+- **Added segmented per-stage cost aggregation by backend.** The new
+  `GET /api/by-agent-segmented` endpoint splits each stage's cost into
+  OpenRouter marginal (pay-per-token) and Claude-SDK subscription-estimated
+  (fixed) pools, ranked by marginal cash. This prevents the `refine` stage's
+  heavy subscription usage (~$51) from dominating the cost rankings and
+  inviting a mis-optimization. The existing `/api/by-agent` endpoint is
+  unchanged.
+
 - **Adopted `structlog` as the first-party structured logging layer**, replacing
   the optional `robotsix_llmio.logging.setup_logging` fallback. All loggers now
   use `structlog.get_logger(__name__)` with `stdlib.LoggerFactory` bridging so
