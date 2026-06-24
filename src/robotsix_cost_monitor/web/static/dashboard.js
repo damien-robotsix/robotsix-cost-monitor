@@ -113,7 +113,7 @@ export function renderByAgentSegmented(rows) {
       .map(
         (r) =>
           `<div class="bar-row" style="grid-template-columns:140px 1fr 80px 140px">` +
-          `<span class="name" title="${esc(r.name)}">${esc(r.name)}</span>` +
+          `<span class="name">${esc(r.name)}</span>` +
           `<span class="bar-track"><span class="bar-fill" style="width:${((r.openrouter_cost || 0) / max) * 100}%"></span></span>` +
           `<span class="cost">${fmt(r.openrouter_cost)}</span>` +
           `<span style="text-align:right;font-size:11px;color:var(--muted)">est. (fixed subscription)&nbsp;${fmt(r.subscription_cost)}</span>` +
