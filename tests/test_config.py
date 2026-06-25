@@ -109,6 +109,7 @@ def test_example_yaml_max_trace_analyses_matches_code_default() -> None:
     config = Config.model_validate(raw)
     assert config.settings.analyst is not None
     assert config.settings.analyst.max_trace_analyses == 12
+    assert config.settings.reconcile_schedule_hours == 24.0
 
 
 def test_analyst_field_defaults() -> None:

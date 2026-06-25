@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- **Added `reconcile_schedule_hours` to example config.** The
+  `config/projects.example.yaml` now includes `reconcile_schedule_hours: 24.0`
+  under `settings:`, matching the Pydantic default. A regression test ensures the
+  example value stays in sync with the code default.
+
 - **Made `robotsix_llmio` import lazy in `reconcile.py`.**  The
   `OpenRouterKeyCostSource` import now lives inside `reconcile_project` instead of
   at module top-level, so the app, CLI, and routes modules are importable without
