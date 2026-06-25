@@ -10,7 +10,7 @@ export const $ = (id) => document.getElementById(id);
  * @param {number | string} n
  * @returns {string}
  */
-export const fmt = (n) => '$' + (Number(n) || 0).toFixed(n >= 100 ? 0 : 2);
+export const fmt = (n) => `$${(Number(n) || 0).toFixed(n >= 100 ? 0 : 2)}`;
 
 /**
  * Escape HTML special characters.

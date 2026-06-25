@@ -81,8 +81,8 @@ export function card(label, value, sub) {
  */
 export function managerReply(rr) {
   if (!rr) return '';
-  if (rr.reply && rr.reply.reply) return rr.reply.reply; // manager NL reply (legacy dict body)
-  if (typeof rr.reply === 'string') return rr.reply;      // BrokeredRequester returns string
+  if (rr.reply?.reply) return rr.reply.reply; // manager NL reply (legacy dict body)
+  if (typeof rr.reply === 'string') return rr.reply; // BrokeredRequester returns string
   if (rr.error) return rr.error;
   return '';
 }
@@ -96,7 +96,7 @@ export function render(run) {
     $('run-meta').innerHTML = card(
       'last run',
       '—',
-      (run && run.detail) || 'no run yet — press “run analysis”',
+      (run?.detail) || 'no run yet — press “run analysis”',
     );
     for (const id of ['summary', 'analyzed', 'proposals', 'ticket'])
       $(id).innerHTML = "<p class='muted'>—</p>";
@@ -111,7 +111,7 @@ export function render(run) {
     card('last run', new Date(run.generated_at).toLocaleString(), `window ${run.window_hours}h`),
     card('traces analyzed', traces.length, ''),
     card('proposals', props.length, ''),
-    card('tickets', fr && fr.filed ? 'filed' : '—', fr && fr.filed ? 'via board manager' : ''),
+    card('tickets', fr?.filed ? 'filed' : '—', fr && fr.filed ? 'via board manager' : ''),
   ].join('');
 
   $('summary').innerHTML = run.summary ? `<p>${esc(run.summary)}</p>` : "<p class='muted'>—</p>";
@@ -123,7 +123,7 @@ export function render(run) {
       <div class="item">
         <div class="item-head">
           <span class="mono">${esc(t.trace_id)}</span>
-          <span class="muted">${esc(t.project || '')}${t.name ? ' · ' + esc(t.name) : ''} · <b>${fmt(t.cost)}</b></span>
+          <span class="muted">${esc(t.project || '')}${t.name ? ` · ${esc(t.name)}` : ''} · <b>${fmt(t.cost)}</b></span>
         </div>
         <div class="item-body"><b>selected:</b> ${esc(
           t.selection_reason || (t.rank ? `#${t.rank} by cost` : 'top-cost trace'),
@@ -181,7 +181,7 @@ export async function load() {
     render(await getJSON('/api/analyst/proposals'));
     setStatus('showing last run');
   } catch (e) {
-    setStatus('load failed: ' + e.message);
+    setStatus(`load failed: ${e.message}`);
   }
 }
 
@@ -199,7 +199,7 @@ export async function run() {
     render(await r.json());
     setStatus('run complete');
   } catch (e) {
-    setStatus('run failed: ' + e.message);
+    setStatus(`run failed: ${e.message}`);
   } finally {
     btn.disabled = false;
   }
@@ -268,9 +268,7 @@ export function renderTargeted(id, run, headerHTML) {
  * @returns {string}
  */
 export function ticketHeader(run) {
-  const stages = (run.by_stage || [])
-    .map((s) => `${esc(s.name)} ${fmt(s.cost)}`)
-    .join(' · ');
+  const stages = (run.by_stage || []).map((s) => `${esc(s.name)} ${fmt(s.cost)}`).join(' · ');
   return `
     <div class="item-head">
       <span class="mono">${esc(run.ticket_id || run.session_id || '')}</span>
@@ -305,7 +303,7 @@ export function makeTargeted(kind, btnId, containerId, headerFn) {
     try {
       renderTargeted(containerId, await getJSON(`/api/analyst/${kind}`), headerFn);
     } catch (e) {
-      setStatus(`${kind} load failed: ` + e.message);
+      setStatus(`${kind} load failed: ${e.message}`);
     }
   };
   const btn = $(btnId);
@@ -318,7 +316,7 @@ export function makeTargeted(kind, btnId, containerId, headerFn) {
       renderTargeted(containerId, await r.json(), headerFn);
       setStatus(`${kind} analysis complete`);
     } catch (e) {
-      setStatus(`${kind} run failed: ` + e.message);
+      setStatus(`${kind} run failed: ${e.message}`);
     } finally {
       btn.disabled = false;
     }

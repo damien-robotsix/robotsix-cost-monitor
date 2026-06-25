@@ -287,7 +287,11 @@ describe('renderTargeted', () => {
 
   it('renders detail when run has detail', () => {
     fixture('<div id="target"></div>');
-    renderTargeted('target', { generated_at: 'x', detail: 'analysis timed out' }, () => '<h>header</h>');
+    renderTargeted(
+      'target',
+      { generated_at: 'x', detail: 'analysis timed out' },
+      () => '<h>header</h>',
+    );
     const el = document.getElementById('target');
     expect(el.innerHTML).toContain('analysis timed out');
     expect(el.innerHTML).not.toContain('<h>header</h>'); // header not rendered on detail
