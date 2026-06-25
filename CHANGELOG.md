@@ -5,6 +5,8 @@
   `tests/test_cli.py`, `tests/test_config.py`, `tests/test_reconcile.py`, and
   `tests/test_service.py` now have corresponding `tests.*` module entries.
 
+- **Registered `tests/clients/test_langfuse.py` in module manifest.** Added
+  `tests.clients.test_langfuse` entry to `docs/modules.yaml`.
 - **Added `traces_per_agent` to example config.** The
   `config/projects.example.yaml` now includes `traces_per_agent: 1` under
   `settings.analyst:`, matching the Pydantic default of 1 trace per agent.
