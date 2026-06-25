@@ -73,6 +73,41 @@ modules:
       - tests/test_routes.py
     role: Unit tests for route helpers, dependency providers, exception handlers, and route edge cases
 
+  - id: tests.test_aggregations
+    paths:
+      - tests/test_aggregations.py
+    role: Unit tests for pure cost-aggregation functions (aggregations.py, no network)
+
+  - id: tests.test_analyst
+    paths:
+      - tests/test_analyst.py
+    role: Offline tests for cost-analyst orchestration (analyst.py, no LLM/network)
+
+  - id: tests.test_app
+    paths:
+      - tests/test_app.py
+    role: App + config tests using a zero-project config (app.py, no network)
+
+  - id: tests.test_cli
+    paths:
+      - tests/test_cli.py
+    role: Unit tests for the CLI entrypoint (cli.py)
+
+  - id: tests.test_config
+    paths:
+      - tests/test_config.py
+    role: Unit tests for config.py I/O helpers and AnalystConfig model
+
+  - id: tests.test_reconcile
+    paths:
+      - tests/test_reconcile.py
+    role: Unit tests for reconcile_project + snapshot load/save (reconcile.py, no network)
+
+  - id: tests.test_service
+    paths:
+      - tests/test_service.py
+    role: Unit tests for CostService caching, cross-project merging, exception isolation (service.py, no network)
+
   - id: tests.web.analyst
     paths:
       - tests/web/analyst.test.js
