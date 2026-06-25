@@ -1,5 +1,9 @@
 ## 0.0.0 (unreleased)
 
+- **Added Makefile with `test` target to ensure dependencies are installed before running pytest.**
+  `make test` runs `uv sync --locked --all-extras` followed by `uv run pytest`,
+  preventing `ModuleNotFoundError` for `structlog` and other declared dependencies.
+
 - **Registered JS test files in module taxonomy.** Added `tests.web.analyst`,
   `tests.web.dashboard`, and `tests.web.shared` entries to `docs/modules.yaml`
   for the Vitest test files under `tests/web/`.
