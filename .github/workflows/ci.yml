@@ -103,6 +103,6 @@ jobs:
       - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.2.0
         with:
           node-version: "20"
-      - run: npm ci
+      - run: npm install
       - run: npm run lint:ci
       - run: npm test
