@@ -1,5 +1,3 @@
-"use strict";
-
 /**
  * Shorthand for `document.getElementById`.
  * @param {string} id
@@ -12,7 +10,7 @@ export const $ = (id) => document.getElementById(id);
  * @param {number | string} n
  * @returns {string}
  */
-export const fmt = (n) => "$" + (Number(n) || 0).toFixed(n >= 100 ? 0 : 2);
+export const fmt = (n) => '$' + (Number(n) || 0).toFixed(n >= 100 ? 0 : 2);
 
 /**
  * Escape HTML special characters.
@@ -20,9 +18,9 @@ export const fmt = (n) => "$" + (Number(n) || 0).toFixed(n >= 100 ? 0 : 2);
  * @returns {string}
  */
 export const esc = (s) =>
-  String(s ?? "").replace(
+  String(s ?? '').replace(
     /[&<>"]/g,
-    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c],
   );
 
 /**
