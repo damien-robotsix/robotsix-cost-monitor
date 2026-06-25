@@ -1,5 +1,9 @@
 ## 0.0.0 (unreleased)
 
+- **Added `traces_per_agent` to example config.** The
+  `config/projects.example.yaml` now includes `traces_per_agent: 1` under
+  `settings.analyst:`, matching the Pydantic default of 1 trace per agent.
+  The existing regression test now also asserts this field.
 - **Added `reconcile_schedule_hours` to example config.** The
   `config/projects.example.yaml` now includes `reconcile_schedule_hours: 24.0`
   under `settings:`, matching the Pydantic default. A regression test ensures the
