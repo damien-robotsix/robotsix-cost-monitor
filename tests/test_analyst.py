@@ -491,13 +491,18 @@ class TestMaybeSetupTracing:
             raising=False,
         )
         # Also need to mock the import inside _maybe_setup_tracing
-        import robotsix_llmio.core.tracing as tracing_mod
+        import sys
+        import types
 
-        monkeypatch.setattr(
-            tracing_mod,
-            "setup_langfuse_tracing",
-            fake_setup,
-        )
+        fake_tracing = types.ModuleType("robotsix_llmio.core.tracing")
+        fake_tracing.setup_langfuse_tracing = fake_setup
+        fake_core = types.ModuleType("robotsix_llmio.core")
+        fake_core.tracing = fake_tracing
+        fake_llmio = types.ModuleType("robotsix_llmio")
+        fake_llmio.core = fake_core
+        monkeypatch.setitem(sys.modules, "robotsix_llmio", fake_llmio)
+        monkeypatch.setitem(sys.modules, "robotsix_llmio.core", fake_core)
+        monkeypatch.setitem(sys.modules, "robotsix_llmio.core.tracing", fake_tracing)
         analyst_mod._maybe_setup_tracing(a)
         assert called.get("public_key") == "pk-test"
         assert called.get("secret_key") == "sk-test"

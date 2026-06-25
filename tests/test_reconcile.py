@@ -1,16 +1,25 @@
-"""Unit tests for reconcile_project + snapshot load/save (no network)."""
+"""Unit tests for reconcile_project + snapshot load/save (no network).
+
+The optional ``robotsix-llmio`` package is mocked via an autouse fixture
+that injects stub modules into ``sys.modules`` for the duration of each
+test, so ``patch("robotsix_llmio.openrouter.OpenRouterKeyCostSource")``
+works even without the ``analyst`` extra.  The mock is torn down after each
+test so it cannot leak into other test modules (e.g. ``test_analyst.py``).
+"""
 
 from __future__ import annotations
 
 import json
+import sys
+from collections.abc import Generator
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from conftest import _proj
-from robotsix_llmio.openrouter import KeyUsage
 
 from robotsix_cost_monitor.config import Settings
 from robotsix_cost_monitor.reconcile import (
@@ -19,6 +28,37 @@ from robotsix_cost_monitor.reconcile import (
     reconcile_project,
     reconcile_status,
 )
+
+
+@dataclass
+class KeyUsage:
+    """Drop-in for ``robotsix_llmio.openrouter.KeyUsage`` when the real
+    package is not installed."""
+
+    usage: float
+
+
+# ---------------------------------------------------------------------------
+# Autouse fixture — inject mock ``robotsix_llmio`` / ``robotsix_llmio.openrouter``
+# modules before each test and remove them afterwards.  When the real package
+# IS installed we must not clobber it.
+# ---------------------------------------------------------------------------
+@pytest.fixture(autouse=True)
+def _mock_robotsix_llmio_modules() -> Generator[None, None, None]:
+    had_llmio = "robotsix_llmio" in sys.modules
+    had_openrouter = "robotsix_llmio.openrouter" in sys.modules
+
+    if not had_llmio:
+        sys.modules["robotsix_llmio"] = MagicMock()
+    if not had_openrouter:
+        sys.modules["robotsix_llmio.openrouter"] = MagicMock()
+
+    yield
+
+    if not had_llmio:
+        sys.modules.pop("robotsix_llmio", None)
+    if not had_openrouter:
+        sys.modules.pop("robotsix_llmio.openrouter", None)
 
 
 def test_reconcile_status() -> None:
@@ -78,7 +118,7 @@ async def test_no_openrouter_key() -> None:
 async def test_openrouter_fetch_failure() -> None:
     """OpenRouterKeyCostSource fetch_key_usage raises → result has error, no snapshot saved."""
     proj = _proj("demo")
-    with patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls:
+    with patch("robotsix_llmio.openrouter.OpenRouterKeyCostSource") as orc_cls:
         mock_orc = orc_cls.return_value
         mock_orc.fetch_key_usage = Mock(side_effect=RuntimeError("boom"))
 
@@ -97,7 +137,7 @@ async def test_openrouter_credits_fetch_failure_ignored(
     proj = _proj("demo")
 
     with (
-        patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls,
+        patch("robotsix_llmio.openrouter.OpenRouterKeyCostSource") as orc_cls,
         patch(
             "robotsix_cost_monitor.reconcile._fetch_credits",
             AsyncMock(side_effect=RuntimeError("credits-down")),
@@ -120,7 +160,7 @@ async def test_first_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
 
     proj = _proj("demo")
     with (
-        patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls,
+        patch("robotsix_llmio.openrouter.OpenRouterKeyCostSource") as orc_cls,
         patch(
             "robotsix_cost_monitor.reconcile._fetch_credits",
             AsyncMock(
@@ -170,7 +210,7 @@ async def test_second_call_within_tolerance(
 
     with (
         patch("robotsix_cost_monitor.reconcile.datetime", _FrozenNow(now)),
-        patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls,
+        patch("robotsix_llmio.openrouter.OpenRouterKeyCostSource") as orc_cls,
         patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
         patch(
             "robotsix_cost_monitor.reconcile._fetch_credits",
@@ -215,7 +255,7 @@ async def test_drift_exceeds_tolerance(
 
     with (
         patch("robotsix_cost_monitor.reconcile.datetime", _FrozenNow(now)),
-        patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls,
+        patch("robotsix_llmio.openrouter.OpenRouterKeyCostSource") as orc_cls,
         patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
         patch(
             "robotsix_cost_monitor.reconcile._fetch_credits",
@@ -261,7 +301,7 @@ async def test_negative_interval_treated_as_zero(
 
     with (
         patch("robotsix_cost_monitor.reconcile.datetime", _FrozenNow(now)),
-        patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls,
+        patch("robotsix_llmio.openrouter.OpenRouterKeyCostSource") as orc_cls,
         patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
         patch(
             "robotsix_cost_monitor.reconcile._fetch_credits",
@@ -297,7 +337,7 @@ async def test_missing_snapshot_file_treated_as_first(
     # _load_snapshot is tested directly below; here we verify the integration
     proj = _proj("demo")
     with (
-        patch("robotsix_cost_monitor.reconcile.OpenRouterKeyCostSource") as orc_cls,
+        patch("robotsix_llmio.openrouter.OpenRouterKeyCostSource") as orc_cls,
         patch(
             "robotsix_cost_monitor.reconcile._fetch_credits",
             AsyncMock(

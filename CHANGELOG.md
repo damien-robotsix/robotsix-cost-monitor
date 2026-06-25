@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- **Made `robotsix_llmio` import lazy in `reconcile.py`.**  The
+  `OpenRouterKeyCostSource` import now lives inside `reconcile_project` instead of
+  at module top-level, so the app, CLI, and routes modules are importable without
+  the optional `analyst` extra installed.
+
 - **Added Makefile with `test` target to ensure dependencies are installed before running pytest.**
   `make test` runs `uv sync --locked --all-extras` followed by `uv run pytest`,
   preventing `ModuleNotFoundError` for `structlog` and other declared dependencies.

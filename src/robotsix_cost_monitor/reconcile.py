@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from robotsix_llmio.openrouter import OpenRouterKeyCostSource
 
 from .clients.langfuse import LangfuseClient
 from .config import Config, ProjectConfig, Settings, data_dir
@@ -88,6 +87,8 @@ async def reconcile_project(
     if not project.openrouter_key:
         result["detail"] = "no openrouter_key configured for this project"
         return result
+
+    from robotsix_llmio.openrouter import OpenRouterKeyCostSource
 
     orc = OpenRouterKeyCostSource(api_key=project.openrouter_key)
     # Per-KEY cumulative usage is the reconciliation basis (isolates this
