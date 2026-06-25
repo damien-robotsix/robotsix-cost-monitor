@@ -491,8 +491,9 @@ class TestMaybeSetupTracing:
             raising=False,
         )
         # Also need to mock the import inside _maybe_setup_tracing
-        import types
         import sys
+        import types
+
         fake_tracing = types.ModuleType("robotsix_llmio.core.tracing")
         fake_tracing.setup_langfuse_tracing = fake_setup
         fake_core = types.ModuleType("robotsix_llmio.core")

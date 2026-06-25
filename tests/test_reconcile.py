@@ -11,14 +11,23 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Generator
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from conftest import _proj
+
+from robotsix_cost_monitor.config import Settings
+from robotsix_cost_monitor.reconcile import (
+    _load_snapshot,
+    _save_snapshot,
+    reconcile_project,
+    reconcile_status,
+)
 
 
 @dataclass
@@ -50,15 +59,6 @@ def _mock_robotsix_llmio_modules() -> Generator[None, None, None]:
         sys.modules.pop("robotsix_llmio", None)
     if not had_openrouter:
         sys.modules.pop("robotsix_llmio.openrouter", None)
-
-
-from robotsix_cost_monitor.config import Settings
-from robotsix_cost_monitor.reconcile import (
-    _load_snapshot,
-    _save_snapshot,
-    reconcile_project,
-    reconcile_status,
-)
 
 
 def test_reconcile_status() -> None:
