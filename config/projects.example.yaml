@@ -27,6 +27,8 @@ settings:
   cache_ttl_seconds: 60
   # Reconciliation tolerance ($): drift below this is considered clean.
   reconcile_tolerance_usd: 1.0
+  # Auto-run reconciliation every N hours (0 disables; default daily).
+  reconcile_schedule_hours: 24.0
   # LLM cost-analyst (optional). Disabled until openrouter_key is set.
   # Runs a level-2 (robotsix-llmio tier-2) agent over the cost digest with a
   # level-3 sub-agent that drills into the most expensive traces, and — when a
