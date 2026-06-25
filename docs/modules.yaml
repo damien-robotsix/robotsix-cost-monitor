@@ -134,8 +134,13 @@ modules:
       - tests/helpers.py
     role: Pure data-builder helper for test trace dicts (trace())
 
+  - id: tests.clients.test_langfuse
+    paths:
+      - tests/clients/test_langfuse.py
+    role: Unit tests for LangfuseClient (__init__, fetch_traces_window, fetch_trace_detail, metrics queries, aggregation methods — no network)
+
   - id: docs.site
     paths:
       - docs/index.md
       - docs/api.md
-    role: MkDocs documentation site source files (landing page + API reference)
+    role: MkDocs documentation site source files (landing page + API reference))
