@@ -133,3 +133,9 @@ modules:
     paths:
       - tests/helpers.py
     role: Pure data-builder helper for test trace dicts (trace())
+
+  - id: docs.site
+    paths:
+      - docs/index.md
+      - docs/api.md
+    role: MkDocs documentation site source files (landing page + API reference)
