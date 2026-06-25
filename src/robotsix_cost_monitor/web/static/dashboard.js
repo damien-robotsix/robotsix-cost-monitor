@@ -117,21 +117,18 @@ export function populateBackends(modelRows) {
  * @param {ModelRow[]} modelRows
  */
 export function renderSummary(s, backend, modelRows) {
-  let cards;
-  if (backend && backend !== 'all') {
-    // Day-granular backend total from the per-model metrics (see by-model).
-    const total = modelRows.reduce((a, r) => a + (Number(r.cost) || 0), 0);
-    cards = [{ label: `total · ${backend}`, value: fmt(total), sub: `${s.window_hours}h window` }];
-  } else {
-    cards = [
-      { label: 'total cost', value: fmt(s.total_cost), sub: `${s.window_hours}h window` },
-      ...s.projects.map((p) => ({
-        label: p.name,
-        value: fmt(p.cost),
-        sub: `${p.trace_count} traces`,
-      })),
-    ];
-  }
+  const total = modelRows.reduce((a, r) => a + (Number(r.cost) || 0), 0);
+  const cards =
+    backend && backend !== 'all'
+      ? [{ label: `total · ${backend}`, value: fmt(total), sub: `${s.window_hours}h window` }]
+      : [
+          { label: 'total cost', value: fmt(s.total_cost), sub: `${s.window_hours}h window` },
+          ...s.projects.map((p) => ({
+            label: p.name,
+            value: fmt(p.cost),
+            sub: `${p.trace_count} traces`,
+          })),
+        ];
   $('summary-cards').innerHTML = cards
     .map(
       (c) =>
@@ -267,7 +264,7 @@ export function renderReconcile(rows) {
       const pill = r.within_tolerance
         ? '<span class="pill ok">clean</span>'
         : '<span class="pill bad">drift</span>';
-      return `<div class="recon-row"><span>${esc(r.project)}</span><span class="muted">provider ${fmt(r.provider_delta_usd)}</span><span class="muted">traced ${fmt(r.langfuse_cost_usd)}${r.langfuse_total_cost_usd != null && Math.abs(r.langfuse_total_cost_usd - r.langfuse_cost_usd) > 1e-9 ? ` (all ${fmt(r.langfuse_total_cost_usd)})` : ''}</span><span class="${r.within_tolerance ? 'ok' : 'drift'}">Δ ${fmt(r.drift_usd)}</span><span>${pill} <span class="muted">${bal}</span></span></div>`;
+      return `<div class="recon-row"><span>${esc(r.project)}</span><span class="muted">provider ${fmt(r.provider_delta_usd)}</span><span class="muted">traced ${fmt(r.langfuse_cost_usd)}${r.langfuse_total_cost_usd !== undefined && r.langfuse_total_cost_usd !== null && Math.abs(r.langfuse_total_cost_usd - r.langfuse_cost_usd) > 1e-9 ? ` (all ${fmt(r.langfuse_total_cost_usd)})` : ''}</span><span class="${r.within_tolerance ? 'ok' : 'drift'}">Δ ${fmt(r.drift_usd)}</span><span>${pill} <span class="muted">${bal}</span></span></div>`;
     })
     .join('');
 }
@@ -334,16 +331,15 @@ export async function refreshReconMeta() {
  * @returns {Promise<void>}
  */
 export async function loadLastReconcile() {
-  let last;
   try {
-    last = await getJSON('/api/reconcile/last');
+    const last = await getJSON('/api/reconcile/last');
+    renderReconBanner(last);
+    renderReconWhen(last);
+    if (last && Array.isArray(last.results) && last.results.length) {
+      renderReconcile(last.results);
+    }
   } catch (_e) {
-    return;
-  }
-  renderReconBanner(last);
-  renderReconWhen(last);
-  if (last && Array.isArray(last.results) && last.results.length) {
-    renderReconcile(last.results);
+    /* no-op */
   }
 }
 
