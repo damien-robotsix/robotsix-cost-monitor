@@ -5,6 +5,13 @@
   under `settings:`, matching the Pydantic default. A regression test ensures the
   example value stays in sync with the code default.
 
+- **Added JS linting, formatting, and type-checking with Biome.**  Configured
+  `@biomejs/biome` as a dev dependency with `biome.json` covering the static JS
+  sources and Vitest test files.  Added `lint`, `format`, and `lint:ci` npm
+  scripts and a `npm run lint:ci` step to the `js-tests` CI job.  Also added
+  JSDoc type annotations (including `@typedef` type definitions) to every
+  exported function in `shared.js`, `analyst.js`, and `dashboard.js`.
+
 - **Made `robotsix_llmio` import lazy in `reconcile.py`.**  The
   `OpenRouterKeyCostSource` import now lives inside `reconcile_project` instead of
   at module top-level, so the app, CLI, and routes modules are importable without

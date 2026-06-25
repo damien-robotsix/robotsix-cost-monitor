@@ -2,16 +2,85 @@
 
 import { $, fmt, esc, getJSON } from "./shared.js";
 
+/**
+ * @typedef {object} AnalystRun
+ * @property {boolean} [enabled]
+ * @property {string} [generated_at]
+ * @property {string} [detail]
+ * @property {number} [window_hours]
+ * @property {string} [summary]
+ * @property {TraceAnalysis[]} [analyzed_traces]
+ * @property {Proposal[]} [proposals]
+ * @property {FilingResult} [filing_result]
+ * @property {number} [total_cost]
+ * @property {number} [trace_count]
+ * @property {boolean} [history_available]
+ * @property {string} [ticket_id]
+ * @property {string} [session_id]
+ * @property {string} [board_id]
+ * @property {StageBreakdown[]} [by_stage]
+ * @property {string} [stage]
+ * @property {number} [pct_of_traced]
+ * @property {number} [sample_size]
+ */
+
+/**
+ * @typedef {object} TraceAnalysis
+ * @property {string} trace_id
+ * @property {string} [project]
+ * @property {string} [name]
+ * @property {number} cost
+ * @property {string} [selection_reason]
+ * @property {number} [rank]
+ * @property {string} [finding]
+ */
+
+/**
+ * @typedef {object} Proposal
+ * @property {string} title
+ * @property {string} [estimated_saving]
+ * @property {string} [rationale]
+ */
+
+/**
+ * @typedef {object} FilingResult
+ * @property {boolean} [filed]
+ * @property {string} [error]
+ * @property {string | {reply: {reply: string}}} [reply]
+ */
+
+/**
+ * @typedef {object} StageBreakdown
+ * @property {string} name
+ * @property {number} cost
+ */
+
+/**
+ * Update the status text element.
+ * @param {string} m
+ */
 export const setStatus = (m) => {
   $("status").textContent = m;
 };
 
+/**
+ * Render a metric card as HTML.
+ * @param {string} label
+ * @param {string} value
+ * @param {string} sub
+ * @returns {string}
+ */
 export function card(label, value, sub) {
   return `<div class="card"><div class="label">${esc(label)}</div><div class="value">${esc(
     value,
   )}</div><div class="sub">${esc(sub)}</div></div>`;
 }
 
+/**
+ * Extract the human-readable reply from a manager FilingResult.
+ * @param {FilingResult | null | undefined} rr
+ * @returns {string}
+ */
 export function managerReply(rr) {
   if (!rr) return "";
   if (rr.reply && rr.reply.reply) return rr.reply.reply; // manager NL reply (legacy dict body)
@@ -20,6 +89,10 @@ export function managerReply(rr) {
   return "";
 }
 
+/**
+ * Render the full analyst run (summary + traces + proposals + filing status).
+ * @param {AnalystRun | null} run
+ */
 export function render(run) {
   if (!run || run.enabled === false || !run.generated_at) {
     $("run-meta").innerHTML = card(
@@ -104,6 +177,10 @@ export function render(run) {
   }
 }
 
+/**
+ * Fetch and render the latest analyst run.
+ * @returns {Promise<void>}
+ */
 export async function load() {
   try {
     render(await getJSON("/api/analyst/proposals"));
@@ -113,6 +190,10 @@ export async function load() {
   }
 }
 
+/**
+ * Trigger a new analyst run and render the result.
+ * @returns {Promise<void>}
+ */
 export async function run() {
   const btn = $("run-btn");
   btn.disabled = true;
@@ -131,6 +212,11 @@ export async function run() {
 
 // --- targeted analyses (most costly ticket / stage) ---
 
+/**
+ * Render proposal list as HTML.
+ * @param {Proposal[] | null} props
+ * @returns {string}
+ */
 export function proposalsHTML(props) {
   if (!props || !props.length) return "<p class='muted'>no proposals</p>";
   return props
@@ -147,12 +233,23 @@ export function proposalsHTML(props) {
     .join("");
 }
 
+/**
+ * Render filing result as HTML (board manager reply).
+ * @param {FilingResult | null} fr
+ * @returns {string}
+ */
 export function filingHTML(fr) {
   if (!fr) return "";
   const reply = managerReply(fr);
   return `<div class="item-body muted"><b>board manager:</b> ${esc(reply || fr.error || "")}</div>`;
 }
 
+/**
+ * Render a targeted analysis (ticket or stage) into a container.
+ * @param {string} id - container element id
+ * @param {AnalystRun | null} run
+ * @param {(run: AnalystRun) => string} headerHTML
+ */
 export function renderTargeted(id, run, headerHTML) {
   const el = $(id);
   if (!run || !run.generated_at) {
@@ -170,6 +267,11 @@ export function renderTargeted(id, run, headerHTML) {
     ${filingHTML(run.filing_result)}`;
 }
 
+/**
+ * Header HTML for a ticket-level targeted analysis.
+ * @param {AnalystRun} run
+ * @returns {string}
+ */
 export function ticketHeader(run) {
   const stages = (run.by_stage || [])
     .map((s) => `${esc(s.name)} ${fmt(s.cost)}`)
@@ -182,6 +284,11 @@ export function ticketHeader(run) {
     ${stages ? `<div class="item-body muted">by stage: ${stages}</div>` : ""}`;
 }
 
+/**
+ * Header HTML for a stage-level targeted analysis.
+ * @param {AnalystRun} run
+ * @returns {string}
+ */
 export function stageHeader(run) {
   return `
     <div class="item-head">
@@ -190,6 +297,14 @@ export function stageHeader(run) {
     </div>`;
 }
 
+/**
+ * Wire up a targeted analysis button (ticket or stage).
+ * @param {"ticket" | "stage"} kind
+ * @param {string} btnId - button element id
+ * @param {string} containerId - result container element id
+ * @param {(run: AnalystRun) => string} headerFn
+ * @returns {() => Promise<void>} initial load function
+ */
 export function makeTargeted(kind, btnId, containerId, headerFn) {
   const loadFn = async () => {
     try {

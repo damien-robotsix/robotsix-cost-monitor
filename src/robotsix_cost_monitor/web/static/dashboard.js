@@ -2,12 +2,89 @@
 
 import { $, fmt, esc, getJSON } from "./shared.js";
 
+/**
+ * @typedef {object} ProjectInfo
+ * @property {string} slug
+ * @property {string} name
+ */
+
+/**
+ * @typedef {object} Summary
+ * @property {number} total_cost
+ * @property {number} window_hours
+ * @property {ProjectCost[]} projects
+ */
+
+/**
+ * @typedef {object} ProjectCost
+ * @property {string} name
+ * @property {number} cost
+ * @property {number} trace_count
+ */
+
+/**
+ * @typedef {object} TrendPoint
+ * @property {number} cost
+ */
+
+/**
+ * @typedef {object} AgentRow
+ * @property {string} name
+ * @property {number} cost
+ * @property {number} [openrouter_cost]
+ * @property {number} [subscription_cost]
+ */
+
+/**
+ * @typedef {object} ModelRow
+ * @property {string} model
+ * @property {string} [backend]
+ * @property {number} cost
+ * @property {number} total_tokens
+ * @property {number} observations
+ */
+
+/**
+ * @typedef {object} Highlights
+ * @property {{name?: string, cost: number, id?: string}} [most_expensive_trace]
+ * @property {{session_id: string, cost: number, count: number}} [most_expensive_session]
+ */
+
+/**
+ * @typedef {object} ReconcileRow
+ * @property {string} project
+ * @property {boolean} [configured]
+ * @property {string} [error]
+ * @property {string} [detail]
+ * @property {number} [provider_delta_usd]
+ * @property {number} [langfuse_cost_usd]
+ * @property {number} [langfuse_total_cost_usd]
+ * @property {number} [drift_usd]
+ * @property {boolean} [within_tolerance]
+ * @property {{remaining: number}} [balance]
+ */
+
+/**
+ * @typedef {object} ReconLast
+ * @property {string} [status]
+ * @property {string} [generated_at]
+ * @property {ReconcileRow[]} [results]
+ */
+
 const qs = () => `?project=${$("project").value}&hours=${$("window").value}`;
 
+/**
+ * Update the status text element.
+ * @param {string} msg
+ */
 export function setStatus(msg) {
   $("status").textContent = msg;
 }
 
+/**
+ * Load the project list and populate the dropdown.
+ * @returns {Promise<void>}
+ */
 export async function loadProjects() {
   const projects = await getJSON("/api/projects");
   const sel = $("project");
@@ -19,6 +96,10 @@ export async function loadProjects() {
   }
 }
 
+/**
+ * Populate the backend filter dropdown from model rows.
+ * @param {ModelRow[]} modelRows
+ */
 export function populateBackends(modelRows) {
   const sel = $("backend");
   const cur = sel.value;
@@ -33,6 +114,12 @@ export function populateBackends(modelRows) {
   sel.value = cur;
 }
 
+/**
+ * Render the summary cards section.
+ * @param {Summary} s
+ * @param {string} backend
+ * @param {ModelRow[]} modelRows
+ */
 export function renderSummary(s, backend, modelRows) {
   let cards;
   if (backend && backend !== "all") {
@@ -60,6 +147,10 @@ export function renderSummary(s, backend, modelRows) {
     .join("");
 }
 
+/**
+ * Render the cost trend chart (line + area on canvas).
+ * @param {TrendPoint[]} points
+ */
 export function renderTrend(points) {
   const canvas = $("trend");
   const ctx = canvas.getContext("2d");
@@ -93,6 +184,10 @@ export function renderTrend(points) {
   ctx.stroke();
 }
 
+/**
+ * Render the by-agent cost bar chart.
+ * @param {AgentRow[]} rows
+ */
 export function renderByAgent(rows) {
   const max = Math.max(...rows.map((r) => r.cost), 1e-9);
   $("by-agent").innerHTML =
@@ -106,6 +201,10 @@ export function renderByAgent(rows) {
       .join("") || '<div class="muted">no data</div>';
 }
 
+/**
+ * Render the by-agent cost bar chart (segmented: usage vs subscription).
+ * @param {AgentRow[]} rows
+ */
 export function renderByAgentSegmented(rows) {
   const max = Math.max(...rows.map((r) => r.openrouter_cost || 0), 1e-9);
   $("by-agent").innerHTML =
@@ -122,6 +221,10 @@ export function renderByAgentSegmented(rows) {
       .join("") || '<div class="muted">no data</div>';
 }
 
+/**
+ * Render the by-model cost bar chart.
+ * @param {ModelRow[]} rows
+ */
 export function renderByModel(rows) {
   const max = Math.max(...rows.map((r) => r.cost), 1e-9);
   $("by-model").innerHTML =
@@ -138,6 +241,10 @@ export function renderByModel(rows) {
       .join("") || '<div class="muted">no data</div>';
 }
 
+/**
+ * Render the highlights section (most expensive trace/session).
+ * @param {Highlights} h
+ */
 export function renderHighlights(h) {
   const t = h.most_expensive_trace;
   const s = h.most_expensive_session;
@@ -155,6 +262,10 @@ export function renderHighlights(h) {
   $("highlights").innerHTML = rows.join("") || '<div class="muted">no data</div>';
 }
 
+/**
+ * Render the reconciliation results table.
+ * @param {ReconcileRow[]} rows
+ */
 export function renderReconcile(rows) {
   $("reconcile").innerHTML = rows
     .map((r) => {
@@ -186,6 +297,10 @@ export function renderReconcile(rows) {
 
 // Warning banner for the last (scheduled or manual) reconcile — only shown when
 // there's drift. Pure renderer over an /api/reconcile/last payload.
+/**
+ * Show/hide the reconciliation drift warning banner.
+ * @param {ReconLast | null} last
+ */
 export function renderReconBanner(last) {
   const el = $("recon-banner");
   if (!el) return;
@@ -212,6 +327,10 @@ export function renderReconBanner(last) {
   el.hidden = false;
 }
 
+/**
+ * Update the "last checked" timestamp label.
+ * @param {ReconLast | null} last
+ */
 export function renderReconWhen(last) {
   const el = $("recon-when");
   if (!el) return;
@@ -221,9 +340,12 @@ export function renderReconWhen(last) {
       : "";
 }
 
-// Refresh the banner + "last checked" label from the persisted last reconcile,
-// without touching the results table (used after a manual, possibly
-// project-scoped, run that already rendered its own rows).
+/**
+ * Refresh the banner + "last checked" label from the persisted last reconcile,
+ * without touching the results table (used after a manual, possibly
+ * project-scoped, run that already rendered its own rows).
+ * @returns {Promise<void>}
+ */
 export async function refreshReconMeta() {
   try {
     const last = await getJSON("/api/reconcile/last");
@@ -234,10 +356,13 @@ export async function refreshReconMeta() {
   }
 }
 
-// On page load, render whatever the last (scheduled) reconcile left behind — the
-// banner, the "last checked" time, AND the results table — so the last run is
-// visible after a reload/restart without having to click "run". The table and
-// last.json are volume-persisted, so this survives container restarts.
+/**
+ * On page load, render whatever the last (scheduled) reconcile left behind — the
+ * banner, the "last checked" time, AND the results table — so the last run is
+ * visible after a reload/restart without having to click "run". The table and
+ * last.json are volume-persisted, so this survives container restarts.
+ * @returns {Promise<void>}
+ */
 export async function loadLastReconcile() {
   let last;
   try {
@@ -252,6 +377,10 @@ export async function loadLastReconcile() {
   }
 }
 
+/**
+ * Refresh all dashboard panels (summary, trend, agents, models, highlights).
+ * @returns {Promise<void>}
+ */
 export async function refresh() {
   setStatus("loading…");
   try {
@@ -283,6 +412,10 @@ export async function refresh() {
   }
 }
 
+/**
+ * Run reconciliation for the selected project and render the results.
+ * @returns {Promise<void>}
+ */
 export async function runReconcile() {
   setStatus("reconciling…");
   try {
