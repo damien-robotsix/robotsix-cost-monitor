@@ -6,7 +6,8 @@ modules:
   - id: robotsix_cost_monitor
     paths:
       - src/robotsix_cost_monitor/__init__.py
-    role: Package root (version + re-exports)
+      - src/robotsix_cost_monitor/py.typed
+    role: Package root (version + re-exports + PEP 561 type marker)
 
   - id: robotsix_cost_monitor.aggregations
     paths:
