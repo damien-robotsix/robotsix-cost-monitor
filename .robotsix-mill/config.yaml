@@ -1,2 +1,2 @@
-test_command: pytest -q
+test_command: uv run pytest -q
 languages: [python]
