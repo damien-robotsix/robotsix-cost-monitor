@@ -4,6 +4,13 @@
   `config/projects.example.yaml` now includes `traces_per_agent: 1` under
   `settings.analyst:`, matching the Pydantic default of 1 trace per agent.
   The existing regression test now also asserts this field.
+
+- **Changed JS CI from `npm install` to `npm ci`.** The `js-tests` job in
+  `.github/workflows/ci.yml` now runs `npm ci` instead of `npm install`, matching
+  the Python side's `uv sync --locked` pattern. This requires a committed
+  `package-lock.json` and ensures reproducible dependency resolution across CI
+  runs. A human operator must run `npm install` locally to generate and commit
+  the initial `package-lock.json`.
 - **Added `reconcile_schedule_hours` to example config.** The
   `config/projects.example.yaml` now includes `reconcile_schedule_hours: 24.0`
   under `settings:`, matching the Pydantic default. A regression test ensures the
