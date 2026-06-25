@@ -96,7 +96,7 @@ export function render(run) {
     $('run-meta').innerHTML = card(
       'last run',
       '—',
-      (run?.detail) || 'no run yet — press “run analysis”',
+      run?.detail || 'no run yet — press “run analysis”',
     );
     for (const id of ['summary', 'analyzed', 'proposals', 'ticket'])
       $(id).innerHTML = "<p class='muted'>—</p>";
@@ -111,7 +111,7 @@ export function render(run) {
     card('last run', new Date(run.generated_at).toLocaleString(), `window ${run.window_hours}h`),
     card('traces analyzed', traces.length, ''),
     card('proposals', props.length, ''),
-    card('tickets', fr?.filed ? 'filed' : '—', fr && fr.filed ? 'via board manager' : ''),
+    card('tickets', fr?.filed ? 'filed' : '—', fr?.filed ? 'via board manager' : ''),
   ].join('');
 
   $('summary').innerHTML = run.summary ? `<p>${esc(run.summary)}</p>` : "<p class='muted'>—</p>";
