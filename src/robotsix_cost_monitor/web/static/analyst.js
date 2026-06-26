@@ -81,7 +81,7 @@ export function card(label, value, sub) {
  */
 export function managerReply(rr) {
   if (!rr) return '';
-  if (rr.reply?.reply) return rr.reply.reply; // manager NL reply (legacy dict body)
+  if (typeof rr.reply === 'object' && rr.reply?.reply) return rr.reply.reply; // manager NL reply (legacy dict body)
   if (typeof rr.reply === 'string') return rr.reply; // BrokeredRequester returns string
   if (rr.error) return rr.error;
   return '';
@@ -181,7 +181,8 @@ export async function load() {
     render(await getJSON('/api/analyst/proposals'));
     setStatus('showing last run');
   } catch (e) {
-    setStatus(`load failed: ${e.message}`);
+    const err = /** @type {Error} */ (e);
+    setStatus(`load failed: ${err.message}`);
   }
 }
 
@@ -190,7 +191,7 @@ export async function load() {
  * @returns {Promise<void>}
  */
 export async function run() {
-  const btn = $('run-btn');
+  const btn = /** @type {HTMLButtonElement} */ ($('run-btn'));
   btn.disabled = true;
   setStatus('running analysis… this can take a couple of minutes');
   try {
@@ -199,7 +200,8 @@ export async function run() {
     render(await r.json());
     setStatus('run complete');
   } catch (e) {
-    setStatus(`run failed: ${e.message}`);
+    const err = /** @type {Error} */ (e);
+    setStatus(`run failed: ${err.message}`);
   } finally {
     btn.disabled = false;
   }
@@ -272,7 +274,7 @@ export function ticketHeader(run) {
   return `
     <div class="item-head">
       <span class="mono">${esc(run.ticket_id || run.session_id || '')}</span>
-      <span class="muted">${esc(run.board_id || '')} · <b>${fmt(run.total_cost)}</b> · ${run.trace_count} traces${run.history_available ? ' · history ✓' : ''}</span>
+      <span class="muted">${esc(run.board_id || '')} · <b>${fmt(run.total_cost ?? 0)}</b> · ${run.trace_count} traces${run.history_available ? ' · history ✓' : ''}</span>
     </div>
     ${stages ? `<div class="item-body muted">by stage: ${stages}</div>` : ''}`;
 }
@@ -286,7 +288,7 @@ export function stageHeader(run) {
   return `
     <div class="item-head">
       <span>${esc(run.stage || '')}</span>
-      <span class="muted"><b>${fmt(run.total_cost)}</b> · ${run.pct_of_traced}% of spend · ${run.trace_count} traces (sampled ${run.sample_size})</span>
+      <span class="muted"><b>${fmt(run.total_cost ?? 0)}</b> · ${run.pct_of_traced}% of spend · ${run.trace_count} traces (sampled ${run.sample_size})</span>
     </div>`;
 }
 
@@ -303,10 +305,11 @@ export function makeTargeted(kind, btnId, containerId, headerFn) {
     try {
       renderTargeted(containerId, await getJSON(`/api/analyst/${kind}`), headerFn);
     } catch (e) {
-      setStatus(`${kind} load failed: ${e.message}`);
+      const err = /** @type {Error} */ (e);
+      setStatus(`${kind} load failed: ${err.message}`);
     }
   };
-  const btn = $(btnId);
+  const btn = /** @type {HTMLButtonElement} */ ($(btnId));
   btn.addEventListener('click', async () => {
     btn.disabled = true;
     setStatus(`analyzing most costly ${kind}… this can take a couple of minutes`);
@@ -316,7 +319,8 @@ export function makeTargeted(kind, btnId, containerId, headerFn) {
       renderTargeted(containerId, await r.json(), headerFn);
       setStatus(`${kind} analysis complete`);
     } catch (e) {
-      setStatus(`${kind} run failed: ${e.message}`);
+      const err = /** @type {Error} */ (e);
+      setStatus(`${kind} run failed: ${err.message}`);
     } finally {
       btn.disabled = false;
     }

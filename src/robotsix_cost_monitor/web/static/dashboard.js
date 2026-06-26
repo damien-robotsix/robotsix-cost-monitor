@@ -69,7 +69,8 @@ import { $, esc, fmt, getJSON } from './shared.js';
  * @property {ReconcileRow[]} [results]
  */
 
-const qs = () => `?project=${$('project').value}&hours=${$('window').value}`;
+const qs = () =>
+  `?project=${/** @type {HTMLSelectElement} */ ($('project')).value}&hours=${/** @type {HTMLInputElement | HTMLSelectElement} */ ($('window')).value}`;
 
 /**
  * Update the status text element.
@@ -99,9 +100,9 @@ export async function loadProjects() {
  * @param {ModelRow[]} modelRows
  */
 export function populateBackends(modelRows) {
-  const sel = $('backend');
+  const sel = /** @type {HTMLSelectElement} */ ($('backend'));
   const cur = sel.value;
-  const set = new Set(modelRows.map((r) => r.backend).filter(Boolean));
+  const set = new Set(modelRows.map((r) => r.backend).filter((b) => b !== undefined));
   if (cur !== 'all') set.add(cur); // keep the current selection selectable
   const backends = [...set].sort();
   sel.innerHTML = `<option value="all">all backends</option>${backends
@@ -143,8 +144,9 @@ export function renderSummary(s, backend, modelRows) {
  * @param {TrendPoint[]} points
  */
 export function renderTrend(points) {
-  const canvas = $('trend');
+  const canvas = /** @type {HTMLCanvasElement} */ ($('trend'));
   const ctx = canvas.getContext('2d');
+  if (!ctx) return;
   canvas.width = canvas.clientWidth;
   const W = canvas.width;
   const H = canvas.height;
@@ -350,7 +352,7 @@ export async function loadLastReconcile() {
 export async function refresh() {
   setStatus('loading…');
   try {
-    const backend = $('backend').value;
+    const backend = /** @type {HTMLSelectElement} */ ($('backend')).value;
     // The fine-grained (trace-based) trend can't be split by backend; when a
     // backend is selected, use the day-granular per-backend trend instead.
     const trendPath =
@@ -373,7 +375,8 @@ export async function refresh() {
     renderHighlights(hi);
     setStatus(`updated ${new Date().toLocaleTimeString()}`);
   } catch (e) {
-    setStatus(`error: ${e.message}`);
+    const err = /** @type {Error} */ (e);
+    setStatus(`error: ${err.message}`);
   }
 }
 
@@ -389,7 +392,8 @@ export async function runReconcile() {
     await refreshReconMeta();
     setStatus(`reconciled ${new Date().toLocaleTimeString()}`);
   } catch (e) {
-    setStatus(`reconcile error: ${e.message}`);
+    const err = /** @type {Error} */ (e);
+    setStatus(`reconcile error: ${err.message}`);
   }
 }
 

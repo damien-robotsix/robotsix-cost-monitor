@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- **Fixed strict TypeScript type errors in static JS files.**  Added null checks,
+  catch-block type assertions, and element-type casts to `shared.js`,
+  `analyst.js`, and `dashboard.js` so that `tsc --noEmit` with `strict: true`
+  passes cleanly.
+
 - **Made `robotsix-llmio` import in `reconcile.py` lazy with graceful fallback.**
   The `OpenRouterKeyCostSource` import is now inside `reconcile_project()` and
   wrapped in `try/except ImportError`, so the dashboard and CLI remain usable
