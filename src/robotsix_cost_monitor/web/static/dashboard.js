@@ -387,7 +387,9 @@ export async function refresh() {
 export async function runReconcile() {
   setStatus('reconciling…');
   try {
-    const rows = await getJSON(`/api/reconcile?project=${/** @type {HTMLSelectElement} */ ($('project')).value}`);
+    const rows = await getJSON(
+      `/api/reconcile?project=${/** @type {HTMLSelectElement} */ ($('project')).value}`,
+    );
     renderReconcile(rows);
     await refreshReconMeta();
     setStatus(`reconciled ${new Date().toLocaleTimeString()}`);
