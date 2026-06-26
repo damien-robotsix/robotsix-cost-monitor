@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from helpers import trace
 
 from robotsix_cost_monitor.aggregations import (
@@ -269,52 +270,83 @@ def test_aggregate_by_name_backend_handles_null_cost() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_aggregate_by_name_split_both_pools() -> None:
-    """Stage with both backends → correct per-pool costs and counts."""
-    rows = [
-        {"name": "implement", "backend": "openrouter", "cost": 10.0, "count": 5},
-        {"name": "implement", "backend": "claude-sdk", "cost": 40.0, "count": 20},
-    ]
+@pytest.mark.parametrize(
+    "rows,expected",
+    [
+        (
+            [
+                {
+                    "name": "implement",
+                    "backend": "openrouter",
+                    "cost": 10.0,
+                    "count": 5,
+                },
+                {
+                    "name": "implement",
+                    "backend": "claude-sdk",
+                    "cost": 40.0,
+                    "count": 20,
+                },
+            ],
+            {
+                "name": "implement",
+                "openrouter_cost": 10.0,
+                "subscription_cost": 40.0,
+                "total_cost": 50.0,
+                "openrouter_count": 5,
+                "subscription_count": 20,
+            },
+        ),
+        (
+            [
+                {
+                    "name": "refine",
+                    "backend": "claude-sdk",
+                    "cost": 51.15,
+                    "count": 183,
+                },
+            ],
+            {
+                "name": "refine",
+                "openrouter_cost": 0.0,
+                "subscription_cost": 51.15,
+                "total_cost": 51.15,
+                "openrouter_count": 0,
+                "subscription_count": 183,
+            },
+        ),
+        (
+            [
+                {
+                    "name": "spec_review",
+                    "backend": "openrouter",
+                    "cost": 0.0002,
+                    "count": 1,
+                },
+            ],
+            {
+                "name": "spec_review",
+                "openrouter_cost": 0.0002,
+                "subscription_cost": 0.0,
+                "total_cost": 0.0002,
+                "openrouter_count": 1,
+                "subscription_count": 0,
+            },
+        ),
+    ],
+    ids=["both_pools", "subscription_only", "openrouter_only"],
+)
+def test_aggregate_by_name_split(rows, expected) -> None:
+    """Single-stage split: correct per-pool costs and counts for each backend mix."""
     result = aggregate_by_name_split(rows)
     assert len(result) == 1
     r = result[0]
-    assert r["name"] == "implement"
-    assert r["openrouter_cost"] == 10.0
-    assert r["subscription_cost"] == 40.0
-    assert r["total_cost"] == 50.0
-    assert r["openrouter_count"] == 5
-    assert r["subscription_count"] == 20
-
-
-def test_aggregate_by_name_split_subscription_only() -> None:
-    """Stage with only claude-sdk rows (refine-like) → openrouter_cost is 0."""
-    rows = [
-        {"name": "refine", "backend": "claude-sdk", "cost": 51.15, "count": 183},
-    ]
-    result = aggregate_by_name_split(rows)
-    assert len(result) == 1
-    r = result[0]
-    assert r["name"] == "refine"
-    assert r["openrouter_cost"] == 0.0
-    assert r["subscription_cost"] == 51.15
-    assert r["total_cost"] == 51.15
-    assert r["openrouter_count"] == 0
-    assert r["subscription_count"] == 183
-
-
-def test_aggregate_by_name_split_openrouter_only() -> None:
-    """Stage with only openrouter rows."""
-    rows = [
-        {"name": "spec_review", "backend": "openrouter", "cost": 0.0002, "count": 1},
-    ]
-    result = aggregate_by_name_split(rows)
-    assert len(result) == 1
-    r = result[0]
-    assert r["name"] == "spec_review"
-    assert r["openrouter_cost"] == 0.0002
-    assert r["subscription_cost"] == 0.0
-    assert r["total_cost"] == 0.0002
-    assert r["subscription_count"] == 0
+    assert r["name"] == expected["name"]
+    assert r["openrouter_cost"] == expected["openrouter_cost"]
+    assert r["subscription_cost"] == expected["subscription_cost"]
+    assert r["total_cost"] == expected["total_cost"]
+    assert r["openrouter_count"] == expected["openrouter_count"]
+    assert r["subscription_count"] == expected["subscription_count"]
 
 
 def test_aggregate_by_name_split_merges_across_projects() -> None:
