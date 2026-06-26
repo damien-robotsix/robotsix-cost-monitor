@@ -1,5 +1,9 @@
 ## 0.0.0 (unreleased)
 
+- **Added TypeScript type checking for JS frontend.** Created `jsconfig.json`
+  with `strict: true` targeting ES2022, added `typescript` devDependency and
+  `typecheck` script to `package.json`, and integrated `npm run typecheck` into
+  the `js-tests` CI job.
 - **Registered seven flat Python test files in `docs/modules.yaml`.**
   `tests/test_aggregations.py`, `tests/test_analyst.py`, `tests/test_app.py`,
   `tests/test_cli.py`, `tests/test_config.py`, `tests/test_reconcile.py`, and
