@@ -6,7 +6,7 @@
     "lint": "npx @biomejs/biome check src/robotsix_cost_monitor/web/static/ tests/web/",
     "format": "npx @biomejs/biome check --write src/robotsix_cost_monitor/web/static/ tests/web/",
     "lint:ci": "npx @biomejs/biome ci src/robotsix_cost_monitor/web/static/ tests/web/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit -p jsconfig.json"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
