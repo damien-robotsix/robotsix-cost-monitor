@@ -915,3 +915,288 @@ async def test_by_agent_backend_agent_usage_cache_expiry() -> None:
         r2 = await svc.by_agent("demo", 24, backend="claude-sdk")
         assert r2[0]["cost"] == 2.0
         assert client.fetch_agent_usage_window.call_count == 2  # type: ignore[attr-defined]
+
+
+# ---------------------------------------------------------------------------
+# by_agent_segmented
+# ---------------------------------------------------------------------------
+
+
+async def test_by_agent_segmented_empty() -> None:
+    """Empty project list returns an empty list."""
+    assert await _svc().by_agent_segmented(None, 24) == []
+
+
+async def test_by_agent_segmented_openrouter_only() -> None:
+    """Only openrouter-backed stages; subscription cost is zero."""
+    svc = _svc(_proj("a"))
+    agent_rows = [
+        {"name": "implement", "backend": "openrouter", "cost": 15.0, "count": 7},
+        {"name": "review", "backend": "openrouter", "cost": 3.0, "count": 2},
+    ]
+    object.__setattr__(
+        svc._clients["a"],
+        "fetch_agent_usage_window",
+        AsyncMock(return_value=agent_rows),
+    )
+
+    result = await svc.by_agent_segmented("a", 24)
+    assert len(result) == 2
+    # implement (higher openrouter cost) first
+    assert result[0]["name"] == "implement"
+    assert result[0]["openrouter_cost"] == 15.0
+    assert result[0]["subscription_cost"] == 0.0
+    assert result[0]["total_cost"] == 15.0
+    assert result[0]["openrouter_count"] == 7
+    assert result[0]["subscription_count"] == 0
+    # review second
+    assert result[1]["name"] == "review"
+    assert result[1]["openrouter_cost"] == 3.0
+    assert result[1]["subscription_cost"] == 0.0
+
+
+async def test_by_agent_segmented_subscription_only() -> None:
+    """Only claude-sdk stages; openrouter cost is zero."""
+    svc = _svc(_proj("a"))
+    agent_rows = [
+        {"name": "refine", "backend": "claude-sdk", "cost": 51.15, "count": 183},
+    ]
+    object.__setattr__(
+        svc._clients["a"],
+        "fetch_agent_usage_window",
+        AsyncMock(return_value=agent_rows),
+    )
+
+    result = await svc.by_agent_segmented("a", 24)
+    assert len(result) == 1
+    assert result[0]["name"] == "refine"
+    assert result[0]["openrouter_cost"] == 0.0
+    assert result[0]["subscription_cost"] == 51.15
+    assert result[0]["total_cost"] == 51.15
+    assert result[0]["openrouter_count"] == 0
+    assert result[0]["subscription_count"] == 183
+
+
+async def test_by_agent_segmented_both_backends() -> None:
+    """Stage with both openrouter and claude-sdk rows splits correctly."""
+    svc = _svc(_proj("a"))
+    agent_rows = [
+        {"name": "implement", "backend": "openrouter", "cost": 10.0, "count": 5},
+        {"name": "implement", "backend": "claude-sdk", "cost": 40.0, "count": 20},
+    ]
+    object.__setattr__(
+        svc._clients["a"],
+        "fetch_agent_usage_window",
+        AsyncMock(return_value=agent_rows),
+    )
+
+    result = await svc.by_agent_segmented("a", 24)
+    assert len(result) == 1
+    r = result[0]
+    assert r["name"] == "implement"
+    assert r["openrouter_cost"] == 10.0
+    assert r["subscription_cost"] == 40.0
+    assert r["total_cost"] == 50.0
+    assert r["openrouter_count"] == 5
+    assert r["subscription_count"] == 20
+
+
+async def test_by_agent_segmented_cross_project_merge() -> None:
+    """Same-stage rows from different projects are summed within each pool."""
+    svc = _svc(_proj("a"), _proj("b"))
+    object.__setattr__(
+        svc._clients["a"],
+        "fetch_agent_usage_window",
+        AsyncMock(
+            return_value=[
+                {"name": "implement", "backend": "openrouter", "cost": 1.5, "count": 2},
+                {"name": "implement", "backend": "claude-sdk", "cost": 0.5, "count": 1},
+            ]
+        ),
+    )
+    object.__setattr__(
+        svc._clients["b"],
+        "fetch_agent_usage_window",
+        AsyncMock(
+            return_value=[
+                {"name": "implement", "backend": "openrouter", "cost": 2.5, "count": 3},
+                {"name": "review", "backend": "openrouter", "cost": 1.0, "count": 1},
+            ]
+        ),
+    )
+
+    result = await svc.by_agent_segmented(None, 24)
+    assert len(result) == 2
+    # implement: 1.5 + 2.5 = 4.0 openrouter; 0.5 subscription
+    impl = next(r for r in result if r["name"] == "implement")
+    assert impl["openrouter_cost"] == 4.0
+    assert impl["subscription_cost"] == 0.5
+    assert impl["total_cost"] == 4.5
+    assert impl["openrouter_count"] == 5
+    assert impl["subscription_count"] == 1
+    # review: only from proj-b
+    rev = next(r for r in result if r["name"] == "review")
+    assert rev["openrouter_cost"] == 1.0
+    assert rev["subscription_cost"] == 0.0
+
+
+async def test_by_agent_segmented_sort_order() -> None:
+    """Sorted by openrouter_cost desc, then total_cost desc.
+
+    A high-subscription/low-marginal stage ranks BELOW a high-marginal stage.
+    """
+    svc = _svc(_proj("a"))
+    agent_rows = [
+        # refine: heavy Claude-SDK, trivial OpenRouter
+        {"name": "refine", "backend": "claude-sdk", "cost": 51.15, "count": 183},
+        {"name": "refine", "backend": "openrouter", "cost": 0.0002, "count": 1},
+        # implement: moderate both
+        {"name": "implement", "backend": "openrouter", "cost": 5.0, "count": 10},
+        {"name": "implement", "backend": "claude-sdk", "cost": 12.0, "count": 20},
+        # review: only moderate openrouter
+        {"name": "review", "backend": "openrouter", "cost": 3.0, "count": 5},
+    ]
+    object.__setattr__(
+        svc._clients["a"],
+        "fetch_agent_usage_window",
+        AsyncMock(return_value=agent_rows),
+    )
+
+    result = await svc.by_agent_segmented("a", 24)
+    assert len(result) == 3
+    assert result[0]["name"] == "implement"  # highest openrouter (5.0)
+    assert result[1]["name"] == "review"  # second (3.0)
+    assert result[2]["name"] == "refine"  # lowest openrouter (0.0002) despite highest total
+
+
+async def test_by_agent_segmented_exception_isolation() -> None:
+    """One dead project doesn't prevent other projects' stages from appearing."""
+    svc = _svc(_proj("good"), _proj("bad"))
+    object.__setattr__(
+        svc._clients["good"],
+        "fetch_agent_usage_window",
+        AsyncMock(
+            return_value=[
+                {"name": "implement", "backend": "openrouter", "cost": 5.0, "count": 2},
+            ]
+        ),
+    )
+    object.__setattr__(
+        svc._clients["bad"],
+        "fetch_agent_usage_window",
+        AsyncMock(side_effect=RuntimeError("boom")),
+    )
+
+    result = await svc.by_agent_segmented(None, 24)
+    assert len(result) == 1
+    assert result[0]["name"] == "implement"
+    assert result[0]["openrouter_cost"] == 5.0
+
+
+async def test_by_agent_segmented_all_dead() -> None:
+    """When all projects fail, return empty list — no 500."""
+    svc = _svc(_proj("a"), _proj("b"))
+    object.__setattr__(
+        svc._clients["a"],
+        "fetch_agent_usage_window",
+        AsyncMock(side_effect=RuntimeError),
+    )
+    object.__setattr__(
+        svc._clients["b"],
+        "fetch_agent_usage_window",
+        AsyncMock(side_effect=RuntimeError),
+    )
+
+    assert await svc.by_agent_segmented(None, 24) == []
+
+
+async def test_by_agent_segmented_cache_hit() -> None:
+    """Repeated calls within TTL use cached agent usage data."""
+    rows_data = [
+        {"name": "implement", "backend": "openrouter", "cost": 3.0, "count": 2},
+    ]
+    svc = _svc(_proj("demo"))
+    client = svc._clients["demo"]
+    object.__setattr__(
+        client, "fetch_agent_usage_window", AsyncMock(return_value=rows_data)
+    )
+
+    await svc.by_agent_segmented("demo", 24)
+    await svc.by_agent_segmented("demo", 24)
+    assert client.fetch_agent_usage_window.call_count == 1  # type: ignore[attr-defined]
+
+
+async def test_by_agent_segmented_cache_expiry() -> None:
+    """After TTL expires, a fresh agent usage fetch is made."""
+    rows_v1 = [
+        {"name": "implement", "backend": "openrouter", "cost": 1.0, "count": 1},
+    ]
+    rows_v2 = [
+        {"name": "implement", "backend": "openrouter", "cost": 2.0, "count": 1},
+    ]
+    svc = _svc(_proj("demo"))
+    client = svc._clients["demo"]
+    object.__setattr__(
+        client,
+        "fetch_agent_usage_window",
+        AsyncMock(side_effect=[rows_v1, rows_v2]),
+    )
+
+    with patch("robotsix_cost_monitor.service.time.monotonic") as mono:
+        mono.return_value = 1000.0
+        r1 = await svc.by_agent_segmented("demo", 24)
+        assert r1[0]["openrouter_cost"] == 1.0
+
+        mono.return_value = 1020.0
+        r2 = await svc.by_agent_segmented("demo", 24)
+        assert r2[0]["openrouter_cost"] == 2.0
+        assert client.fetch_agent_usage_window.call_count == 2  # type: ignore[attr-defined]
+
+
+async def test_by_agent_segmented_null_cost() -> None:
+    """Null/None cost is treated as 0.0."""
+    svc = _svc(_proj("a"))
+    agent_rows = [
+        {"name": "review", "backend": "openrouter", "cost": None, "count": 1},
+        {"name": "review", "backend": "claude-sdk", "cost": None, "count": 2},
+    ]
+    object.__setattr__(
+        svc._clients["a"],
+        "fetch_agent_usage_window",
+        AsyncMock(return_value=agent_rows),
+    )
+
+    result = await svc.by_agent_segmented("a", 24)
+    assert len(result) == 1
+    r = result[0]
+    assert r["name"] == "review"
+    assert r["openrouter_cost"] == 0.0
+    assert r["subscription_cost"] == 0.0
+    assert r["total_cost"] == 0.0
+    assert r["openrouter_count"] == 1
+    assert r["subscription_count"] == 2
+
+
+async def test_by_agent_segmented_unknown_slug() -> None:
+    """A slug not matching any project returns empty list."""
+    svc = _svc(_proj("demo"))
+    assert await svc.by_agent_segmented("ghost", 24) == []
+
+
+async def test_by_agent_segmented_slug_all() -> None:
+    """slug='all' includes all projects (same as None)."""
+    svc = _svc(_proj("demo"))
+    agent_rows = [
+        {"name": "implement", "backend": "openrouter", "cost": 7.0, "count": 3},
+    ]
+    object.__setattr__(
+        svc._clients["demo"],
+        "fetch_agent_usage_window",
+        AsyncMock(return_value=agent_rows),
+    )
+
+    none_result = await svc.by_agent_segmented(None, 24)
+    all_result = await svc.by_agent_segmented("all", 24)
+    assert all_result == none_result
+    assert len(all_result) == 1
+    assert all_result[0]["openrouter_cost"] == 7.0
