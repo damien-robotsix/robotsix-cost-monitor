@@ -160,9 +160,9 @@ def test_require_project_case_sensitive_slug() -> None:
 @pytest.mark.parametrize(
     "hours,expected",
     [
-        (24, 24),      # nonzero → supplied hours
-        (0, 168),      # zero → config default
-        (None, 168),   # None → config default
+        (24, 24),  # nonzero → supplied hours
+        (0, 168),  # zero → config default
+        (None, 168),  # None → config default
     ],
     ids=["nonzero", "zero_falls_back", "none_falls_back"],
 )

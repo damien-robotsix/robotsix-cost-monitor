@@ -275,25 +275,63 @@ def test_aggregate_by_name_backend_handles_null_cost() -> None:
     [
         (
             [
-                {"name": "implement", "backend": "openrouter", "cost": 10.0, "count": 5},
-                {"name": "implement", "backend": "claude-sdk", "cost": 40.0, "count": 20},
+                {
+                    "name": "implement",
+                    "backend": "openrouter",
+                    "cost": 10.0,
+                    "count": 5,
+                },
+                {
+                    "name": "implement",
+                    "backend": "claude-sdk",
+                    "cost": 40.0,
+                    "count": 20,
+                },
             ],
-            {"name": "implement", "openrouter_cost": 10.0, "subscription_cost": 40.0,
-             "total_cost": 50.0, "openrouter_count": 5, "subscription_count": 20},
+            {
+                "name": "implement",
+                "openrouter_cost": 10.0,
+                "subscription_cost": 40.0,
+                "total_cost": 50.0,
+                "openrouter_count": 5,
+                "subscription_count": 20,
+            },
         ),
         (
             [
-                {"name": "refine", "backend": "claude-sdk", "cost": 51.15, "count": 183},
+                {
+                    "name": "refine",
+                    "backend": "claude-sdk",
+                    "cost": 51.15,
+                    "count": 183,
+                },
             ],
-            {"name": "refine", "openrouter_cost": 0.0, "subscription_cost": 51.15,
-             "total_cost": 51.15, "openrouter_count": 0, "subscription_count": 183},
+            {
+                "name": "refine",
+                "openrouter_cost": 0.0,
+                "subscription_cost": 51.15,
+                "total_cost": 51.15,
+                "openrouter_count": 0,
+                "subscription_count": 183,
+            },
         ),
         (
             [
-                {"name": "spec_review", "backend": "openrouter", "cost": 0.0002, "count": 1},
+                {
+                    "name": "spec_review",
+                    "backend": "openrouter",
+                    "cost": 0.0002,
+                    "count": 1,
+                },
             ],
-            {"name": "spec_review", "openrouter_cost": 0.0002, "subscription_cost": 0.0,
-             "total_cost": 0.0002, "openrouter_count": 1, "subscription_count": 0},
+            {
+                "name": "spec_review",
+                "openrouter_cost": 0.0002,
+                "subscription_cost": 0.0,
+                "total_cost": 0.0002,
+                "openrouter_count": 1,
+                "subscription_count": 0,
+            },
         ),
     ],
     ids=["both_pools", "subscription_only", "openrouter_only"],
