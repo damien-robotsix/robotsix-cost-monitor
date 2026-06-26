@@ -1,5 +1,12 @@
 ## 0.0.0 (unreleased)
 
+- **Swapped incorrect `global_model` / `trace_model` comments in example config.**
+  The inline YAML comments on `global_model` and `trace_model` were reversed
+  relative to what the fields actually control.  `global_model` is the level-3
+  orchestrator model; `trace_model` is the level-2 trace model.  The comments in
+  `config/projects.example.yaml` now match the authoritative docstrings in
+  `src/robotsix_cost_monitor/config.py`.
+
 - **Fixed strict TypeScript type errors in static JS files.**  Added null checks,
   catch-block type assertions, and element-type casts to `shared.js`,
   `analyst.js`, and `dashboard.js` so that `tsc --noEmit` with `strict: true`

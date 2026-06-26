@@ -35,8 +35,8 @@ settings:
   # broker is configured — files a board ticket via agent-comm when warranted.
   analyst:
     openrouter_key: null        # OpenRouter key for the analyst's own LLM calls
-    global_model: null          # level-2 model (null → llmio tier-2 default)
-    trace_model: null           # level-3 model (null → llmio tier-3 default)
+    global_model: null          # level-3 orchestrator model (null → llmio tier-3 default)
+    trace_model: null           # level-2 trace model (null → llmio tier-2 default)
     window_hours: 24
     top_stages: 8
     traces_per_agent: 1         # top-N traces per agent before the overall cap
