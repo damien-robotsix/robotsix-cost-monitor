@@ -44,7 +44,7 @@ import { $, esc, fmt, getJSON } from './shared.js';
  * @typedef {object} FilingResult
  * @property {boolean} [filed]
  * @property {string} [error]
- * @property {string | {reply: {reply: string}}} [reply]
+ * @property {string} [reply]
  */
 
 /**
@@ -81,7 +81,6 @@ export function card(label, value, sub) {
  */
 export function managerReply(rr) {
   if (!rr) return '';
-  if (typeof rr.reply === 'object' && rr.reply?.reply) return rr.reply.reply; // manager NL reply (legacy dict body)
   if (typeof rr.reply === 'string') return rr.reply; // BrokeredRequester returns string
   if (rr.error) return rr.error;
   return '';
