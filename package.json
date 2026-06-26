@@ -8,8 +8,8 @@
     "lint:ci": "npx @biomejs/biome ci src/robotsix_cost_monitor/web/static/ tests/web/"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
-    "jsdom": "^25.0.1",
-    "vitest": "^2.1.8"
+    "@biomejs/biome": "1.9.4",
+    "jsdom": "25.0.1",
+    "vitest": "2.1.8"
   }
 }

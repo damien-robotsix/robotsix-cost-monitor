@@ -5,6 +5,11 @@
   wrapped in `try/except ImportError`, so the dashboard and CLI remain usable
   when the optional `analyst` extra is not installed.
 
+- **Added `.npmrc` with `save-exact`, `min-release-age`, and `engine-strict`.** Pinned
+  all npm devDependencies (`@biomejs/biome`, `jsdom`, `vitest`) to exact versions in
+  `package.json`, removing `^` ranges to ensure deterministic installs. The `.npmrc`
+  also blocks packages younger than 7 days and enforces Node.js engine requirements.
+
 - **Registered seven flat Python test files in `docs/modules.yaml`.**
   `tests/test_aggregations.py`, `tests/test_analyst.py`, `tests/test_app.py`,
   `tests/test_cli.py`, `tests/test_config.py`, `tests/test_reconcile.py`, and
