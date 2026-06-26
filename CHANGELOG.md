@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- **Removed legacy nested-dict reply branch from `managerReply()` in analyst.js.**
+  The `typeof rr.reply === 'object'` branch (handling `rr.reply.reply`) was dead
+  code — no production backend path produces a nested-dict reply.  The string
+  branch and error branch handle all current production cases.
+
 - **Swapped incorrect `global_model` / `trace_model` comments in example config.**
   The inline YAML comments on `global_model` and `trace_model` were reversed
   relative to what the fields actually control.  `global_model` is the level-3

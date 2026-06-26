@@ -35,10 +35,6 @@ describe('managerReply', () => {
     expect(managerReply(undefined)).toBe('');
   });
 
-  it('returns reply.reply when present', () => {
-    expect(managerReply({ reply: { reply: 'hello' } })).toBe('hello');
-  });
-
   it('returns error when present and no reply', () => {
     expect(managerReply({ error: 'timeout' })).toBe('timeout');
   });
@@ -135,7 +131,7 @@ describe('render', () => {
       ],
       filing_result: {
         filed: true,
-        reply: { reply: 'thanks, will review' },
+        reply: 'thanks, will review',
       },
     };
     render(run);
@@ -340,7 +336,7 @@ describe('filingHTML', () => {
   });
 
   it('renders board manager reply', () => {
-    const html = filingHTML({ reply: { reply: 'done' } });
+    const html = filingHTML({ reply: 'done' });
     expect(html).toContain('board manager');
     expect(html).toContain('done');
   });
