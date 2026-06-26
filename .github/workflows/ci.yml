@@ -123,6 +123,6 @@ jobs:
       - uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f  # v1.3.2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          mode: audit
+          mode: scan
       - run: npm run lint:ci
       - run: npm test
