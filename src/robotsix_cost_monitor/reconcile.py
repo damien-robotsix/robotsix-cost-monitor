@@ -88,7 +88,13 @@ async def reconcile_project(
         result["detail"] = "no openrouter_key configured for this project"
         return result
 
-    from robotsix_llmio.openrouter import OpenRouterKeyCostSource
+    try:
+        from robotsix_llmio.openrouter import OpenRouterKeyCostSource
+    except ImportError:
+        result["error"] = (
+            "robotsix-llmio is not installed. Install it with: uv sync --extra analyst"
+        )
+        return result
 
     orc = OpenRouterKeyCostSource(api_key=project.openrouter_key)
     # Per-KEY cumulative usage is the reconciliation basis (isolates this

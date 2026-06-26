@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- **Made `robotsix-llmio` import in `reconcile.py` lazy with graceful fallback.**
+  The `OpenRouterKeyCostSource` import is now inside `reconcile_project()` and
+  wrapped in `try/except ImportError`, so the dashboard and CLI remain usable
+  when the optional `analyst` extra is not installed.
+
 - **Registered seven flat Python test files in `docs/modules.yaml`.**
   `tests/test_aggregations.py`, `tests/test_analyst.py`, `tests/test_app.py`,
   `tests/test_cli.py`, `tests/test_config.py`, `tests/test_reconcile.py`, and
