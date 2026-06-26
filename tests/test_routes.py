@@ -157,19 +157,18 @@ def test_require_project_case_sensitive_slug() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_window_returns_supplied_hours_when_nonzero() -> None:
+@pytest.mark.parametrize(
+    "hours,expected",
+    [
+        (24, 24),      # nonzero → supplied hours
+        (0, 168),      # zero → config default
+        (None, 168),   # None → config default
+    ],
+    ids=["nonzero", "zero_falls_back", "none_falls_back"],
+)
+def test_window(hours: int | None, expected: int) -> None:
     cfg = _config(default_window_hours=168)
-    assert _window(24, cfg) == 24
-
-
-def test_window_falls_back_to_config_default_when_zero() -> None:
-    cfg = _config(default_window_hours=168)
-    assert _window(0, cfg) == 168
-
-
-def test_window_falls_back_to_config_default_when_none() -> None:
-    cfg = _config(default_window_hours=168)
-    assert _window(None, cfg) == 168  # type: ignore[arg-type]
+    assert _window(hours, cfg) == expected  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------
@@ -237,24 +236,22 @@ async def test_validation_handler_missing_type_defaults_to_validation_error() ->
 # ---------------------------------------------------------------------------
 
 
-async def test_http_exception_handler_404() -> None:
+@pytest.mark.parametrize(
+    "status_code,detail",
+    [
+        (404, "Unknown project slug: nope"),
+        (500, "boom"),
+    ],
+    ids=["404", "500"],
+)
+async def test_http_exception_handler(status_code: int, detail: str) -> None:
     req = _make_request(FastAPI())
-    exc = HTTPException(status_code=404, detail="Unknown project slug: nope")
+    exc = HTTPException(status_code=status_code, detail=detail)
     resp = await http_exception_handler(req, exc)
-    assert resp.status_code == 404
+    assert resp.status_code == status_code
     body = json.loads(resp.body)
     assert body["error"]["code"] == "HTTP_ERROR"
-    assert body["error"]["detail"] == "Unknown project slug: nope"
-
-
-async def test_http_exception_handler_500() -> None:
-    req = _make_request(FastAPI())
-    exc = HTTPException(status_code=500, detail="boom")
-    resp = await http_exception_handler(req, exc)
-    assert resp.status_code == 500
-    body = json.loads(resp.body)
-    assert body["error"]["code"] == "HTTP_ERROR"
-    assert body["error"]["detail"] == "boom"
+    assert body["error"]["detail"] == detail
 
 
 # ---------------------------------------------------------------------------
