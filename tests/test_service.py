@@ -1066,7 +1066,9 @@ async def test_by_agent_segmented_sort_order() -> None:
     assert len(result) == 3
     assert result[0]["name"] == "implement"  # highest openrouter (5.0)
     assert result[1]["name"] == "review"  # second (3.0)
-    assert result[2]["name"] == "refine"  # lowest openrouter (0.0002) despite highest total
+    assert (
+        result[2]["name"] == "refine"
+    )  # lowest openrouter (0.0002) despite highest total
 
 
 async def test_by_agent_segmented_exception_isolation() -> None:
