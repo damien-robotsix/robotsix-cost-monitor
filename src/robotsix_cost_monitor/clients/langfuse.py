@@ -24,6 +24,7 @@ from ..aggregations import (
     _utc_now,
     backend_for_model,
 )
+from .models import LangfuseMetricsRow, LangfuseTrace
 
 __all__ = [
     "LangfuseClient",
@@ -52,22 +53,25 @@ class LangfuseClient:
         )
         self._timeout = timeout
 
-    async def fetch_traces_window(self, hours: float) -> list[dict[str, Any]]:
+    async def fetch_traces_window(self, hours: float) -> list[LangfuseTrace]:
         """Return all traces with ``timestamp`` within the last *hours*.
 
         *hours* may be fractional (reconciliation passes the exact snapshot
         interval). Delegates to
         :meth:`AsyncLangfuseReadClient.fetch_traces_window`.
         """
-        return [trace async for trace in self._lf.fetch_traces_window(hours)]
+        return [
+            LangfuseTrace.model_validate(t)
+            async for t in self._lf.fetch_traces_window(hours)
+        ]
 
-    async def fetch_trace_detail(self, trace_id: str) -> dict[str, Any]:
+    async def fetch_trace_detail(self, trace_id: str) -> LangfuseTrace:
         """Return a single trace's full detail (including its observations).
 
         Delegates to :meth:`AsyncLangfuseReadClient.fetch_trace_detail`.
         """
         detail: dict[str, Any] = await self._lf.fetch_trace_detail(trace_id)
-        return detail
+        return LangfuseTrace.model_validate(detail)
 
     async def _metrics(
         self,
@@ -77,11 +81,11 @@ class LangfuseClient:
         view: str = "observations",
         dimensions: list[dict[str, str]] | None = None,
         time_dimension: dict[str, str] | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> list[LangfuseMetricsRow]:
         """Run a Langfuse metrics query over *view* (``observations`` or
         ``traces``) for the exact last *hours*, grouped by *dimensions* (``None``
         → group by model; pass ``[]`` for an ungrouped total). Returns the raw
-        ``data`` rows.
+        ``data`` rows parsed as :class:`LangfuseMetricsRow`.
 
         ``/api/public/metrics`` aggregates server-side and, unlike the
         daily-metrics endpoint, honors the exact ``from``/``to`` window (the
@@ -110,7 +114,10 @@ class LangfuseClient:
             )
             resp.raise_for_status()
             data: dict[str, Any] = resp.json()
-            return list(data.get("data") or [])
+            return [
+                LangfuseMetricsRow.model_validate(row)
+                for row in (data.get("data") or [])
+            ]
 
     async def fetch_trace_count_window(self, hours: float) -> int:
         """Count traces in the exact last *hours* via a server-side metrics
@@ -125,7 +132,7 @@ class LangfuseClient:
             metrics=[{"measure": "count", "aggregation": "count"}],
             dimensions=[],
         )
-        return int(rows[0].get("count_count") or 0) if rows else 0
+        return int(rows[0].count_count or 0) if rows else 0
 
     async def fetch_agent_usage_window(self, hours: int) -> list[dict[str, Any]]:
         """Per-(stage, backend) cost over the exact last *hours*.
@@ -151,15 +158,15 @@ class LangfuseClient:
         )
         acc: dict[tuple[str, str], dict[str, float]] = {}
         for row in rows:
-            model = row.get("providedModelName")
-            stage = row.get("traceName")
+            model = row.provided_model_name
+            stage = row.trace_name
             if not model or not stage:
                 continue
             backend = backend_for_model(model)
             key = (stage, backend)
             slot = acc.setdefault(key, {"cost": 0.0, "count": 0.0})
-            slot["cost"] += float(row.get("sum_totalCost") or 0.0)
-            slot["count"] += float(row.get("count_count") or 0.0)
+            slot["cost"] += float(row.sum_total_cost or 0.0)
+            slot["count"] += float(row.count_count or 0.0)
         ordered = sorted(acc.items(), key=lambda kv: kv[1]["cost"], reverse=True)
         return [
             {
@@ -189,15 +196,15 @@ class LangfuseClient:
         )
         acc: dict[str, dict[str, float]] = {}
         for row in rows:
-            model = row.get("providedModelName")
+            model = row.provided_model_name
             if not model:
                 continue
             slot = acc.setdefault(model, _empty_model_slot())
-            slot["cost"] += float(row.get("sum_totalCost") or 0.0)
-            slot["input_tokens"] += float(row.get("sum_inputTokens") or 0.0)
-            slot["output_tokens"] += float(row.get("sum_outputTokens") or 0.0)
-            slot["total_tokens"] += float(row.get("sum_totalTokens") or 0.0)
-            slot["observations"] += float(row.get("count_count") or 0.0)
+            slot["cost"] += float(row.sum_total_cost or 0.0)
+            slot["input_tokens"] += float(row.sum_input_tokens or 0.0)
+            slot["output_tokens"] += float(row.sum_output_tokens or 0.0)
+            slot["total_tokens"] += float(row.sum_total_tokens or 0.0)
+            slot["observations"] += float(row.count_count or 0.0)
         return _model_rows(acc)
 
     async def fetch_cost_by_backend(self, hours: float) -> dict[str, float]:
@@ -213,13 +220,11 @@ class LangfuseClient:
         )
         out: dict[str, float] = {}
         for row in rows:
-            model = row.get("providedModelName")
+            model = row.provided_model_name
             if not model:
                 continue
             backend = backend_for_model(model)
-            out[backend] = out.get(backend, 0.0) + float(
-                row.get("sum_totalCost") or 0.0
-            )
+            out[backend] = out.get(backend, 0.0) + float(row.sum_total_cost or 0.0)
         return out
 
     async def fetch_backend_cost_window(
@@ -239,13 +244,11 @@ class LangfuseClient:
         )
         out: dict[str, dict[str, float]] = {}
         for row in rows:
-            model = row.get("providedModelName")
+            model = row.provided_model_name
             if not model:
                 continue
-            bucket = str(row.get("time_dimension"))
+            bucket = str(row.time_dimension)
             backend = backend_for_model(model)
             slot = out.setdefault(bucket, {})
-            slot[backend] = slot.get(backend, 0.0) + float(
-                row.get("sum_totalCost") or 0.0
-            )
+            slot[backend] = slot.get(backend, 0.0) + float(row.sum_total_cost or 0.0)
         return out

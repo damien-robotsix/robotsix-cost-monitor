@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .clients.models import LangfuseTrace
 
 # Periodic-agent sessions: "<board> · <stage>-<YYYYMMDDTHHmmssZ>-<hash>"
 # Match the stage prefix (e.g. "trace_review", "implement") so unnamed
@@ -21,10 +24,10 @@ _PERIODIC_SESSION_RE = re.compile(
 )
 
 
-def _trace_cost(trace: dict[str, Any]) -> float:
+def _trace_cost(trace: LangfuseTrace) -> float:
     """Extract a trace's total cost, tolerant of Langfuse field-name variants."""
-    for key in ("totalCost", "calculatedTotalCost", "cost"):
-        v = trace.get(key)
+    for key in ("total_cost", "calculated_total_cost", "cost"):
+        v = getattr(trace, key, None)
         if isinstance(v, (int, float)):
             return float(v)
     return 0.0
@@ -109,7 +112,7 @@ def merge_model_costs(parts: list[list[dict[str, Any]]]) -> list[dict[str, Any]]
     return _model_rows(acc)
 
 
-def _trace_label(trace: dict[str, Any]) -> str:
+def _trace_label(trace: LangfuseTrace) -> str:
     """Display label for a trace in the by-agent view.
 
     Prefers the trace name (the stage/agent). Some traces reach Langfuse
@@ -118,10 +121,10 @@ def _trace_label(trace: dict[str, Any]) -> str:
     handling); rather than dumping their cost into one opaque "(unnamed)"
     bucket, attribute it to the session/ticket so it's still actionable.
     """
-    name = trace.get("name")
+    name = trace.name
     if name:
         return str(name)
-    sid = trace.get("sessionId") or trace.get("session_id")
+    sid = trace.session_id
     if sid and isinstance(sid, str):
         m = _PERIODIC_SESSION_RE.match(sid)
         if m:
@@ -129,7 +132,7 @@ def _trace_label(trace: dict[str, Any]) -> str:
     return f"(unnamed) {sid}" if sid else "(unnamed)"
 
 
-def aggregate_by_name(traces: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def aggregate_by_name(traces: list[LangfuseTrace]) -> list[dict[str, Any]]:
     """Cost + count grouped by trace name (the pipeline stage/agent)."""
     acc: dict[str, dict[str, float]] = {}
     for t in traces:
@@ -144,11 +147,11 @@ def aggregate_by_name(traces: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-def aggregate_by_session(traces: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def aggregate_by_session(traces: list[LangfuseTrace]) -> list[dict[str, Any]]:
     """Cost + trace-count grouped by sessionId (the ticket)."""
     acc: dict[str, dict[str, float]] = {}
     for t in traces:
-        sid = t.get("sessionId") or t.get("session_id")
+        sid = t.session_id
         if not sid:
             continue
         slot = acc.setdefault(sid, {"cost": 0.0, "count": 0.0})
@@ -161,8 +164,8 @@ def aggregate_by_session(traces: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-def _parse_ts(trace: dict[str, Any]) -> datetime | None:
-    raw = trace.get("timestamp")
+def _parse_ts(trace: LangfuseTrace) -> datetime | None:
+    raw = trace.timestamp
     if not isinstance(raw, str):
         return None
     try:
@@ -172,7 +175,7 @@ def _parse_ts(trace: dict[str, Any]) -> datetime | None:
 
 
 def cost_trend(
-    traces: list[dict[str, Any]], hours: int, buckets: int = 48
+    traces: list[LangfuseTrace], hours: int, buckets: int = 48
 ) -> list[dict[str, Any]]:
     """Bucket total cost over the time window into *buckets* equal slots."""
     now = _utc_now()
@@ -287,19 +290,19 @@ def aggregate_by_name_split(
     ]
 
 
-def most_expensive_trace(traces: list[dict[str, Any]]) -> dict[str, Any] | None:
+def most_expensive_trace(traces: list[LangfuseTrace]) -> dict[str, Any] | None:
     if not traces:
         return None
     top = max(traces, key=_trace_cost)
     return {
-        "id": top.get("id"),
-        "name": top.get("name"),
-        "session_id": top.get("sessionId"),
+        "id": top.id,
+        "name": top.name,
+        "session_id": top.session_id,
         "cost": round(_trace_cost(top), 6),
-        "timestamp": top.get("timestamp"),
+        "timestamp": top.timestamp,
     }
 
 
-def most_expensive_session(traces: list[dict[str, Any]]) -> dict[str, Any] | None:
+def most_expensive_session(traces: list[LangfuseTrace]) -> dict[str, Any] | None:
     rows = aggregate_by_session(traces)
     return rows[0] if rows else None
