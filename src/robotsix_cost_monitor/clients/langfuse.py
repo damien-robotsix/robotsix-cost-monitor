@@ -11,12 +11,12 @@ Pure aggregation / transformation functions live in
 
 from __future__ import annotations
 
-import base64
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from typing import Any
 
 import httpx
+from robotsix_llmio.core.langfuse_async_client import AsyncLangfuseReadClient
 
 from ..aggregations import (
     _empty_model_slot,
@@ -30,88 +30,10 @@ __all__ = [
 ]
 
 
-class _LangfuseRESTClient:
-    """Minimal vendored async REST helper for the Langfuse public API.
-
-    Replaces the external ``AsyncLangfuseReadClient`` so that
-    ``robotsix-llmio`` remains a truly optional (analyst-only) dependency.
-    Provides exactly the four methods :class:`LangfuseClient` uses:
-    ``url``, ``auth_header``, ``fetch_traces_window``, ``fetch_trace_detail``.
-    """
-
-    def __init__(
-        self,
-        *,
-        public_key: str,
-        secret_key: str,
-        base_url: str,
-        timeout: float = 30.0,
-    ) -> None:
-        self._public_key = public_key
-        self._secret_key = secret_key
-        self.base_url = base_url.rstrip("/")
-        self._timeout = timeout
-
-    def url(self, path: str) -> str:
-        """Join *path* onto the project's base URL."""
-        return f"{self.base_url}{path}"
-
-    def auth_header(self) -> str:
-        """Return the ``Authorization: Basic ...`` header value."""
-        creds = f"{self._public_key}:{self._secret_key}"
-        return f"Basic {base64.b64encode(creds.encode()).decode()}"
-
-    async def fetch_traces_window(
-        self, hours: float
-    ) -> Any:  # pragma: no cover — tested via LangfuseClient delegation
-        """Yield every trace with ``timestamp`` within the last *hours*.
-
-        Paginates ``GET /api/public/traces`` automatically.
-        """
-        from_timestamp = (
-            datetime.now(timezone.utc) - timedelta(hours=hours)  # noqa: UP017
-        ).isoformat()
-        page = 1
-        limit = 50
-        while True:
-            async with httpx.AsyncClient(timeout=self._timeout) as client:
-                resp = await client.get(
-                    self.url("/api/public/traces"),
-                    params={
-                        "fromTimestamp": from_timestamp,
-                        "page": str(page),
-                        "limit": str(limit),
-                    },
-                    headers={"Authorization": self.auth_header()},
-                )
-                resp.raise_for_status()
-                body: dict[str, Any] = resp.json()
-                for trace in body.get("data") or []:
-                    yield trace
-                meta: dict[str, Any] = body.get("meta") or {}
-                total_pages: int = meta.get("totalPages", 0)
-                if page >= total_pages:
-                    break
-                page += 1
-
-    async def fetch_trace_detail(
-        self, trace_id: str
-    ) -> dict[str, Any]:  # pragma: no cover — tested via LangfuseClient delegation
-        """Return the full trace for *trace_id* (including observations)."""
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.get(
-                self.url(f"/api/public/traces/{trace_id}"),
-                headers={"Authorization": self.auth_header()},
-            )
-            resp.raise_for_status()
-            body_data: dict[str, Any] = resp.json()
-            return body_data
-
-
 class LangfuseClient:
     """Read-only cost/trace client for a single Langfuse project.
 
-    Composes :class:`_LangfuseRESTClient` for auth/URL helpers and
+    Composes :class:`AsyncLangfuseReadClient` for auth/URL helpers and
     async REST transport; owns its own domain aggregation.
     """
 
@@ -123,11 +45,10 @@ class LangfuseClient:
         base_url: str,
         timeout: float = 30.0,
     ) -> None:
-        self._lf = _LangfuseRESTClient(
+        self._lf = AsyncLangfuseReadClient(
             public_key=public_key,
             secret_key=secret_key,
             base_url=base_url,
-            timeout=timeout,
         )
         self._timeout = timeout
 
@@ -135,14 +56,15 @@ class LangfuseClient:
         """Return all traces with ``timestamp`` within the last *hours*.
 
         *hours* may be fractional (reconciliation passes the exact snapshot
-        interval). Delegates to :meth:`_LangfuseRESTClient.fetch_traces_window`.
+        interval). Delegates to
+        :meth:`AsyncLangfuseReadClient.fetch_traces_window`.
         """
         return [trace async for trace in self._lf.fetch_traces_window(hours)]
 
     async def fetch_trace_detail(self, trace_id: str) -> dict[str, Any]:
         """Return a single trace's full detail (including its observations).
 
-        Delegates to :meth:`_LangfuseRESTClient.fetch_trace_detail`.
+        Delegates to :meth:`AsyncLangfuseReadClient.fetch_trace_detail`.
         """
         detail: dict[str, Any] = await self._lf.fetch_trace_detail(trace_id)
         return detail
