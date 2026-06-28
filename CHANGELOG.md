@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- **Consolidated `_load_json` in `analyst.py` with `_safe_load_json` from `reconcile.py`.**
+  Deleted the local `_load_json` helper and replaced its two call sites
+  (`load_proposals`, `load_targeted_analysis`) with the generic `_safe_load_json`,
+  removing a duplicate JSON-loading pattern.
+
 - **Added `robotsix_cost_monitor.aggregations` and `robotsix_cost_monitor.clients` to API reference.** The `docs/api.md` mkdocstrings listing now includes both modules so their docstrings appear in generated documentation.
 
 - **Extracted shared `_build_analysis_response` factory in `analyst.py`.**  The
