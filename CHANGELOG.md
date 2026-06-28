@@ -4,6 +4,10 @@
   duplicate `out` dict literal (6 fields) in `run_analyst` and
   `_run_opus_analysis_and_file` is replaced by a single helper function,
   eliminating the clone pair and keeping the response shape consistent.
+- **Extracted shared `_safe_load_json` helper in `reconcile.py`.**
+  Replaced two duplicate JSON-loading patterns (`_load_snapshot` and
+  `load_last_reconcile`) with a single `_safe_load_json(path, default)`
+  generic function.
 
 - **Removed legacy nested-dict reply branch from `managerReply()` in analyst.js.**
   The `typeof rr.reply === 'object'` branch (handling `rr.reply.reply`) was dead

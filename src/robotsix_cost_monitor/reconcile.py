@@ -13,7 +13,7 @@ import contextlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -31,15 +31,17 @@ def _snapshot_path(slug: str) -> Path:
     return _state_dir() / f"{slug}.json"
 
 
-def _load_snapshot(slug: str) -> dict[str, Any] | None:
-    p = _snapshot_path(slug)
-    if not p.exists():
-        return None
+def _safe_load_json[T](path: Path, default: T) -> T:
+    if not path.exists():
+        return default
     try:
-        data: dict[str, Any] = json.loads(p.read_text())
-        return data
+        return cast(T, json.loads(path.read_text()))
     except (json.JSONDecodeError, OSError):
-        return None
+        return default
+
+
+def _load_snapshot(slug: str) -> dict[str, Any] | None:
+    return _safe_load_json(_snapshot_path(slug), None)
 
 
 def _save_snapshot(slug: str, cumulative: float, at: datetime) -> None:
@@ -195,11 +197,7 @@ async def reconcile_all(config: Config) -> dict[str, Any]:
 
 def load_last_reconcile() -> dict[str, Any]:
     """The last stored reconcile result (for the banner); empty when none yet."""
-    p = _last_path()
-    if not p.exists():
-        return {"generated_at": None, "status": "unknown", "results": []}
-    try:
-        data: dict[str, Any] = json.loads(p.read_text())
-        return data
-    except (json.JSONDecodeError, OSError):
-        return {"generated_at": None, "status": "unknown", "results": []}
+    return _safe_load_json(
+        _last_path(),
+        {"generated_at": None, "status": "unknown", "results": []},
+    )
