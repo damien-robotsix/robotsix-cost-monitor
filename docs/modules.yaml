@@ -90,9 +90,9 @@ modules:
       - tests/robotsix_cost_monitor/test_app.py
     role: App + config tests using a zero-project config (app.py, no network)
 
-  - id: tests.test_cli
+  - id: tests.robotsix_cost_monitor.test_cli
     paths:
-      - tests/test_cli.py
+      - tests/robotsix_cost_monitor/test_cli.py
     role: Unit tests for the CLI entrypoint (cli.py)
 
   - id: tests.test_config
