@@ -18,10 +18,10 @@ dependencies = [
 [project.optional-dependencies]
 # The LLM cost-analyst (optional — the dashboard + reconciliation work without it).
 # robotsix-llmio is already a core dependency; the analyst extra adds its
-# openrouter_deepseek + claude_sdk extras, plus robotsix-agent-comm for the
+# openrouter + claude_sdk extras, plus robotsix-agent-comm for the
 # pull/mailbox client that files board tickets through the central broker.
 analyst = [
-    "robotsix-llmio[openrouter_deepseek,claude_sdk] @ git+https://github.com/damien-robotsix/robotsix-llmio.git@2fd2be4dcf7f0a44e91012fd1167517e5e09180e",
+    "robotsix-llmio[openrouter,claude_sdk] @ git+https://github.com/damien-robotsix/robotsix-llmio.git@2fd2be4dcf7f0a44e91012fd1167517e5e09180e",
     "robotsix-agent-comm @ git+https://github.com/damien-robotsix/robotsix-agent-comm.git@c57e9d7483f3e283d3e421cd24b60f0a442971c9",
 ]
 
