@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- **Replaced vendored `_LangfuseRESTClient` with `AsyncLangfuseReadClient` from robotsix-llmio.**
+  `robotsix-llmio` is now a hard (non-optional) core dependency. The vendored
+  ~70-line `_LangfuseRESTClient` class in `clients/langfuse.py` has been deleted;
+  `LangfuseClient` now composes `AsyncLangfuseReadClient` directly.
+
 - **Added `.nvmrc` and `.node-version` to pin Node.js to version 20.**
   These files ensure `nvm`, `fnm`, `nodenv`, and similar tools automatically
   select the same Node version used in CI (`js-tests` job),
