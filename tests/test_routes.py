@@ -500,6 +500,7 @@ def test_analyst_stage_loads() -> None:
 def test_analyst_run() -> None:
     with patch(
         "robotsix_cost_monitor.routes.run_analyst",
+        new_callable=AsyncMock,
         return_value={"status": "ok"},
     ) as mock_run:
         r = _client().post("/api/analyst/run")
@@ -511,6 +512,7 @@ def test_analyst_run() -> None:
 def test_analyst_ticket_run() -> None:
     with patch(
         "robotsix_cost_monitor.routes.run_ticket_analyst",
+        new_callable=AsyncMock,
         return_value={"status": "ok"},
     ) as mock_run:
         r = _client().post("/api/analyst/ticket-run")
