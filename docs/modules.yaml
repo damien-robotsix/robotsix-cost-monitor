@@ -105,9 +105,9 @@ modules:
       - tests/test_reconcile.py
     role: Unit tests for reconcile_project + snapshot load/save (reconcile.py, no network)
 
-  - id: tests.test_service
+  - id: tests.robotsix_cost_monitor.test_service
     paths:
-      - tests/test_service.py
+      - tests/robotsix_cost_monitor/test_service.py
     role: Unit tests for CostService caching, cross-project merging, exception isolation (service.py, no network)
 
   - id: tests.web.analyst
