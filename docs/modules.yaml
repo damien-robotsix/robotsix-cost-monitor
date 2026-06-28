@@ -87,7 +87,7 @@ modules:
 
   - id: tests.test_app
     paths:
-      - tests/test_app.py
+      - tests/robotsix_cost_monitor/test_app.py
     role: App + config tests using a zero-project config (app.py, no network)
 
   - id: tests.test_cli
