@@ -1,5 +1,7 @@
 ## 0.0.0 (unreleased)
 
+- **Added `robotsix_cost_monitor.aggregations` and `robotsix_cost_monitor.clients` to API reference.** The `docs/api.md` mkdocstrings listing now includes both modules so their docstrings appear in generated documentation.
+
 - **Extracted shared `_build_analysis_response` factory in `analyst.py`.**  The
   duplicate `out` dict literal (6 fields) in `run_analyst` and
   `_run_opus_analysis_and_file` is replaced by a single helper function,
