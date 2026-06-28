@@ -1,5 +1,9 @@
 ## 0.0.0 (unreleased)
 
+- **Fixed `_parse_analysis` docstring: s/level-2/agent/.**  The docstring
+  incorrectly claimed the function parsed output from a level-2 agent, but it
+  is called exclusively from `_opus_analysis`, which uses a level-3 orchestrator.
+
 - **Consolidated `_load_json` in `analyst.py` with `_safe_load_json` from `reconcile.py`.**
   Deleted the local `_load_json` helper and replaced its two call sites
   (`load_proposals`, `load_targeted_analysis`) with the generic `_safe_load_json`,
