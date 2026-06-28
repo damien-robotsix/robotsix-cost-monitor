@@ -8,11 +8,11 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
-from robotsix_cost_monitor.config import ProjectConfig
-from robotsix_cost_monitor.service import CostService
-
 from conftest import _config, _mock_client, _proj
 from helpers import trace
+
+from robotsix_cost_monitor.config import ProjectConfig
+from robotsix_cost_monitor.service import CostService
 
 # ---------------------------------------------------------------------------
 # Helpers (file-local — not shared across test modules)
