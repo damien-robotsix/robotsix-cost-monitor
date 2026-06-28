@@ -1,5 +1,9 @@
 ## 0.0.0 (unreleased)
 
+- **Moved `tests/test_app.py` to `tests/robotsix_cost_monitor/test_app.py`**
+  to align with the per-module test layout convention.
+  `docs/modules.yaml` updated accordingly.
+
 - **Added developer-convenience Makefile targets (`lint`, `typecheck`, `format`, `serve`, `docs`, `clean`).**
   The `Makefile` now provides canonical entry points for common development
   workflows: pre-commit linting (`make lint`), mypy type-checking
