@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- **Added `.nvmrc` and `.node-version` to pin Node.js to version 20.**
+  These files ensure `nvm`, `fnm`, `nodenv`, and similar tools automatically
+  select the same Node version used in CI (`js-tests` job),
+  eliminating local-vs-CI reproducibility gaps.
+
 - **Fixed `_parse_analysis` docstring: s/level-2/agent/.**  The docstring
   incorrectly claimed the function parsed output from a level-2 agent, but it
   is called exclusively from `_opus_analysis`, which uses a level-3 orchestrator.
