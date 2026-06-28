@@ -5,6 +5,10 @@
   to use relative imports (`..conftest`, `..helpers`). Added empty
   `tests/robotsix_cost_monitor/__init__.py` to enable relative imports.
   `docs/modules.yaml` updated accordingly.
+- **Moved `tests/test_routes.py` to `tests/robotsix_cost_monitor/test_routes.py`**
+  to align with the per-module test layout convention. Added
+  `tests/robotsix_cost_monitor/__init__.py` and fixed conftest import to use
+  a relative `..conftest` path. `docs/modules.yaml` updated accordingly.
 
 - **Moved `tests/test_app.py` to `tests/robotsix_cost_monitor/test_app.py`**
   to align with the per-module test layout convention.

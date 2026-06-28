@@ -53,6 +53,7 @@ modules:
   - id: robotsix_cost_monitor.routes
     paths:
       - src/robotsix_cost_monitor/routes.py
+      - tests/robotsix_cost_monitor/test_routes.py
     role: HTTP route handlers (APIRouter) and exception handlers
 
   - id: robotsix_cost_monitor.clients
@@ -71,10 +72,6 @@ modules:
       - src/robotsix_cost_monitor/web/static/shared.js
     role: Shared JS helpers for cost-monitor UI pages (getJSON, fmt, esc, $)
 
-  - id: tests.test_routes
-    paths:
-      - tests/test_routes.py
-    role: Unit tests for route helpers, dependency providers, exception handlers, and route edge cases
 
   - id: tests.test_aggregations
     paths:
