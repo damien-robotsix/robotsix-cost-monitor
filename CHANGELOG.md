@@ -1,5 +1,12 @@
 ## 0.0.0 (unreleased)
 
+- **Added developer-convenience Makefile targets (`lint`, `typecheck`, `format`, `serve`, `docs`, `clean`).**
+  The `Makefile` now provides canonical entry points for common development
+  workflows: pre-commit linting (`make lint`), mypy type-checking
+  (`make typecheck`), ruff formatting (`make format`), dev server
+  (`make serve`), docs preview (`make docs`), and cache cleanup
+  (`make clean`). CI is unaffected — these are purely developer-local aliases.
+
 - **Added typed Pydantic v2 response models for Langfuse API shapes.**
   New `src/robotsix_cost_monitor/clients/models.py` with `LangfuseMetricsRow`
   and `LangfuseTrace` `BaseModel` classes. `LangfuseClient` now parses API
