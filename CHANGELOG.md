@@ -4,6 +4,11 @@
   to align with the per-module test layout convention.
   `docs/modules.yaml` updated accordingly.
 
+- **Moved `tests/test_analyst.py` to `tests/robotsix_cost_monitor/test_analyst.py`**
+  to align with the per-module test layout convention.
+  Merged the `tests.test_analyst` module entry into `robotsix_cost_monitor.analyst`
+  in `docs/modules.yaml`.
+
 - **Added developer-convenience Makefile targets (`lint`, `typecheck`, `format`, `serve`, `docs`, `clean`).**
   The `Makefile` now provides canonical entry points for common development
   workflows: pre-commit linting (`make lint`), mypy type-checking
