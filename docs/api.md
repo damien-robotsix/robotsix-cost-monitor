@@ -10,6 +10,8 @@
 
 ::: robotsix_cost_monitor.config
 
+::: robotsix_cost_monitor.aggregations
+
 ::: robotsix_cost_monitor.service
 
 ::: robotsix_cost_monitor.reconcile
@@ -17,3 +19,5 @@
 ::: robotsix_cost_monitor.analyst
 
 ::: robotsix_cost_monitor.clients.langfuse
+
+::: robotsix_cost_monitor.clients
