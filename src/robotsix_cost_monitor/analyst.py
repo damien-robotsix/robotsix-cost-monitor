@@ -283,7 +283,7 @@ def _opus_analysis(
 
 
 def _parse_analysis(raw: str) -> Analysis:
-    """Parse the level-2 agent's JSON reply into an :class:`Analysis`.
+    """Parse an agent's JSON reply into an :class:`Analysis`.
 
     Tolerant of code fences / surrounding prose; on any failure the raw text is
     kept as the summary so a run is never lost.
