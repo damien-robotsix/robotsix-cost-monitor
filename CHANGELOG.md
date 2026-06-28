@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- **Extracted shared `_build_analysis_response` factory in `analyst.py`.**  The
+  duplicate `out` dict literal (6 fields) in `run_analyst` and
+  `_run_opus_analysis_and_file` is replaced by a single helper function,
+  eliminating the clone pair and keeping the response shape consistent.
+
 - **Removed legacy nested-dict reply branch from `managerReply()` in analyst.js.**
   The `typeof rr.reply === 'object'` branch (handling `rr.reply.reply`) was dead
   code — no production backend path produces a nested-dict reply.  The string

@@ -353,6 +353,31 @@ def _file_proposals(a: AnalystConfig, analysis: Analysis) -> dict[str, Any]:
     return {"filed": True, "reply": reply}
 
 
+def _build_analysis_response(
+    a: AnalystConfig,
+    analysis: Analysis,
+    filing_result: dict[str, Any] | None = None,
+    *,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build the standard analysis response dict.
+
+    Shared between ``run_analyst`` and ``_run_opus_analysis_and_file`` to keep
+    the response shape consistent.
+    """
+    out: dict[str, Any] = {
+        "enabled": True,
+        "generated_at": datetime.now(UTC).isoformat(),
+        "window_hours": a.window_hours,
+        "summary": analysis.summary,
+        "proposals": [p.model_dump() for p in analysis.proposals],
+        "filing_result": filing_result,
+    }
+    if extra:
+        out.update(extra)
+    return out
+
+
 async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
     """Run the analyst (digest → L2 agent + L3 sub-agent → optional ticket).
 
@@ -384,19 +409,8 @@ async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
     if analysis.proposals and a.can_file_tickets:
         filing_result = await asyncio.to_thread(_file_proposals, a, analysis)
 
-    out: dict[str, Any] = {
-        "enabled": True,
-        "generated_at": datetime.now(UTC).isoformat(),
-        "window_hours": a.window_hours,
-        "summary": analysis.summary,
-        "proposals": [p.model_dump() for p in analysis.proposals],
-        # findings = the traces actually analysed by the L2 pre-pass, each with
-        # its cost + the "why" (finding). (Candidates without detail are skipped.)
-        "analyzed_traces": findings,
-        # The board manager's reply: which tickets it created/updated from the
-        # proposals (it decides count, dedup, refinement).
-        "filing_result": filing_result,
-    }
+    out = _build_analysis_response(a, analysis, filing_result)
+    out["analyzed_traces"] = findings
     _store_path().write_text(json.dumps(out, indent=2))
     return out
 
@@ -471,15 +485,7 @@ async def _run_opus_analysis_and_file(
     filing_result: dict[str, Any] | None = None
     if analysis.proposals and a.can_file_tickets:
         filing_result = await asyncio.to_thread(_file_proposals, a, analysis)
-    out: dict[str, Any] = {
-        "enabled": True,
-        "generated_at": datetime.now(UTC).isoformat(),
-        "window_hours": a.window_hours,
-        "summary": analysis.summary,
-        "proposals": [p.model_dump() for p in analysis.proposals],
-        "filing_result": filing_result,
-        **(extra_out or {}),
-    }
+    out = _build_analysis_response(a, analysis, filing_result, extra=extra_out)
     _targeted_store_path(out_prefix).write_text(json.dumps(out, indent=2))
     return out
 
