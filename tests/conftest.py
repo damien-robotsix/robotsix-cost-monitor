@@ -20,7 +20,6 @@ import asyncio
 from typing import Any
 
 import pytest
-
 from helpers import _config, _mock_client, _proj  # noqa: F401
 
 
