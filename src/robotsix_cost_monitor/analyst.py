@@ -17,12 +17,13 @@ import contextlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import structlog
 from pydantic import BaseModel
 
 from .config import AnalystConfig, Config, data_dir
+from .reconcile import _safe_load_json
 from .service import CostService
 
 logger = structlog.get_logger(__name__)
@@ -159,17 +160,8 @@ async def build_digest(
     }
 
 
-def _load_json(path: Path, default: dict[str, Any]) -> dict[str, Any]:
-    if not path.exists():
-        return default
-    try:
-        return cast(dict[str, Any], json.loads(path.read_text()))
-    except (json.JSONDecodeError, OSError):
-        return default
-
-
 def load_proposals() -> dict[str, Any]:
-    return _load_json(_store_path(), {"generated_at": None, "proposals": []})
+    return _safe_load_json(_store_path(), {"generated_at": None, "proposals": []})
 
 
 def _run_agents(
@@ -426,7 +418,7 @@ def _targeted_store_path(kind: str) -> Path:
 
 def load_targeted_analysis(kind: str) -> dict[str, Any]:
     """Last stored ticket/stage analysis (for the page); empty when none yet."""
-    return _load_json(_targeted_store_path(kind), {"generated_at": None})
+    return _safe_load_json(_targeted_store_path(kind), {"generated_at": None})
 
 
 def _split_session(session_id: str) -> tuple[str, str]:
