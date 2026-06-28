@@ -186,9 +186,7 @@ class CostService:
         if not top:
             return None
         sid = top["session_id"]
-        session_traces = [
-            t for t in all_traces if t.session_id == sid
-        ]
+        session_traces = [t for t in all_traces if t.session_id == sid]
         traces = sorted(
             (
                 {
