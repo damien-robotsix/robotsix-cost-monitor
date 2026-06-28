@@ -102,7 +102,7 @@ modules:
 
   - id: tests.test_reconcile
     paths:
-      - tests/test_reconcile.py
+      - tests/robotsix_cost_monitor/test_reconcile.py
     role: Unit tests for reconcile_project + snapshot load/save (reconcile.py, no network)
 
   - id: tests.test_service
