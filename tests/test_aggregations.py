@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from helpers import trace
 
@@ -17,6 +19,7 @@ from robotsix_cost_monitor.aggregations import (
     most_expensive_session,
     most_expensive_trace,
 )
+from robotsix_cost_monitor.clients.models import LangfuseTrace
 
 
 def test_aggregate_by_name_sorted_desc() -> None:
@@ -73,9 +76,13 @@ def test_merge_model_costs_sums_by_model_sorted_desc() -> None:
 def test_aggregate_by_name_unnamed_falls_back_to_session() -> None:
     rows = aggregate_by_name(
         [
-            {"name": "", "sessionId": "robotsix-mill · ticket-1", "totalCost": 2.0},
-            {"name": None, "totalCost": 1.0},  # no name, no session
-            {"name": "implement", "totalCost": 0.5},
+            LangfuseTrace.model_validate(
+                {"name": "", "sessionId": "robotsix-mill · ticket-1", "totalCost": 2.0}
+            ),
+            LangfuseTrace.model_validate(
+                {"name": None, "totalCost": 1.0}
+            ),  # no name, no session
+            LangfuseTrace.model_validate({"name": "implement", "totalCost": 0.5}),
         ]
     )
     by = {r["name"]: r for r in rows}
@@ -89,21 +96,27 @@ def test_aggregate_by_name_periodic_session_uses_stage() -> None:
     should group under the stage name, not a per-run "(unnamed) …" bucket."""
     rows = aggregate_by_name(
         [
-            {
-                "name": "",
-                "sessionId": "robotsix-llmio · trace_review-20260619T200540Z-d2857b65",
-                "totalCost": 1.0,
-            },
-            {
-                "name": "",
-                "sessionId": "robotsix-cost-monitor · trace_review-20260619T200542Z-2ba9839d",
-                "totalCost": 2.0,
-            },
-            {
-                "name": "implement",
-                "sessionId": "robotsix-mill · 20260619T200540Z-some-slug",
-                "totalCost": 0.5,
-            },
+            LangfuseTrace.model_validate(
+                {
+                    "name": "",
+                    "sessionId": "robotsix-llmio · trace_review-20260619T200540Z-d2857b65",
+                    "totalCost": 1.0,
+                }
+            ),
+            LangfuseTrace.model_validate(
+                {
+                    "name": "",
+                    "sessionId": "robotsix-cost-monitor · trace_review-20260619T200542Z-2ba9839d",
+                    "totalCost": 2.0,
+                }
+            ),
+            LangfuseTrace.model_validate(
+                {
+                    "name": "implement",
+                    "sessionId": "robotsix-mill · 20260619T200540Z-some-slug",
+                    "totalCost": 0.5,
+                }
+            ),
         ]
     )
     by = {r["name"]: r for r in rows}
@@ -120,11 +133,13 @@ def test_aggregate_by_name_ticket_session_keeps_fallback() -> None:
     "(unnamed) <session>" fallback."""
     rows = aggregate_by_name(
         [
-            {
-                "name": "",
-                "sessionId": "robotsix-mill · 20260619T200540Z-some-slug",
-                "totalCost": 1.5,
-            },
+            LangfuseTrace.model_validate(
+                {
+                    "name": "",
+                    "sessionId": "robotsix-mill · 20260619T200540Z-some-slug",
+                    "totalCost": 1.5,
+                }
+            ),
         ]
     )
     assert rows[0]["name"] == "(unnamed) robotsix-mill · 20260619T200540Z-some-slug"
@@ -336,7 +351,9 @@ def test_aggregate_by_name_backend_handles_null_cost() -> None:
     ],
     ids=["both_pools", "subscription_only", "openrouter_only"],
 )
-def test_aggregate_by_name_split(rows, expected) -> None:
+def test_aggregate_by_name_split(
+    rows: list[dict[str, Any]], expected: dict[str, Any]
+) -> None:
     """Single-stage split: correct per-pool costs and counts for each backend mix."""
     result = aggregate_by_name_split(rows)
     assert len(result) == 1

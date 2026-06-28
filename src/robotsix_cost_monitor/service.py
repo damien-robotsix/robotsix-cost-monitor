@@ -23,6 +23,7 @@ from .aggregations import (
     most_expensive_trace,
 )
 from .clients.langfuse import LangfuseClient
+from .clients.models import LangfuseTrace
 from .config import Config, ProjectConfig
 
 _T = TypeVar("_T")
@@ -40,7 +41,7 @@ class CostService:
             for p in config.projects
         }
         # cache: (slug, hours) -> (traces, monotonic_deadline)
-        self._cache: dict[tuple[str, int], tuple[list[dict[str, Any]], float]] = {}
+        self._cache: dict[tuple[str, int], tuple[list[LangfuseTrace], float]] = {}
         # cache: (slug, hours) -> (per-model usage rows, monotonic_deadline)
         self._model_cache: dict[
             tuple[str, int], tuple[list[dict[str, Any]], float]
@@ -78,7 +79,7 @@ class CostService:
         cache_dict[key] = (result, time.monotonic() + ttl)
         return result
 
-    async def _traces(self, project: ProjectConfig, hours: int) -> list[dict[str, Any]]:
+    async def _traces(self, project: ProjectConfig, hours: int) -> list[LangfuseTrace]:
         return await self._cached_fetch(
             project,
             hours,
@@ -101,8 +102,8 @@ class CostService:
 
     async def _gather(
         self, slug: str | None, hours: int
-    ) -> list[tuple[ProjectConfig, list[dict[str, Any]]]]:
-        out: list[tuple[ProjectConfig, list[dict[str, Any]]]] = []
+    ) -> list[tuple[ProjectConfig, list[LangfuseTrace]]]:
+        out: list[tuple[ProjectConfig, list[LangfuseTrace]]] = []
         for p in self._projects(slug):
             try:
                 out.append((p, await self._traces(p, hours)))
@@ -117,14 +118,14 @@ class CostService:
         rows: list[dict[str, Any]] = []
         for p, traces in gathered:
             for t in traces:
-                tid = t.get("id")
+                tid = t.id
                 if not tid:
                     continue
                 rows.append(
                     {
                         "trace_id": tid,
                         "project": p.slug,
-                        "name": t.get("name") or "(unnamed)",
+                        "name": t.name or "(unnamed)",
                         "cost": round(_trace_cost(t), 6),
                     }
                 )
@@ -186,19 +187,19 @@ class CostService:
             return None
         sid = top["session_id"]
         session_traces = [
-            t for t in all_traces if (t.get("sessionId") or t.get("session_id")) == sid
+            t for t in all_traces if t.session_id == sid
         ]
         traces = sorted(
             (
                 {
-                    "trace_id": t["id"],
-                    "name": t.get("name") or "(unnamed)",
+                    "trace_id": t.id,
+                    "name": t.name or "(unnamed)",
                     "cost": round(_trace_cost(t), 6),
                 }
                 for t in session_traces
-                if t.get("id")
+                if t.id
             ),
-            key=lambda r: r["cost"],
+            key=lambda r: float(r["cost"]),  # type: ignore[arg-type]
             reverse=True,
         )
         return {
@@ -246,7 +247,8 @@ class CostService:
         client = self._clients.get(project_slug)
         if client is None:
             return {}
-        return await client.fetch_trace_detail(trace_id)
+        trace = await client.fetch_trace_detail(trace_id)
+        return trace.model_dump(by_alias=True)
 
     async def summary(self, slug: str | None, hours: int) -> dict[str, Any]:
         """Per-project totals + the aggregate, for the window.

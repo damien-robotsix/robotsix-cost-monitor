@@ -1,5 +1,13 @@
 ## 0.0.0 (unreleased)
 
+- **Added typed Pydantic v2 response models for Langfuse API shapes.**
+  New `src/robotsix_cost_monitor/clients/models.py` with `LangfuseMetricsRow`
+  and `LangfuseTrace` `BaseModel` classes. `LangfuseClient` now parses API
+  responses through `model_validate()` at the boundary instead of passing
+  raw `dict[str, Any]`. `aggregations.py` trace functions accept
+  `LangfuseTrace` instead of `dict[str, Any]`. `service.py` uses attribute
+  access on traces throughout. All affected tests updated.
+
 - **Replaced vendored `_LangfuseRESTClient` with `AsyncLangfuseReadClient` from robotsix-llmio.**
   `robotsix-llmio` is now a hard (non-optional) core dependency. The vendored
   ~70-line `_LangfuseRESTClient` class in `clients/langfuse.py` has been deleted;

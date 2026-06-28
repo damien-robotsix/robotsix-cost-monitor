@@ -252,12 +252,13 @@ async def test_trace_detail_unknown_project() -> None:
 
 async def test_trace_detail_delegates_to_client() -> None:
     svc = _svc(_proj("a"))
-    detail = {"id": "tr-1", "observations": [{"name": "gpt-4"}]}
+    trace_model = trace(cost=1.0, tid="tr-1")
     object.__setattr__(
-        svc._clients["a"], "fetch_trace_detail", AsyncMock(return_value=detail)
+        svc._clients["a"], "fetch_trace_detail", AsyncMock(return_value=trace_model)
     )
     result = await svc.trace_detail("a", "tr-1")
-    assert result == detail
+    assert result["id"] == "tr-1"
+    assert result["totalCost"] == 1.0
 
 
 # ---------------------------------------------------------------------------

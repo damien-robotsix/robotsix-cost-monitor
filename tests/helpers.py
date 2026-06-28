@@ -8,7 +8,8 @@ module avoids duplication and signature drift.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
+
+from robotsix_cost_monitor.clients.models import LangfuseTrace
 
 
 def trace(
@@ -18,8 +19,8 @@ def trace(
     session: str = "",
     tid: str | None = None,
     ago_h: float | None = None,
-) -> dict[str, Any]:
-    """Build a trace dict row in the shape returned by LangfuseClient.
+) -> LangfuseTrace:
+    """Build a :class:`LangfuseTrace` instance for tests.
 
     Keyword Args:
         cost: ``totalCost`` value (default 1.0).
@@ -30,10 +31,14 @@ def trace(
             is included (ISO-8601 with ``Z`` suffix).
     """
     trace_id = tid if tid is not None else f"tr-{cost}-{name}"
-    t: dict[str, Any] = {"id": trace_id, "name": name, "totalCost": cost}
+    data: dict[str, str | float | None] = {
+        "id": trace_id,
+        "name": name,
+        "totalCost": cost,
+    }
     if session:
-        t["sessionId"] = session
+        data["sessionId"] = session
     if ago_h is not None:
         ts = (datetime.now(UTC) - timedelta(hours=ago_h)).isoformat()
-        t["timestamp"] = ts.replace("+00:00", "Z")
-    return t
+        data["timestamp"] = ts.replace("+00:00", "Z")
+    return LangfuseTrace.model_validate(data)

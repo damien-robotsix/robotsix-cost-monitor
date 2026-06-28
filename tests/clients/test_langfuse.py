@@ -13,6 +13,7 @@ from unittest.mock import AsyncMock, Mock, patch
 from httpx import Request, Response
 
 from robotsix_cost_monitor.clients.langfuse import LangfuseClient
+from robotsix_cost_monitor.clients.models import LangfuseMetricsRow, LangfuseTrace
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -90,17 +91,20 @@ def test_init_custom_timeout() -> None:
 
 async def test_fetch_traces_window_delegates_to_async_client() -> None:
     """fetch_traces_window delegates to _LangfuseRESTClient.fetch_traces_window
-    and collects the async iterator into a list."""
+    and collects the async iterator into a list of LangfuseTrace models."""
     c = _client()
-    traces = [{"id": "t1"}, {"id": "t2"}]
+    raw_traces = [{"id": "t1"}, {"id": "t2"}]
 
     async def _mock_fetch(hours: float):  # type: ignore[no-untyped-def]
-        for t in traces:
+        for t in raw_traces:
             yield t
 
     with patch.object(c._lf, "fetch_traces_window", side_effect=_mock_fetch):
         result = await c.fetch_traces_window(hours=24)
-    assert result == traces
+    assert len(result) == 2
+    assert all(isinstance(t, LangfuseTrace) for t in result)
+    assert result[0].id == "t1"
+    assert result[1].id == "t2"
 
 
 async def test_fetch_traces_window_empty() -> None:
@@ -137,13 +141,16 @@ async def test_fetch_traces_window_passes_hours() -> None:
 
 
 async def test_fetch_trace_detail_delegates() -> None:
-    """fetch_trace_detail delegates to _LangfuseRESTClient.fetch_trace_detail."""
+    """fetch_trace_detail delegates to _LangfuseRESTClient.fetch_trace_detail
+    and returns a LangfuseTrace model."""
     c = _client()
     detail = {"id": "tr-99", "name": "implement", "observations": []}
     mock = AsyncMock(return_value=detail)
     with patch.object(c._lf, "fetch_trace_detail", mock):
         result = await c.fetch_trace_detail("tr-99")
-    assert result == detail
+    assert isinstance(result, LangfuseTrace)
+    assert result.id == "tr-99"
+    assert result.name == "implement"
     mock.assert_called_once_with("tr-99")
 
 
@@ -163,7 +170,9 @@ async def test_metrics_basic_query() -> None:
             24,
             metrics=[{"measure": "totalCost", "aggregation": "sum"}],
         )
-    assert result == [{"sum_totalCost": 1.5}]
+    assert len(result) == 1
+    assert isinstance(result[0], LangfuseMetricsRow)
+    assert result[0].sum_total_cost == 1.5
     call_kwargs = mock_client.get.call_args.kwargs
     assert "query" in call_kwargs["params"]
     query = json.loads(call_kwargs["params"]["query"])
