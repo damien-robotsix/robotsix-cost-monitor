@@ -1,5 +1,9 @@
 ## 0.0.0 (unreleased)
 
+- **Moved `tests/test_aggregations.py` to per-module layout** — relocated to
+  `tests/robotsix_cost_monitor/test_aggregations.py`; merged test entry into
+  the source module's paths in `docs/modules.yaml`.
+
 - **Fixed docstring drift in `_opus_analysis`** — replaced "DeepSeek thinking
   rejects forced tool_choice" with correct rationale ("avoids structured-output
   parsing edge-cases with reasoning models"); `_opus_analysis` runs Claude Opus,
