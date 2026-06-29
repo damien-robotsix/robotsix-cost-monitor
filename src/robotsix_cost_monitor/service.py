@@ -311,18 +311,24 @@ class CostService:
         all_rows: list[dict[str, Any]] = [r for part in parts for r in part]
         return aggregate_by_name_backend(all_rows, backend)
 
-    async def by_agent_segmented(
-        self, slug: str | None, hours: int
-    ) -> list[dict[str, Any]]:
+    async def by_agent_segmented(self, slug: str | None, hours: int) -> dict[str, Any]:
         """Cost by stage, split into OpenRouter-marginal and subscription-estimated
         pools.
 
-        Each returned row is a stage with its cost (and trace count) attributed to
-        each serving backend, keeping fixed-subscription estimates (Claude-SDK)
-        separate from pay-per-token marginal cash (OpenRouter).  This makes it
-        impossible to conflate the two pools — e.g. the ``refine`` stage's heavy
-        Claude-SDK subscription usage (~$51) will no longer swamp the marginal
-        rankings.
+        Returns::
+
+            {"window_hours": int,
+             "rows": list[dict],
+             "openrouter_marginal_total": float,
+             "subscription_estimate_total": float,
+             "subscription_count_total": int,
+             "subscription_cap": int,
+             "subscription_cap_pct": float | None}
+
+        Each row in ``rows`` carries the stage name, per-pool cost + count,
+        total cost, and a ``marginal_reducible`` flag.  ``subscription_cap_pct``
+        is ``subscription_count_total / subscription_cap`` when the cap > 0,
+        otherwise ``None``.
         """
         parts: list[list[dict[str, Any]]] = []
         for p in self._projects(slug):
@@ -331,7 +337,22 @@ class CostService:
             except Exception:  # noqa: BLE001 — a dead project must not 500 the page
                 parts.append([])
         all_rows: list[dict[str, Any]] = [r for part in parts for r in part]
-        return aggregate_by_name_split(all_rows)
+        rows = aggregate_by_name_split(all_rows)
+        openrouter_marginal_total = sum(r["openrouter_cost"] for r in rows)
+        subscription_estimate_total = sum(r["subscription_cost"] for r in rows)
+        subscription_count_total = sum(r["subscription_count"] for r in rows)
+        cap = self.config.settings.subscription_call_cap
+        return {
+            "window_hours": hours,
+            "rows": rows,
+            "openrouter_marginal_total": round(openrouter_marginal_total, 6),
+            "subscription_estimate_total": round(subscription_estimate_total, 6),
+            "subscription_count_total": subscription_count_total,
+            "subscription_cap": cap,
+            "subscription_cap_pct": (
+                round(subscription_count_total / cap, 6) if cap > 0 else None
+            ),
+        }
 
     async def _model_usage(
         self, project: ProjectConfig, hours: int

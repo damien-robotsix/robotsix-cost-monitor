@@ -241,11 +241,14 @@ def aggregate_by_name_split(
 
         {"name": str,
          "openrouter_cost": float, "subscription_cost": float, "total_cost": float,
-         "openrouter_count": int, "subscription_count": int}
+         "openrouter_count": int, "subscription_count": int,
+         "marginal_reducible": bool}
 
-    where ``total_cost = openrouter_cost + subscription_cost``.  All costs are
-    rounded to 6 decimals.  Sorted by ``openrouter_cost`` descending (primary),
-    ``total_cost`` descending (tie-break) so stages are ranked by marginal cash.
+    where ``total_cost = openrouter_cost + subscription_cost`` and
+    ``marginal_reducible`` is ``True`` when ``openrouter_cost > 0``.  All costs
+    are rounded to 6 decimals.  Sorted by ``openrouter_cost`` descending
+    (primary), ``total_cost`` descending (tie-break) so stages are ranked by
+    marginal cash.
     """
     acc: dict[str, dict[str, float]] = {}
     for r in rows:
@@ -285,6 +288,7 @@ def aggregate_by_name_split(
             "total_cost": round(v["openrouter_cost"] + v["subscription_cost"], 6),
             "openrouter_count": int(v["openrouter_count"]),
             "subscription_count": int(v["subscription_count"]),
+            "marginal_reducible": v["openrouter_cost"] > 0,
         }
         for n, v in ordered
     ]
