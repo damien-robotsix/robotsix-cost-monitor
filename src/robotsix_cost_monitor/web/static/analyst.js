@@ -64,8 +64,8 @@ export const setStatus = (m) => {
 /**
  * Render a metric card as HTML.
  * @param {string} label
- * @param {string} value
- * @param {string} sub
+ * @param {number|string} value
+ * @param {number|string} sub
  * @returns {string}
  */
 export function card(label, value, sub) {
@@ -210,7 +210,7 @@ export async function run() {
 
 /**
  * Render proposal list as HTML.
- * @param {Proposal[] | null} props
+ * @param {Proposal[] | null | undefined} props
  * @returns {string}
  */
 export function proposalsHTML(props) {
@@ -231,7 +231,7 @@ export function proposalsHTML(props) {
 
 /**
  * Render filing result as HTML (board manager reply).
- * @param {FilingResult | null} fr
+ * @param {FilingResult | null | undefined} fr
  * @returns {string}
  */
 export function filingHTML(fr) {
