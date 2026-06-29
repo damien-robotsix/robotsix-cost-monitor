@@ -370,7 +370,7 @@ export async function refresh() {
     const modelRows =
       backend === 'all'
         ? models
-        : models.filter(/** @type {ModelRow} */ (m) => m.backend === backend);
+        : models.filter((/** @type {ModelRow} */ m) => m.backend === backend);
     renderSummary(s, backend, modelRows);
     renderTrend(trend);
     renderByAgentSegmented(agents);

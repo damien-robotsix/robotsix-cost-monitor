@@ -69,9 +69,7 @@ export const setStatus = (m) => {
  * @returns {string}
  */
 export function card(label, value, sub) {
-  return `<div class="card"><div class="label">${esc(label)}</div><div class="value">${esc(
-    value,
-  )}</div><div class="sub">${esc(sub)}</div></div>`;
+  return `<div class="card"><div class="label">${esc(label)}</div><div class="value">${esc(String(value))}</div><div class="sub">${esc(String(sub))}</div></div>`;
 }
 
 /**
