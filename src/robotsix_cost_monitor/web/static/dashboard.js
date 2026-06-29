@@ -196,18 +196,69 @@ export function renderByAgent(rows) {
 }
 
 /**
- * Render the by-agent cost bar chart (segmented: usage vs subscription).
- * @param {AgentRow[]} rows
+ * Render the by-agent cost panel segmented into OpenRouter (marginal) and
+ * subscription (estimate) columns, with per-stage call counts, a
+ * "subscription — no model-switch" badge on non-reducible stages, and a
+ * volume-vs-cap signal for subscription call volume.
+ *
+ * @param {{rows: AgentRow[], subscription_cap: number, subscription_cap_pct: number|null, subscription_count_total: number}} data
  */
-export function renderByAgentSegmented(rows) {
+export function renderByAgentSegmented(data) {
+  const rows = /** @type {AgentRow[]} */ (data.rows || []);
+  const cap = data.subscription_cap || 0;
+  const capPct = data.subscription_cap_pct;
+  const countTotal = data.subscription_count_total || 0;
+
+  // --- volume-vs-cap signal ---
+  let capHtml = '';
+  if (cap > 0) {
+    const pct = capPct != null ? capPct : 0;
+    const pctDisplay = (pct * 100).toFixed(1);
+    const warn = pct >= 0.8;
+    capHtml =
+      `<div class="cap-info${warn ? ' cap-warn' : ''}">` +
+      `Subscription call volume: ${countTotal} / ${cap} (${pctDisplay}%)` +
+      (warn ? ' ⚠ near cap' : '') +
+      `</div>`;
+  } else {
+    capHtml = '<div class="cap-info muted">Subscription cap not configured</div>';
+  }
+
   const max = Math.max(...rows.map((r) => r.openrouter_cost || 0), 1e-9);
-  $('by-agent').innerHTML =
-    rows
-      .map(
-        (r) =>
-          `<div class="bar-row" style="grid-template-columns:140px 1fr 80px 140px"><span class="name">${esc(r.name)}</span><span class="bar-track"><span class="bar-fill" style="width:${((r.openrouter_cost || 0) / max) * 100}%"></span></span><span class="cost">${fmt(r.openrouter_cost)}</span><span style="text-align:right;font-size:11px;color:var(--muted)">est. (fixed subscription)&nbsp;${fmt(r.subscription_cost)}</span></div>`,
-      )
-      .join('') || '<div class="muted">no data</div>';
+
+  // --- header + rows ---
+  const header =
+    '<div class="bar-row seg-header">' +
+    '<span></span>' +
+    '<span>OpenRouter (marginal $)</span>' +
+    '<span></span>' +
+    '<span>Subscription (estimate)</span>' +
+    '<span></span>' +
+    '</div>';
+
+  const body =
+    rows.length === 0
+      ? '<div class="muted">no data</div>'
+      : rows
+          .map((r) => {
+            const subOnly = !r.marginal_reducible;
+            const rowCls = subOnly ? ' subscription-only' : '';
+            const badge = subOnly
+              ? ' <span class="pill muted">subscription — no model-switch</span>'
+              : '';
+            return (
+              `<div class="bar-row${rowCls}" style="grid-template-columns:160px 1fr 100px 100px auto">` +
+              `<span class="name" title="${esc(r.name)}">${esc(r.name)}</span>` +
+              `<span class="bar-track"><span class="bar-fill" style="width:${((r.openrouter_cost || 0) / max) * 100}%"></span></span>` +
+              `<span class="cost">${fmt(r.openrouter_cost)}<span class="count">${r.openrouter_count || 0} calls</span></span>` +
+              `<span class="cost">${fmt(r.subscription_cost)}<span class="count">${r.subscription_count || 0} calls</span></span>` +
+              badge +
+              `</div>`
+            );
+          })
+          .join('');
+
+  $('by-agent-segmented').innerHTML = capHtml + header + body;
 }
 
 /**

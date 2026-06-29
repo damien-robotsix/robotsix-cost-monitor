@@ -1,5 +1,11 @@
 ## 0.0.0 (unreleased)
 
+- **Dashboard: segmented by-agent panel with subscription-vs-marginal split** —
+  `renderByAgentSegmented` now renders two distinct columns (OpenRouter
+  marginal and subscription estimate) with per-stage call counts, badges
+  subscription-only stages with "subscription — no model-switch", and shows a
+  volume-vs-cap warning when subscription calls approach the configured cap.
+
 - **Added `marginal_reducible` flag to `aggregate_by_name_split`** — each stage
   row now carries a boolean indicating whether the stage has any OpenRouter
   (pay-per-token) cost, distinguishing subscription-backed stages from those
