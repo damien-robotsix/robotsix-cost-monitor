@@ -5,6 +5,12 @@
   parsing edge-cases with reasoning models"); `_opus_analysis` runs Claude Opus,
   not DeepSeek.
 
+- **Added `jsconfig.json` and `npm run typecheck` to CI.** The new `jsconfig.json`
+  enables `tsc --noEmit` type-checking (`strict`, `allowJs`, `checkJs`,
+  `target: ES2022`) across the JS frontend sources under
+  `src/robotsix_cost_monitor/web/static/`. Added `typescript` as a devDependency
+  and a `typecheck` npm script, and inserted a `npm run typecheck` step in the
+  `js-tests` CI job after lint and before tests.
 - **Extracted duplicated early-return block in `analyst.py`** — `run_ticket_analyst`
   and `run_stage_analyst` now share a `_no_top_early_return(kind, detail)` helper
   that constructs the "no top-{kind} data" response, writes it to the targeted
