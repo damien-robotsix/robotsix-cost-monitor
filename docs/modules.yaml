@@ -12,6 +12,7 @@ modules:
   - id: robotsix_cost_monitor.aggregations
     paths:
       - src/robotsix_cost_monitor/aggregations.py
+      - tests/robotsix_cost_monitor/test_aggregations.py
     role: Pure cost-aggregation and transformation functions over trace dicts (no I/O)
 
   - id: robotsix_cost_monitor.app
@@ -72,11 +73,6 @@ modules:
       - src/robotsix_cost_monitor/web/static/shared.js
     role: Shared JS helpers for cost-monitor UI pages (getJSON, fmt, esc, $)
 
-
-  - id: tests.test_aggregations
-    paths:
-      - tests/test_aggregations.py
-    role: Unit tests for pure cost-aggregation functions (aggregations.py, no network)
 
 
   - id: tests.test_app
