@@ -31,6 +31,10 @@ import { $, esc, fmt, getJSON } from './shared.js';
  * @property {number} cost
  * @property {number} [openrouter_cost]
  * @property {number} [subscription_cost]
+ * @property {number} [openrouter_count]
+ * @property {number} [subscription_count]
+ * @property {number} [total_cost]
+ * @property {boolean} [marginal_reducible]
  */
 
 /**
@@ -228,7 +232,7 @@ export function renderByAgentSegmented(data) {
 
   // --- header + rows ---
   const header =
-    '<div class="bar-row seg-header">' +
+    '<div class="bar-row seg-header" style="grid-template-columns:160px 1fr 100px 100px auto">' +
     '<span></span>' +
     '<span>OpenRouter (marginal $)</span>' +
     '<span></span>' +
