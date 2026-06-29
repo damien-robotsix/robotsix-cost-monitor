@@ -29,12 +29,21 @@ from fastapi.testclient import TestClient
 # ---------------------------------------------------------------------------
 _orig_llmio = sys.modules.get("robotsix_llmio")
 _orig_llmio_openrouter = sys.modules.get("robotsix_llmio.openrouter")
+_orig_llmio_core = sys.modules.get("robotsix_llmio.core")
+_orig_llmio_core_langfuse = sys.modules.get("robotsix_llmio.core.langfuse_async_client")
 
 _llmio = MagicMock()
 _llmio_openrouter = MagicMock()
 _llmio_openrouter.OpenRouterKeyCostSource = MagicMock()
+_llmio_core = MagicMock()
+_llmio_core_langfuse = MagicMock()
+_llmio_core_langfuse.AsyncLangfuseReadClient = MagicMock
 sys.modules["robotsix_llmio"] = _llmio
 sys.modules["robotsix_llmio.openrouter"] = _llmio_openrouter
+sys.modules["robotsix_llmio.core"] = _llmio_core
+sys.modules["robotsix_llmio.core.langfuse_async_client"] = _llmio_core_langfuse
+
+from helpers import _config, _proj  # noqa: E402
 
 from robotsix_cost_monitor.config import Config  # noqa: E402
 from robotsix_cost_monitor.routes import (  # noqa: E402
@@ -48,7 +57,6 @@ from robotsix_cost_monitor.routes import (  # noqa: E402
     unhandled_handler,
     validation_handler,
 )
-from conftest import _config, _proj  # noqa: E402
 
 # Restore the original sys.modules entries so the mock does not leak.
 if _orig_llmio is not None:
@@ -59,6 +67,14 @@ if _orig_llmio_openrouter is not None:
     sys.modules["robotsix_llmio.openrouter"] = _orig_llmio_openrouter
 else:
     sys.modules.pop("robotsix_llmio.openrouter", None)
+if _orig_llmio_core is not None:
+    sys.modules["robotsix_llmio.core"] = _orig_llmio_core
+else:
+    sys.modules.pop("robotsix_llmio.core", None)
+if _orig_llmio_core_langfuse is not None:
+    sys.modules["robotsix_llmio.core.langfuse_async_client"] = _orig_llmio_core_langfuse
+else:
+    sys.modules.pop("robotsix_llmio.core.langfuse_async_client", None)
 
 
 # ---------------------------------------------------------------------------
