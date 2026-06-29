@@ -17,5 +17,5 @@ jobs:
       packages: write
       id-token: write
       attestations: write
-    uses: damien-robotsix/robotsix-mill/.github/workflows/docker-release.yml@a317d51ad25be89194d55f220164819807d549f1 # v0.0.1
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/docker-release.yml@5cd8c1facb02299da618979e7a55f1953f9c075a # v0.0.1
     secrets: inherit  # zizmor: ignore[secrets-inherit] -- reusable workflow needs full secret access
