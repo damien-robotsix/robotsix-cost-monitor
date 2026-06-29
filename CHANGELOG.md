@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- **Fixed docstring drift in `_opus_analysis`** — replaced "DeepSeek thinking
+  rejects forced tool_choice" with correct rationale ("avoids structured-output
+  parsing edge-cases with reasoning models"); `_opus_analysis` runs Claude Opus,
+  not DeepSeek.
+
 - **Extracted duplicated early-return block in `analyst.py`** — `run_ticket_analyst`
   and `run_stage_analyst` now share a `_no_top_early_return(kind, detail)` helper
   that constructs the "no top-{kind} data" response, writes it to the targeted

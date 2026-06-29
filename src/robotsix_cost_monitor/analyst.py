@@ -257,8 +257,9 @@ def _opus_analysis(
 ) -> Analysis:
     """Run the level-3 (tier-3 → Claude Opus) orchestrator on *payload*, no tools.
 
-    Shared by the fleet / ticket / stage analyses. output_type=str (DeepSeek
-    thinking rejects forced tool_choice), parsed by :func:`_parse_analysis`.
+    Shared by the fleet / ticket / stage analyses. output_type=str (avoids
+    structured-output parsing edge-cases with reasoning models), parsed by
+    :func:`_parse_analysis`.
     """
     from robotsix_llmio import build_agent_for_level
     from robotsix_llmio.core.run import run_agent
