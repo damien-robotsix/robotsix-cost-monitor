@@ -416,6 +416,16 @@ def _targeted_store_path(kind: str) -> Path:
     return d / f"{kind}.json"
 
 
+def _no_top_early_return(kind: str, detail: str) -> dict[str, Any]:
+    out: dict[str, Any] = {
+        "enabled": True,
+        "generated_at": datetime.now(UTC).isoformat(),
+        "detail": detail,
+    }
+    _targeted_store_path(kind).write_text(json.dumps(out, indent=2))
+    return out
+
+
 def load_targeted_analysis(kind: str) -> dict[str, Any]:
     """Last stored ticket/stage analysis (for the page); empty when none yet."""
     return _safe_load_json(_targeted_store_path(kind), {"generated_at": None})
@@ -494,13 +504,7 @@ async def run_ticket_analyst(config: Config, service: CostService) -> dict[str, 
 
     top = await service.top_ticket("all", a.window_hours)
     if not top:
-        out: dict[str, Any] = {
-            "enabled": True,
-            "generated_at": datetime.now(UTC).isoformat(),
-            "detail": "no ticket sessions in the window",
-        }
-        _targeted_store_path("ticket").write_text(json.dumps(out, indent=2))
-        return out
+        return _no_top_early_return("ticket", "no ticket sessions in the window")
 
     board_id, ticket_id = _split_session(top["session_id"])
     context: dict[str, Any] = {}
@@ -551,13 +555,7 @@ async def run_stage_analyst(config: Config, service: CostService) -> dict[str, A
 
     top = await service.top_stage("all", a.window_hours, sample=a.max_trace_analyses)
     if not top:
-        out: dict[str, Any] = {
-            "enabled": True,
-            "generated_at": datetime.now(UTC).isoformat(),
-            "detail": "no traces in the window",
-        }
-        _targeted_store_path("stage").write_text(json.dumps(out, indent=2))
-        return out
+        return _no_top_early_return("stage", "no traces in the window")
 
     sampled: list[dict[str, Any]] = []
     for t in top["traces"]:

@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- **Extracted duplicated early-return block in `analyst.py`** — `run_ticket_analyst`
+  and `run_stage_analyst` now share a `_no_top_early_return(kind, detail)` helper
+  that constructs the "no top-{kind} data" response, writes it to the targeted
+  store, and returns it. Eliminates the 6-line clone pair between the two functions.
+
 - **Moved `tests/test_service.py` to `tests/robotsix_cost_monitor/test_service.py`**
   to align with the per-module test layout convention. Import paths updated
   to use relative imports (`..conftest`, `..helpers`). Added empty
