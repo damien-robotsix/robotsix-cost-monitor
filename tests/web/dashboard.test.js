@@ -220,9 +220,33 @@ describe('renderByAgentSegmented', () => {
     renderByAgentSegmented(
       data({
         rows: [
-          { name: 'c', openrouter_cost: 1, subscription_cost: 0, openrouter_count: 1, subscription_count: 0, total_cost: 1, marginal_reducible: true },
-          { name: 'a', openrouter_cost: 3, subscription_cost: 0, openrouter_count: 1, subscription_count: 0, total_cost: 3, marginal_reducible: true },
-          { name: 'b', openrouter_cost: 2, subscription_cost: 0, openrouter_count: 1, subscription_count: 0, total_cost: 2, marginal_reducible: true },
+          {
+            name: 'c',
+            openrouter_cost: 1,
+            subscription_cost: 0,
+            openrouter_count: 1,
+            subscription_count: 0,
+            total_cost: 1,
+            marginal_reducible: true,
+          },
+          {
+            name: 'a',
+            openrouter_cost: 3,
+            subscription_cost: 0,
+            openrouter_count: 1,
+            subscription_count: 0,
+            total_cost: 3,
+            marginal_reducible: true,
+          },
+          {
+            name: 'b',
+            openrouter_cost: 2,
+            subscription_cost: 0,
+            openrouter_count: 1,
+            subscription_count: 0,
+            total_cost: 2,
+            marginal_reducible: true,
+          },
         ],
       }),
     );
@@ -237,7 +261,15 @@ describe('renderByAgentSegmented', () => {
     renderByAgentSegmented(
       data({
         rows: [
-          { name: '<script>alert(1)</script>', openrouter_cost: 0, subscription_cost: 1, openrouter_count: 0, subscription_count: 1, total_cost: 1, marginal_reducible: false },
+          {
+            name: '<script>alert(1)</script>',
+            openrouter_cost: 0,
+            subscription_cost: 1,
+            openrouter_count: 0,
+            subscription_count: 1,
+            total_cost: 1,
+            marginal_reducible: false,
+          },
         ],
       }),
     );
@@ -259,8 +291,24 @@ describe('renderByAgentSegmented', () => {
     renderByAgentSegmented(
       data({
         rows: [
-          { name: 'marginal-stage', openrouter_cost: 5, subscription_cost: 0, openrouter_count: 2, subscription_count: 0, total_cost: 5, marginal_reducible: true },
-          { name: 'claude_sdk agent', openrouter_cost: 0, subscription_cost: 1.17, openrouter_count: 0, subscription_count: 3, total_cost: 1.17, marginal_reducible: false },
+          {
+            name: 'marginal-stage',
+            openrouter_cost: 5,
+            subscription_cost: 0,
+            openrouter_count: 2,
+            subscription_count: 0,
+            total_cost: 5,
+            marginal_reducible: true,
+          },
+          {
+            name: 'claude_sdk agent',
+            openrouter_cost: 0,
+            subscription_cost: 1.17,
+            openrouter_count: 0,
+            subscription_count: 3,
+            total_cost: 1.17,
+            marginal_reducible: false,
+          },
         ],
       }),
     );
@@ -280,7 +328,15 @@ describe('renderByAgentSegmented', () => {
     renderByAgentSegmented(
       data({
         rows: [
-          { name: 's', openrouter_cost: 0, subscription_cost: 1, openrouter_count: 0, subscription_count: 850, total_cost: 1, marginal_reducible: false },
+          {
+            name: 's',
+            openrouter_cost: 0,
+            subscription_cost: 1,
+            openrouter_count: 0,
+            subscription_count: 850,
+            total_cost: 1,
+            marginal_reducible: false,
+          },
         ],
         subscription_cap: 1000,
         subscription_cap_pct: 0.85,
@@ -299,7 +355,15 @@ describe('renderByAgentSegmented', () => {
     renderByAgentSegmented(
       data({
         rows: [
-          { name: 's', openrouter_cost: 0, subscription_cost: 1, openrouter_count: 0, subscription_count: 10, total_cost: 1, marginal_reducible: false },
+          {
+            name: 's',
+            openrouter_cost: 0,
+            subscription_cost: 1,
+            openrouter_count: 0,
+            subscription_count: 10,
+            total_cost: 1,
+            marginal_reducible: false,
+          },
         ],
         subscription_cap: 0,
         subscription_cap_pct: null,
@@ -316,7 +380,15 @@ describe('renderByAgentSegmented', () => {
     renderByAgentSegmented(
       data({
         rows: [
-          { name: 's', openrouter_cost: 0, subscription_cost: 1, openrouter_count: 0, subscription_count: 5, total_cost: 1, marginal_reducible: false },
+          {
+            name: 's',
+            openrouter_cost: 0,
+            subscription_cost: 1,
+            openrouter_count: 0,
+            subscription_count: 5,
+            total_cost: 1,
+            marginal_reducible: false,
+          },
         ],
         subscription_cap: null,
         subscription_cap_pct: null,
@@ -332,7 +404,15 @@ describe('renderByAgentSegmented', () => {
     renderByAgentSegmented(
       data({
         rows: [
-          { name: 'mixed', openrouter_cost: 4.2, subscription_cost: 80.0, openrouter_count: 5, subscription_count: 100, total_cost: 84.2, marginal_reducible: true },
+          {
+            name: 'mixed',
+            openrouter_cost: 4.2,
+            subscription_cost: 80.0,
+            openrouter_count: 5,
+            subscription_count: 100,
+            total_cost: 84.2,
+            marginal_reducible: true,
+          },
         ],
       }),
     );

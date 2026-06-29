@@ -219,11 +219,7 @@ export function renderByAgentSegmented(data) {
     const pct = capPct != null ? capPct : 0;
     const pctDisplay = (pct * 100).toFixed(1);
     const warn = pct >= 0.8;
-    capHtml =
-      `<div class="cap-info${warn ? ' cap-warn' : ''}">` +
-      `Subscription call volume: ${countTotal} / ${cap} (${pctDisplay}%)` +
-      (warn ? ' ⚠ near cap' : '') +
-      `</div>`;
+    capHtml = `<div class="cap-info${warn ? ' cap-warn' : ''}">Subscription call volume: ${countTotal} / ${cap} (${pctDisplay}%)${warn ? ' ⚠ near cap' : ''}</div>`;
   } else {
     capHtml = '<div class="cap-info muted">Subscription cap not configured</div>';
   }
@@ -250,15 +246,7 @@ export function renderByAgentSegmented(data) {
             const badge = subOnly
               ? ' <span class="pill muted">subscription — no model-switch</span>'
               : '';
-            return (
-              `<div class="bar-row${rowCls}" style="grid-template-columns:160px 1fr 100px 100px auto">` +
-              `<span class="name" title="${esc(r.name)}">${esc(r.name)}</span>` +
-              `<span class="bar-track"><span class="bar-fill" style="width:${((r.openrouter_cost || 0) / max) * 100}%"></span></span>` +
-              `<span class="cost">${fmt(r.openrouter_cost)}<span class="count">${r.openrouter_count || 0} calls</span></span>` +
-              `<span class="cost">${fmt(r.subscription_cost)}<span class="count">${r.subscription_count || 0} calls</span></span>` +
-              badge +
-              `</div>`
-            );
+            return `<div class="bar-row${rowCls}" style="grid-template-columns:160px 1fr 100px 100px auto"><span class="name" title="${esc(r.name)}">${esc(r.name)}</span><span class="bar-track"><span class="bar-fill" style="width:${((r.openrouter_cost || 0) / max) * 100}%"></span></span><span class="cost">${fmt(r.openrouter_cost)}<span class="count">${r.openrouter_count || 0} calls</span></span><span class="cost">${fmt(r.subscription_cost)}<span class="count">${r.subscription_count || 0} calls</span></span>${badge}</div>`;
           })
           .join('');
 
