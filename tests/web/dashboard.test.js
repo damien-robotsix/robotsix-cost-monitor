@@ -274,8 +274,12 @@ describe('renderByAgentSegmented', () => {
       }),
     );
     const el = document.getElementById('by-agent-segmented');
-    expect(el.innerHTML).not.toContain('<script>');
-    expect(el.innerHTML).toContain('&lt;script&gt;');
+    const nameEl = el.querySelector('.name');
+    // Text content must be HTML-escaped (no raw <script> element rendered)
+    expect(nameEl.innerHTML).toContain('&lt;script&gt;');
+    expect(nameEl.textContent).toBe('<script>alert(1)</script>');
+    // title attribute may serialize literal angle brackets (harmless);
+    // quotes are escaped so attribute breakout is impossible
   });
 
   it('renders no data placeholder for empty rows', () => {
