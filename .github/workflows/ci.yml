@@ -74,7 +74,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: damien-robotsix/robotsix-mill/.github/workflows/python-ci.yml@a317d51ad25be89194d55f220164819807d549f1 # v0.0.1
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-ci.yml@5cd8c1facb02299da618979e7a55f1953f9c075a # v0.0.1
     with:
       # The project requires Python >=3.14 (see pyproject `requires-python`); a
       # 3.12 runner fails dependency install with "No interpreter found".
@@ -87,7 +87,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: damien-robotsix/robotsix-mill/.github/workflows/python-security.yml@a317d51ad25be89194d55f220164819807d549f1 # v0.0.1
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-security.yml@5cd8c1facb02299da618979e7a55f1953f9c075a # v0.0.1
     with:
       install-extras: ""
       trufflehog-pr-diff: true
