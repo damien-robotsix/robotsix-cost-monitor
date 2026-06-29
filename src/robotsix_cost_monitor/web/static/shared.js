@@ -26,7 +26,7 @@ export const fmt = (n) => `$${(Number(n) || 0).toFixed(Number(n) >= 100 ? 0 : 2)
 export const esc = (s) =>
   String(s ?? '').replace(
     /[&<>"]/g,
-    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c],
+    (c) => /** @type {string} */ ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]),
   );
 
 /**

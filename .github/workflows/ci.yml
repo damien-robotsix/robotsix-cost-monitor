@@ -126,4 +126,5 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           mode: firewall
       - run: npm run lint:ci
+      - run: npm run typecheck
       - run: npm test

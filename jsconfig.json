@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "target": "ES2022"
+  },
+  "include": ["src/robotsix_cost_monitor/web/static/"]
+}

@@ -266,7 +266,7 @@ export function renderReconcile(rows) {
       const pill = r.within_tolerance
         ? '<span class="pill ok">clean</span>'
         : '<span class="pill bad">drift</span>';
-      return `<div class="recon-row"><span>${esc(r.project)}</span><span class="muted">provider ${fmt(r.provider_delta_usd)}</span><span class="muted">traced ${fmt(r.langfuse_cost_usd)}${r.langfuse_total_cost_usd !== undefined && r.langfuse_total_cost_usd !== null && Math.abs(r.langfuse_total_cost_usd - r.langfuse_cost_usd) > 1e-9 ? ` (all ${fmt(r.langfuse_total_cost_usd)})` : ''}</span><span class="${r.within_tolerance ? 'ok' : 'drift'}">Δ ${fmt(r.drift_usd)}</span><span>${pill} <span class="muted">${bal}</span></span></div>`;
+      return `<div class="recon-row"><span>${esc(r.project)}</span><span class="muted">provider ${fmt(r.provider_delta_usd)}</span><span class="muted">traced ${fmt(r.langfuse_cost_usd)}${r.langfuse_total_cost_usd !== undefined && r.langfuse_total_cost_usd !== null && Math.abs(r.langfuse_total_cost_usd - (r.langfuse_cost_usd ?? 0)) > 1e-9 ? ` (all ${fmt(r.langfuse_total_cost_usd)})` : ''}</span><span class="${r.within_tolerance ? 'ok' : 'drift'}">Δ ${fmt(r.drift_usd)}</span><span>${pill} <span class="muted">${bal}</span></span></div>`;
     })
     .join('');
 }
@@ -367,7 +367,10 @@ export async function refresh() {
       getJSON(`/api/highlights${qs()}`),
     ]);
     populateBackends(models);
-    const modelRows = backend === 'all' ? models : models.filter((m) => m.backend === backend);
+    const modelRows =
+      backend === 'all'
+        ? models
+        : models.filter((/** @type {ModelRow} */ m) => m.backend === backend);
     renderSummary(s, backend, modelRows);
     renderTrend(trend);
     renderByAgentSegmented(agents);
