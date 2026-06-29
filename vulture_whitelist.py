@@ -24,3 +24,8 @@ analyst_page
 # analyst.py — Pydantic model fields (consumed by pydantic BaseModel)
 rationale
 estimated_saving
+
+# Pydantic model_config / field false-positives (clients/models.py)
+model_config
+total_cost
+calculated_total_cost

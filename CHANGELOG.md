@@ -9,6 +9,10 @@
   parsing edge-cases with reasoning models"); `_opus_analysis` runs Claude Opus,
   not DeepSeek.
 
+- **Added vulture whitelist entries for `clients/models.py`** — suppressed
+  false-positives for Pydantic `model_config` and field declarations
+  (`total_cost`, `calculated_total_cost`) consumed via metaclass machinery.
+
 - **Added `jsconfig.json` and `npm run typecheck` to CI.** The new `jsconfig.json`
   enables `tsc --noEmit` type-checking (`strict`, `allowJs`, `checkJs`,
   `target: ES2022`) across the JS frontend sources under
