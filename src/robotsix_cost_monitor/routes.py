@@ -160,7 +160,7 @@ async def by_agent_segmented(
     hours: int = Query(0, ge=0),
     cfg: Config = Depends(get_config),
     service: CostService = Depends(get_service),
-) -> list[dict[str, Any]]:
+) -> dict[str, Any]:
     """GET /api/by-agent-segmented — agent costs segmented by model and backend."""
     h = _window(hours, cfg)
     _require_project(project, cfg)

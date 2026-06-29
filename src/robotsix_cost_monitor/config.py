@@ -95,6 +95,8 @@ class Settings(BaseModel):
     # Auto-run reconciliation every N hours (0 disables; default daily). The
     # stored result drives the dashboard warning banner.
     reconcile_schedule_hours: float = 24.0
+    # Per-day subscription call cap for volume-vs-cap monitoring; 0 = disabled/unknown.
+    subscription_call_cap: int = 0
     analyst: AnalystConfig = Field(default_factory=AnalystConfig)
 
 

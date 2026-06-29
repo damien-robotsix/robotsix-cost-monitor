@@ -77,6 +77,7 @@ def _proj(
 def _config(
     *projects: ProjectConfig,
     ttl: int = 10,
+    subscription_call_cap: int = 0,
     **analyst_kwargs: Any,
 ) -> Config:
     """Build a ``Config`` from projects and optional Settings overrides.
@@ -84,7 +85,10 @@ def _config(
     ``analyst_kwargs`` are forwarded to ``AnalystConfig`` (only when at least
     one kwarg is given).
     """
-    settings_kwargs: dict[str, Any] = {"cache_ttl_seconds": ttl}
+    settings_kwargs: dict[str, Any] = {
+        "cache_ttl_seconds": ttl,
+        "subscription_call_cap": subscription_call_cap,
+    }
     if analyst_kwargs:
         settings_kwargs["analyst"] = AnalystConfig(**analyst_kwargs)
     return Config(projects=list(projects), settings=Settings(**settings_kwargs))

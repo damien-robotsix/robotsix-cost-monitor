@@ -1,5 +1,18 @@
 ## 0.0.0 (unreleased)
 
+- **Added `marginal_reducible` flag to `aggregate_by_name_split`** — each stage
+  row now carries a boolean indicating whether the stage has any OpenRouter
+  (pay-per-token) cost, distinguishing subscription-backed stages from those
+  with marginal spend.
+
+- **Enriched `by_agent_segmented` service result** — returns a dict with
+  `window_hours`, `rows`, `openrouter_marginal_total`,
+  `subscription_estimate_total`, `subscription_count_total`,
+  `subscription_cap`, and `subscription_cap_pct` (was a plain list).
+
+- **Added `subscription_call_cap` setting** — configurable int (default 0)
+  in `Settings` for volume-vs-cap monitoring of subscription-backed stages.
+
 - **Moved `tests/test_aggregations.py` to per-module layout** — relocated to
   `tests/robotsix_cost_monitor/test_aggregations.py`; merged test entry into
   the source module's paths in `docs/modules.yaml`.

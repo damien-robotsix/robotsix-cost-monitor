@@ -340,7 +340,17 @@ def client() -> TestClient:
         }
     )
     svc.by_agent = AsyncMock(return_value=[])
-    svc.by_agent_segmented = AsyncMock(return_value=[])
+    svc.by_agent_segmented = AsyncMock(
+        return_value={
+            "window_hours": 168,
+            "rows": [],
+            "openrouter_marginal_total": 0.0,
+            "subscription_estimate_total": 0.0,
+            "subscription_count_total": 0,
+            "subscription_cap": 0,
+            "subscription_cap_pct": None,
+        }
+    )
     svc.by_model = AsyncMock(return_value=[])
     svc.backend_trend = AsyncMock(return_value=[])
     svc.trend = AsyncMock(return_value=[])
@@ -387,7 +397,15 @@ def test_by_agent_default_backend(client: TestClient) -> None:
 def test_by_agent_segmented_empty(client: TestClient) -> None:
     r = client.get("/api/by-agent-segmented?hours=24")
     assert r.status_code == 200
-    assert r.json() == []
+    body = r.json()
+    assert "rows" in body
+    assert "window_hours" in body
+    assert "openrouter_marginal_total" in body
+    assert "subscription_estimate_total" in body
+    assert "subscription_count_total" in body
+    assert "subscription_cap" in body
+    assert "subscription_cap_pct" in body
+    assert body["rows"] == []
 
 
 def test_by_model_defaults(client: TestClient) -> None:

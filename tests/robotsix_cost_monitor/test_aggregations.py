@@ -310,6 +310,7 @@ def test_aggregate_by_name_backend_handles_null_cost() -> None:
                 "total_cost": 50.0,
                 "openrouter_count": 5,
                 "subscription_count": 20,
+                "marginal_reducible": True,
             },
         ),
         (
@@ -328,6 +329,7 @@ def test_aggregate_by_name_backend_handles_null_cost() -> None:
                 "total_cost": 51.15,
                 "openrouter_count": 0,
                 "subscription_count": 183,
+                "marginal_reducible": False,
             },
         ),
         (
@@ -346,6 +348,7 @@ def test_aggregate_by_name_backend_handles_null_cost() -> None:
                 "total_cost": 0.0002,
                 "openrouter_count": 1,
                 "subscription_count": 0,
+                "marginal_reducible": True,
             },
         ),
     ],
@@ -364,6 +367,7 @@ def test_aggregate_by_name_split(
     assert r["total_cost"] == expected["total_cost"]
     assert r["openrouter_count"] == expected["openrouter_count"]
     assert r["subscription_count"] == expected["subscription_count"]
+    assert r["marginal_reducible"] == expected["marginal_reducible"]
 
 
 def test_aggregate_by_name_split_merges_across_projects() -> None:
@@ -381,6 +385,7 @@ def test_aggregate_by_name_split_merges_across_projects() -> None:
     assert r["subscription_cost"] == 0.5
     assert r["openrouter_count"] == 5  # 2 + 3
     assert r["subscription_count"] == 1
+    assert r["marginal_reducible"] is True
 
 
 def test_aggregate_by_name_split_sort_order() -> None:
@@ -411,6 +416,8 @@ def test_aggregate_by_name_split_sort_order() -> None:
     assert result[2]["name"] == "refine"
     assert result[2]["openrouter_cost"] == 0.0002
     assert result[2]["total_cost"] == 51.1502
+    # refine has trivial openrouter but nonzero → marginal_reducible should be True
+    assert result[2]["marginal_reducible"] is True
 
 
 def test_aggregate_by_name_split_rounding() -> None:
@@ -452,3 +459,4 @@ def test_aggregate_by_name_split_handles_null_cost() -> None:
     assert r["total_cost"] == 0.0
     assert r["openrouter_count"] == 1
     assert r["subscription_count"] == 2
+    assert r["marginal_reducible"] is False
