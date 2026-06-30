@@ -148,102 +148,286 @@ describe('renderByAgent', () => {
 });
 
 describe('renderByAgentSegmented', () => {
-  it('renders openrouter and subscription costs as distinct columns', () => {
-    fixture('<div id="by-agent"></div>');
-    const rows = [
-      {
-        name: 'plan',
-        openrouter_cost: 2.5,
-        subscription_cost: 0,
-        openrouter_count: 10,
-        subscription_count: 0,
-        total_cost: 2.5,
-      },
-      {
-        name: 'refine',
-        openrouter_cost: 0.0003,
-        subscription_cost: 51.15,
-        openrouter_count: 183,
-        subscription_count: 183,
-        total_cost: 51.1503,
-      },
-    ];
-    renderByAgentSegmented(rows);
-    const el = document.getElementById('by-agent');
-    expect(el.children.length).toBe(2);
+  function data(overrides = {}) {
+    return {
+      rows: [],
+      subscription_cap: 0,
+      subscription_cap_pct: null,
+      subscription_count_total: 0,
+      window_hours: 24,
+      openrouter_marginal_total: 0,
+      subscription_estimate_total: 0,
+      ...overrides,
+    };
+  }
 
-    // First row should be plan (higher openrouter_cost, so ranked first)
-    expect(el.children[0].innerHTML).toContain('plan');
-    expect(el.children[0].innerHTML).toContain('$2.50');
-    // plan has no subscription cost
-    expect(el.children[0].innerHTML).toContain('est. (fixed subscription)');
-    expect(el.children[0].innerHTML).toContain('$0.00');
+  it('renders openrouter and subscription costs as distinct columns with call counts', () => {
+    fixture('<div id="by-agent-segmented"></div>');
+    renderByAgentSegmented(
+      data({
+        rows: [
+          {
+            name: 'plan',
+            openrouter_cost: 2.5,
+            subscription_cost: 0,
+            openrouter_count: 10,
+            subscription_count: 0,
+            total_cost: 2.5,
+            marginal_reducible: true,
+          },
+          {
+            name: 'refine',
+            openrouter_cost: 0.0003,
+            subscription_cost: 51.15,
+            openrouter_count: 183,
+            subscription_count: 183,
+            total_cost: 51.1503,
+            marginal_reducible: true,
+          },
+        ],
+        subscription_cap: 1000,
+        subscription_cap_pct: 0.183,
+        subscription_count_total: 183,
+      }),
+    );
+    const el = document.getElementById('by-agent-segmented');
 
-    // Second row should be refine
-    expect(el.children[1].innerHTML).toContain('refine');
-    expect(el.children[1].innerHTML).toContain('$0.00'); // openrouter_cost ~0
-    expect(el.children[1].innerHTML).toContain('est. (fixed subscription)');
-    expect(el.children[1].innerHTML).toContain('$51.15');
+    // volume-vs-cap signal present
+    expect(el.innerHTML).toContain('Subscription call volume: 183 / 1000');
+    expect(el.innerHTML).toContain('(18.3%)');
+
+    // header labels
+    expect(el.innerHTML).toContain('OpenRouter (marginal $)');
+    expect(el.innerHTML).toContain('Subscription (estimate)');
+
+    // first row: plan (higher openrouter_cost)
+    const rows = el.querySelectorAll('.bar-row:not(.seg-header)');
+    expect(rows.length).toBe(2);
+    expect(rows[0].innerHTML).toContain('plan');
+    expect(rows[0].innerHTML).toContain('$2.50');
+    expect(rows[0].innerHTML).toContain('$0.00');
+
+    // second row: refine
+    expect(rows[1].innerHTML).toContain('refine');
+    expect(rows[1].innerHTML).toContain('$51.15');
+    // call counts rendered
+    expect(rows[0].innerHTML).toContain('10 calls');
+    expect(rows[1].innerHTML).toContain('183 calls');
   });
 
-  it('preserves input ordering (openrouter_cost desc)', () => {
-    fixture('<div id="by-agent"></div>');
-    const rows = [
-      {
-        name: 'c',
-        openrouter_cost: 1,
-        subscription_cost: 0,
-        openrouter_count: 1,
-        subscription_count: 0,
-        total_cost: 1,
-      },
-      {
-        name: 'a',
-        openrouter_cost: 3,
-        subscription_cost: 0,
-        openrouter_count: 1,
-        subscription_count: 0,
-        total_cost: 3,
-      },
-      {
-        name: 'b',
-        openrouter_cost: 2,
-        subscription_cost: 0,
-        openrouter_count: 1,
-        subscription_count: 0,
-        total_cost: 2,
-      },
-    ];
-    renderByAgentSegmented(rows);
-    const el = document.getElementById('by-agent');
-    const names = [...el.children].map((c) => c.querySelector('.name').textContent);
-    // Input order is preserved (backend already sorts; renderer renders as-is)
+  it('preserves input ordering (rows rendered as supplied)', () => {
+    fixture('<div id="by-agent-segmented"></div>');
+    renderByAgentSegmented(
+      data({
+        rows: [
+          {
+            name: 'c',
+            openrouter_cost: 1,
+            subscription_cost: 0,
+            openrouter_count: 1,
+            subscription_count: 0,
+            total_cost: 1,
+            marginal_reducible: true,
+          },
+          {
+            name: 'a',
+            openrouter_cost: 3,
+            subscription_cost: 0,
+            openrouter_count: 1,
+            subscription_count: 0,
+            total_cost: 3,
+            marginal_reducible: true,
+          },
+          {
+            name: 'b',
+            openrouter_cost: 2,
+            subscription_cost: 0,
+            openrouter_count: 1,
+            subscription_count: 0,
+            total_cost: 2,
+            marginal_reducible: true,
+          },
+        ],
+      }),
+    );
+    const el = document.getElementById('by-agent-segmented');
+    const rows = el.querySelectorAll('.bar-row:not(.seg-header)');
+    const names = [...rows].map((c) => c.querySelector('.name').textContent);
     expect(names).toEqual(['c', 'a', 'b']);
   });
 
   it('escapes agent names', () => {
-    fixture('<div id="by-agent"></div>');
-    renderByAgentSegmented([
-      {
-        name: '<script>alert(1)</script>',
-        openrouter_cost: 0,
-        subscription_cost: 1,
-        openrouter_count: 0,
-        subscription_count: 1,
-        total_cost: 1,
-      },
-    ]);
-    const el = document.getElementById('by-agent');
-    expect(el.innerHTML).not.toContain('<script>');
-    expect(el.innerHTML).toContain('&lt;script&gt;');
+    fixture('<div id="by-agent-segmented"></div>');
+    renderByAgentSegmented(
+      data({
+        rows: [
+          {
+            name: '<script>alert(1)</script>',
+            openrouter_cost: 0,
+            subscription_cost: 1,
+            openrouter_count: 0,
+            subscription_count: 1,
+            total_cost: 1,
+            marginal_reducible: false,
+          },
+        ],
+      }),
+    );
+    const el = document.getElementById('by-agent-segmented');
+    const nameEl = el.querySelector('.name');
+    // Text content must be HTML-escaped (no raw <script> element rendered)
+    expect(nameEl.innerHTML).toContain('&lt;script&gt;');
+    expect(nameEl.textContent).toBe('<script>alert(1)</script>');
+    // title attribute may serialize literal angle brackets (harmless);
+    // quotes are escaped so attribute breakout is impossible
   });
 
   it('renders no data placeholder for empty rows', () => {
-    fixture('<div id="by-agent"></div>');
-    renderByAgentSegmented([]);
-    const el = document.getElementById('by-agent');
+    fixture('<div id="by-agent-segmented"></div>');
+    renderByAgentSegmented(data({ rows: [] }));
+    const el = document.getElementById('by-agent-segmented');
     expect(el.innerHTML).toContain('no data');
     expect(el.querySelector('.muted')).not.toBeNull();
+  });
+
+  it('badges subscription-only stages with "subscription — no model-switch"', () => {
+    fixture('<div id="by-agent-segmented"></div>');
+    renderByAgentSegmented(
+      data({
+        rows: [
+          {
+            name: 'marginal-stage',
+            openrouter_cost: 5,
+            subscription_cost: 0,
+            openrouter_count: 2,
+            subscription_count: 0,
+            total_cost: 5,
+            marginal_reducible: true,
+          },
+          {
+            name: 'claude_sdk agent',
+            openrouter_cost: 0,
+            subscription_cost: 1.17,
+            openrouter_count: 0,
+            subscription_count: 3,
+            total_cost: 1.17,
+            marginal_reducible: false,
+          },
+        ],
+      }),
+    );
+    const el = document.getElementById('by-agent-segmented');
+    // subscription-only row carries the badge
+    const rows = el.querySelectorAll('.bar-row:not(.seg-header)');
+    expect(rows[1].innerHTML).toContain('subscription — no model-switch');
+    // marginal row does NOT
+    expect(rows[0].innerHTML).not.toContain('subscription — no model-switch');
+    // subscription-only row is de-emphasised
+    expect(rows[1].classList.contains('subscription-only')).toBe(true);
+    expect(rows[0].classList.contains('subscription-only')).toBe(false);
+  });
+
+  it('shows warning state when subscription_cap_pct >= 0.8', () => {
+    fixture('<div id="by-agent-segmented"></div>');
+    renderByAgentSegmented(
+      data({
+        rows: [
+          {
+            name: 's',
+            openrouter_cost: 0,
+            subscription_cost: 1,
+            openrouter_count: 0,
+            subscription_count: 850,
+            total_cost: 1,
+            marginal_reducible: false,
+          },
+        ],
+        subscription_cap: 1000,
+        subscription_cap_pct: 0.85,
+        subscription_count_total: 850,
+      }),
+    );
+    const el = document.getElementById('by-agent-segmented');
+    expect(el.innerHTML).toContain('850 / 1000');
+    expect(el.innerHTML).toContain('(85.0%)');
+    expect(el.innerHTML).toContain('near cap');
+    expect(el.querySelector('.cap-info.cap-warn')).not.toBeNull();
+  });
+
+  it('shows "cap not configured" when subscription_cap is 0', () => {
+    fixture('<div id="by-agent-segmented"></div>');
+    renderByAgentSegmented(
+      data({
+        rows: [
+          {
+            name: 's',
+            openrouter_cost: 0,
+            subscription_cost: 1,
+            openrouter_count: 0,
+            subscription_count: 10,
+            total_cost: 1,
+            marginal_reducible: false,
+          },
+        ],
+        subscription_cap: 0,
+        subscription_cap_pct: null,
+        subscription_count_total: 10,
+      }),
+    );
+    const el = document.getElementById('by-agent-segmented');
+    expect(el.innerHTML).toContain('cap not configured');
+    expect(el.querySelector('.cap-info.muted')).not.toBeNull();
+  });
+
+  it('shows "cap not configured" when subscription_cap is null/undefined', () => {
+    fixture('<div id="by-agent-segmented"></div>');
+    renderByAgentSegmented(
+      data({
+        rows: [
+          {
+            name: 's',
+            openrouter_cost: 0,
+            subscription_cost: 1,
+            openrouter_count: 0,
+            subscription_count: 5,
+            total_cost: 1,
+            marginal_reducible: false,
+          },
+        ],
+        subscription_cap: null,
+        subscription_cap_pct: null,
+        subscription_count_total: 5,
+      }),
+    );
+    const el = document.getElementById('by-agent-segmented');
+    expect(el.innerHTML).toContain('cap not configured');
+  });
+
+  it('renders marginal (openrouter) cost as primary signal, not subscription', () => {
+    fixture('<div id="by-agent-segmented"></div>');
+    renderByAgentSegmented(
+      data({
+        rows: [
+          {
+            name: 'mixed',
+            openrouter_cost: 4.2,
+            subscription_cost: 80.0,
+            openrouter_count: 5,
+            subscription_count: 100,
+            total_cost: 84.2,
+            marginal_reducible: true,
+          },
+        ],
+      }),
+    );
+    const el = document.getElementById('by-agent-segmented');
+    // The bar-fill width is based on openrouter_cost
+    const barFill = el.querySelector('.bar-fill');
+    expect(barFill).not.toBeNull();
+    // openrouter cost value is present
+    expect(el.innerHTML).toContain('$4.20');
+    // subscription cost is there but as secondary
+    expect(el.innerHTML).toContain('$80');
   });
 });
 

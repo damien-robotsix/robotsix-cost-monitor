@@ -52,6 +52,17 @@ main { padding: 20px; max-width: 1100px; margin: 0 auto; }
 .bar-track { background: var(--bg); border-radius: 4px; height: 16px; overflow: hidden; }
 .bar-fill { background: linear-gradient(90deg, var(--accent), #8a5bff); height: 100%; }
 .bar-row .cost { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar-row .cost .count { display: block; font-size: 11px; color: var(--muted); }
+/* subscription-only rows are de-emphasised — greyed out */
+.bar-row.subscription-only { opacity: 0.55; }
+.bar-row.subscription-only .name { color: var(--muted); }
+/* segmented header row */
+.bar-row.seg-header { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 2px; }
+.bar-row.seg-header .cost { text-align: right; }
+/* subscription volume-vs-cap signal */
+.cap-info { font-size: 12px; padding: 6px 0; margin-bottom: 8px; border-bottom: 1px solid var(--border); }
+.cap-info.muted { color: var(--muted); }
+.cap-info.cap-warn { color: var(--warn); font-weight: 600; }
 #highlights .hl { padding: 8px 0; border-bottom: 1px solid var(--border); }
 #highlights .hl:last-child { border-bottom: none; }
 #highlights .k { color: var(--muted); font-size: 12px; }
