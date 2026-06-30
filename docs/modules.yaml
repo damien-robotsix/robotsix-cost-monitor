@@ -21,26 +21,31 @@ modules:
       - src/robotsix_cost_monitor/web/index.html
       - src/robotsix_cost_monitor/web/static/dashboard.js
       - src/robotsix_cost_monitor/web/static/dashboard.css
+      - tests/robotsix_cost_monitor/test_app.py
     role: FastAPI app factory, server-rendered UI, static files
 
   - id: robotsix_cost_monitor.cli
     paths:
       - src/robotsix_cost_monitor/cli.py
+      - tests/robotsix_cost_monitor/test_cli.py
     role: CLI entrypoint (serve, summary, reconcile)
 
   - id: robotsix_cost_monitor.config
     paths:
       - src/robotsix_cost_monitor/config.py
+      - tests/robotsix_cost_monitor/test_config.py
     role: YAML config models + loader (config/projects.yaml)
 
   - id: robotsix_cost_monitor.service
     paths:
       - src/robotsix_cost_monitor/service.py
+      - tests/robotsix_cost_monitor/test_service.py
     role: Cross-project cost aggregation with TTL cache
 
   - id: robotsix_cost_monitor.reconcile
     paths:
       - src/robotsix_cost_monitor/reconcile.py
+      - tests/robotsix_cost_monitor/test_reconcile.py
     role: OpenRouter ↔ Langfuse cost reconciliation via snapshots
 
   - id: robotsix_cost_monitor.analyst
@@ -74,31 +79,6 @@ modules:
     role: Shared JS helpers for cost-monitor UI pages (getJSON, fmt, esc, $)
 
 
-
-  - id: tests.test_app
-    paths:
-      - tests/robotsix_cost_monitor/test_app.py
-    role: App + config tests using a zero-project config (app.py, no network)
-
-  - id: tests.robotsix_cost_monitor.test_cli
-    paths:
-      - tests/robotsix_cost_monitor/test_cli.py
-    role: Unit tests for the CLI entrypoint (cli.py)
-
-  - id: tests.test_config
-    paths:
-      - tests/robotsix_cost_monitor/test_config.py
-    role: Unit tests for config.py I/O helpers and AnalystConfig model
-
-  - id: tests.test_reconcile
-    paths:
-      - tests/robotsix_cost_monitor/test_reconcile.py
-    role: Unit tests for reconcile_project + snapshot load/save (reconcile.py, no network)
-
-  - id: tests.robotsix_cost_monitor.test_service
-    paths:
-      - tests/robotsix_cost_monitor/test_service.py
-    role: Unit tests for CostService caching, cross-project merging, exception isolation (service.py, no network)
 
   - id: tests.web.analyst
     paths:
