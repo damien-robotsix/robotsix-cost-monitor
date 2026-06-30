@@ -74,6 +74,18 @@ def _model_rows(acc: dict[str, dict[str, float]]) -> list[dict[str, Any]]:
     ]
 
 
+def _sorted_cost_rows(
+    acc: dict[str, dict[str, float]],
+    key_field: str = "name",
+) -> list[dict[str, Any]]:
+    """Convert a ``{key: {cost, count}}`` accumulator into rows sorted by cost desc."""
+    ordered = sorted(acc.items(), key=lambda kv: kv[1]["cost"], reverse=True)
+    return [
+        {key_field: k, "cost": round(v["cost"], 6), "count": int(v["count"])}
+        for k, v in ordered
+    ]
+
+
 def backend_cost_series(
     parts: list[dict[str, dict[str, float]]], backend: str
 ) -> list[dict[str, Any]]:
@@ -140,11 +152,7 @@ def aggregate_by_name(traces: list[LangfuseTrace]) -> list[dict[str, Any]]:
         slot = acc.setdefault(name, {"cost": 0.0, "count": 0.0})
         slot["cost"] += _trace_cost(t)
         slot["count"] += 1
-    ordered = sorted(acc.items(), key=lambda kv: kv[1]["cost"], reverse=True)
-    return [
-        {"name": n, "cost": round(v["cost"], 6), "count": int(v["count"])}
-        for n, v in ordered
-    ]
+    return _sorted_cost_rows(acc)
 
 
 def aggregate_by_session(traces: list[LangfuseTrace]) -> list[dict[str, Any]]:
@@ -157,11 +165,7 @@ def aggregate_by_session(traces: list[LangfuseTrace]) -> list[dict[str, Any]]:
         slot = acc.setdefault(sid, {"cost": 0.0, "count": 0.0})
         slot["cost"] += _trace_cost(t)
         slot["count"] += 1
-    ordered = sorted(acc.items(), key=lambda kv: kv[1]["cost"], reverse=True)
-    return [
-        {"session_id": s, "cost": round(v["cost"], 6), "count": int(v["count"])}
-        for s, v in ordered
-    ]
+    return _sorted_cost_rows(acc, "session_id")
 
 
 def _parse_ts(trace: LangfuseTrace) -> datetime | None:
@@ -220,11 +224,7 @@ def aggregate_by_name_backend(
         slot = acc.setdefault(name, {"cost": 0.0, "count": 0.0})
         slot["cost"] += float(r.get("cost") or 0.0)
         slot["count"] += float(r.get("count") or 0.0)
-    ordered = sorted(acc.items(), key=lambda kv: kv[1]["cost"], reverse=True)
-    return [
-        {"name": n, "cost": round(v["cost"], 6), "count": int(v["count"])}
-        for n, v in ordered
-    ]
+    return _sorted_cost_rows(acc)
 
 
 def aggregate_by_name_split(

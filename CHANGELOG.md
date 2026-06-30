@@ -10,6 +10,9 @@
   inline `.map(...).join('')` block in `render()` now delegates to the
   existing `proposalsHTML(props)` function, removing ~12 lines of duplicated
   template logic and keeping both rendering paths in sync.
+- **Extracted `_sorted_cost_rows` helper in `aggregations.py`** — deduplicates
+  sort+format boilerplate in `aggregate_by_name`, `aggregate_by_session`, and
+  `aggregate_by_name_backend`, ensuring consistent rounding precision.
 
 - **Dashboard: segmented by-agent panel with subscription-vs-marginal split** —
   `renderByAgentSegmented` now renders two distinct columns (OpenRouter
