@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- **Consolidated `docs/modules.yaml` module entries** — merged
+  `robotsix_cost_monitor.langfuse` and `tests.clients.test_langfuse` into
+  `robotsix_cost_monitor.clients`, so the entire `clients/` sub-package
+  (init, models, langfuse, and its tests) lives under one cohesive entry.
+
 - **Added `[tool.bandit]` config to `pyproject.toml`** — excludes test
   directories and venv/node_modules from bandit scans, resolving a misleading
   `-c pyproject.toml` reference in pre-commit that previously pointed at a
