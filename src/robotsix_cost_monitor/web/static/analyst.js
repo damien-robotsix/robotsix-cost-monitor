@@ -131,20 +131,7 @@ export function render(run) {
         .join('')
     : "<p class='muted'>no traces were analyzed</p>";
 
-  $('proposals').innerHTML = props.length
-    ? props
-        .map(
-          (p) => `
-      <div class="item">
-        <div class="item-head">
-          <span>${esc(p.title)}</span>
-          ${p.estimated_saving ? `<span class="save">${esc(p.estimated_saving)}</span>` : ''}
-        </div>
-        <div class="item-body">${esc(p.rationale || '')}</div>
-      </div>`,
-        )
-        .join('')
-    : "<p class='muted'>no proposals</p>";
+  $('proposals').innerHTML = proposalsHTML(props);
 
   if (!fr) {
     $('ticket').innerHTML =
