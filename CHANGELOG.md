@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- **Eliminated duplicated proposals HTML template in `analyst.js`** — the
+  inline `.map(...).join('')` block in `render()` now delegates to the
+  existing `proposalsHTML(props)` function, removing ~12 lines of duplicated
+  template logic and keeping both rendering paths in sync.
+
 - **Dashboard: segmented by-agent panel with subscription-vs-marginal split** —
   `renderByAgentSegmented` now renders two distinct columns (OpenRouter
   marginal and subscription estimate) with per-stage call counts, badges
