@@ -61,12 +61,9 @@ modules:
     paths:
       - src/robotsix_cost_monitor/clients/__init__.py
       - src/robotsix_cost_monitor/clients/models.py
-    role: Package init for the external API clients sub-package (Langfuse, OpenRouter)
-
-  - id: robotsix_cost_monitor.langfuse
-    paths:
       - src/robotsix_cost_monitor/clients/langfuse.py
-    role: Self-contained async Langfuse REST client
+      - tests/clients/test_langfuse.py
+    role: Package init for the external API clients sub-package (Langfuse, OpenRouter)
 
   - id: robotsix_cost_monitor.web.static.shared
     paths:
@@ -124,11 +121,6 @@ modules:
     paths:
       - tests/helpers.py
     role: Pure data-builder helper for test trace dicts (trace())
-
-  - id: tests.clients.test_langfuse
-    paths:
-      - tests/clients/test_langfuse.py
-    role: Unit tests for LangfuseClient (__init__, fetch_traces_window, fetch_trace_detail, metrics queries, aggregation methods — no network)
 
   - id: docs.site
     paths:
