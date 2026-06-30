@@ -1,5 +1,11 @@
 ## 0.0.0 (unreleased)
 
+- **Added `[tool.bandit]` config to `pyproject.toml`** — excludes test
+  directories and venv/node_modules from bandit scans, resolving a misleading
+  `-c pyproject.toml` reference in pre-commit that previously pointed at a
+  non-existent section. Also added `additional_dependencies: ["bandit[toml]"]`
+  to the bandit pre-commit hook so the TOML config is parsed.
+
 - **Eliminated duplicated proposals HTML template in `analyst.js`** — the
   inline `.map(...).join('')` block in `render()` now delegates to the
   existing `proposalsHTML(props)` function, removing ~12 lines of duplicated
