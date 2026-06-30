@@ -1,0 +1,38 @@
+name: Feature request
+description: Propose a new feature or enhancement.
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem-statement
+    attributes:
+      label: Problem statement
+      description: What problem does this feature solve? Why is it needed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed solution
+      description: Describe the solution you'd like to see.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives-considered
+    attributes:
+      label: Alternatives considered
+      description: What other approaches have you considered?
+
+  - type: checkboxes
+    id: impact-scope
+    attributes:
+      label: Impact scope
+      description: Which areas of the project would this affect?
+      options:
+        - label: Dashboard
+        - label: Reconciliation
+        - label: Analyst
+        - label: CLI
+        - label: Docs
