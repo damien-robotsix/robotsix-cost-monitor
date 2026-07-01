@@ -1,6 +1,10 @@
 ## 0.0.0 (unreleased)
 
 - Update Bandit pre-commit hook from 1.8.3 to 1.9.4 for latest security checks and Python 3.14+ compatibility.
+- Generate CycloneDX SBOM at build time (`uv export --format cyclonedx1.5`):
+  - New `sbom` job in `ci.yml` uploads the SBOM as a build artifact on every push/PR.
+  - Docker image now includes the SBOM at `/home/appuser/sbom.cyclonedx.json`.
+  - Release workflow generates, attests (SLSA provenance), and archives the SBOM.
 - Add periodic `security_posture` workflow
 - **Consolidated `docs/modules.yaml` module entries** — merged
   `robotsix_cost_monitor.langfuse` and `tests.clients.test_langfuse` into

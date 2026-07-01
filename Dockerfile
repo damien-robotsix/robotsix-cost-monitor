@@ -38,7 +38,8 @@ COPY src ./src
 # configured; the dashboard runs fine without it.
 RUN uv export --frozen --no-emit-project --no-hashes --extra analyst > requirements.txt \
     && uv pip install --python /opt/venv/bin/python -r requirements.txt \
-    && uv pip install --python /opt/venv/bin/python --no-deps .
+    && uv pip install --python /opt/venv/bin/python --no-deps . \
+    && uv export --format cyclonedx1.5 --frozen --extra analyst --preview-features sbom-export > /app/sbom.cyclonedx.json
 
 # ---------------------------------------------------------------------------
 # Runtime stage: minimal image with only the prebuilt virtual environment,
@@ -48,6 +49,9 @@ FROM python:3.14-slim AS runtime
 
 # Copy the prebuilt virtual environment (deps + project) from the builder stage.
 COPY --from=builder /opt/venv /opt/venv
+
+# Include the CycloneDX SBOM generated in the builder stage.
+COPY --from=builder /app/sbom.cyclonedx.json /home/appuser/sbom.cyclonedx.json
 ENV VIRTUAL_ENV=/opt/venv \
     PATH="/opt/venv/bin:$PATH"
 
