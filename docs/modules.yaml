@@ -68,6 +68,7 @@ modules:
       - src/robotsix_cost_monitor/clients/models.py
       - src/robotsix_cost_monitor/clients/langfuse.py
       - tests/clients/test_langfuse.py
+      - tests/clients/test_models.py
     role: Package init for the external API clients sub-package (Langfuse, OpenRouter)
 
   - id: robotsix_cost_monitor.web.static.shared
