@@ -22,6 +22,7 @@ modules:
       - src/robotsix_cost_monitor/web/static/dashboard.js
       - src/robotsix_cost_monitor/web/static/dashboard.css
       - tests/robotsix_cost_monitor/test_app.py
+      - tests/web/dashboard.test.js
     role: FastAPI app factory, server-rendered UI, static files
 
   - id: robotsix_cost_monitor.cli
@@ -54,6 +55,7 @@ modules:
       - src/robotsix_cost_monitor/web/analyst.html
       - src/robotsix_cost_monitor/web/static/analyst.js
       - tests/robotsix_cost_monitor/test_analyst.py
+      - tests/web/analyst.test.js
     role: Deterministic cost digest + optional LLM proposal pass and analyst UI
 
   - id: robotsix_cost_monitor.routes
@@ -73,24 +75,10 @@ modules:
   - id: robotsix_cost_monitor.web.static.shared
     paths:
       - src/robotsix_cost_monitor/web/static/shared.js
+      - tests/web/shared.test.js
     role: Shared JS helpers for cost-monitor UI pages (getJSON, fmt, esc, $)
 
 
-
-  - id: tests.web.analyst
-    paths:
-      - tests/web/analyst.test.js
-    role: Vitest unit tests for the analyst UI (analyst.js)
-
-  - id: tests.web.dashboard
-    paths:
-      - tests/web/dashboard.test.js
-    role: Vitest unit tests for the dashboard UI (dashboard.js)
-
-  - id: tests.web.shared
-    paths:
-      - tests/web/shared.test.js
-    role: Vitest unit tests for shared JS helpers (shared.js)
 
   - id: tests.conftest
     paths:

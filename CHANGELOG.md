@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Consolidated JS web test module entries (`tests.web.analyst`, `tests.web.dashboard`, `tests.web.shared`) into their source modules in `docs/modules.yaml`, matching the Pattern A convention used for Python test modules.
 - Fix CI workflow YAML syntax error: remove `timeout-minutes` from reusable-workflow-call jobs (`ci`, `security`, `docs`, `publish`) where it is not a valid property (#220 regression)
 - build(deps): Update uvicorn[standard] requirement from >=0.34 to >=0.49.0 (PR #42)
 - Update Bandit pre-commit hook from 1.8.3 to 1.9.4 for latest security checks and Python 3.14+ compatibility.
