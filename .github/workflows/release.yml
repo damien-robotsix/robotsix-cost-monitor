@@ -38,7 +38,6 @@ jobs:
 
   publish:
     needs: sbom
-    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
