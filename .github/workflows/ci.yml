@@ -75,7 +75,6 @@ jobs:
     # or GitHub rejects the reusable-workflow call with a startup_failure
     # ("nested job 'tests' is requesting 'security-events: write'"). The
     # `security` job below already does this; the `ci` job was missing it.
-    timeout-minutes: 20
     permissions:
       contents: read
       security-events: write
@@ -89,7 +88,6 @@ jobs:
     secrets: inherit  # zizmor: ignore[secrets-inherit] -- reusable workflow needs full secret access
 
   security:
-    timeout-minutes: 10
     permissions:
       contents: read
       security-events: write

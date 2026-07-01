@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Fix CI workflow YAML syntax error: remove `timeout-minutes` from reusable-workflow-call jobs (`ci`, `security`, `docs`, `publish`) where it is not a valid property (#220 regression)
 - build(deps): Update uvicorn[standard] requirement from >=0.34 to >=0.49.0 (PR #42)
 - Update Bandit pre-commit hook from 1.8.3 to 1.9.4 for latest security checks and Python 3.14+ compatibility.
 - Generate CycloneDX SBOM at build time (`uv export --format cyclonedx1.5`):
