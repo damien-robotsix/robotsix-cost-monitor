@@ -13,6 +13,7 @@ concurrency:
 jobs:
   sbom:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       id-token: write
@@ -37,6 +38,7 @@ jobs:
 
   publish:
     needs: sbom
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
