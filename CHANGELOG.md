@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Add periodic `security_posture` workflow
 - **Consolidated `docs/modules.yaml` module entries** — merged
   `robotsix_cost_monitor.langfuse` and `tests.clients.test_langfuse` into
   `robotsix_cost_monitor.clients`, so the entire `clients/` sub-package
