@@ -1,4 +1,4 @@
-import { $, esc, fmt, getJSON } from './shared.js';
+import { $, esc, fmt, getJSON, setStatus } from './shared.js';
 
 /**
  * @typedef {object} ProjectInfo
@@ -75,14 +75,6 @@ import { $, esc, fmt, getJSON } from './shared.js';
 
 const qs = () =>
   `?project=${/** @type {HTMLSelectElement} */ ($('project')).value}&hours=${/** @type {HTMLInputElement | HTMLSelectElement} */ ($('window')).value}`;
-
-/**
- * Update the status text element.
- * @param {string} msg
- */
-export function setStatus(msg) {
-  $('status').textContent = msg;
-}
 
 /**
  * Load the project list and populate the dropdown.

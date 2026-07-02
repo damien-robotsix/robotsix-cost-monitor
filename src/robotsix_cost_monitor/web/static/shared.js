@@ -34,6 +34,14 @@ export const esc = (s) =>
  * @param {string} path
  * @returns {Promise<any>}
  */
+/**
+ * Update the status text element.
+ * @param {string} msg
+ */
+export const setStatus = (msg) => {
+  $('status').textContent = msg;
+};
+
 export async function getJSON(path) {
   const r = await fetch(path);
   if (!r.ok) throw new Error(`${path} → ${r.status}`);
