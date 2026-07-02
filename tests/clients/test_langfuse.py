@@ -10,7 +10,7 @@ import json
 from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
-from httpx import Request, Response
+import respx
 
 from robotsix_cost_monitor.clients.langfuse import LangfuseClient
 from robotsix_cost_monitor.clients.models import LangfuseMetricsRow, LangfuseTrace
@@ -28,27 +28,6 @@ def _client(**overrides: Any) -> LangfuseClient:
     }
     kwargs.update(overrides)
     return LangfuseClient(**kwargs)
-
-
-def _response(status: int = 200, json_data: object = None) -> Response:
-    """Return an httpx Response for use as a mock return value."""
-    req = Request("GET", "http://localhost/")
-    resp = Response(status, json=json_data, request=req)
-    return resp
-
-
-def _async_client_mock(get_response: object = None) -> AsyncMock:
-    """Create an AsyncMock that works with ``async with httpx.AsyncClient(...)``.
-
-    Sets ``__aenter__`` to return self so the context variable is the mock,
-    not a coroutine.  The ``get`` method returns *get_response* by default;
-    callers can override with ``side_effect`` afterwards.
-    """
-    mock_client = AsyncMock()
-    mock_client.get = AsyncMock(return_value=get_response)
-    mock_client.__aenter__.return_value = mock_client
-    mock_client.__aexit__.return_value = None
-    return mock_client
 
 
 # ---------------------------------------------------------------------------
@@ -159,23 +138,20 @@ async def test_fetch_trace_detail_delegates() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_metrics_basic_query() -> None:
+async def test_metrics_basic_query(respx_mock: respx.MockRouter) -> None:
     c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": [{"sum_totalCost": 1.5}]}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c._metrics(
-            24,
-            metrics=[{"measure": "totalCost", "aggregation": "sum"}],
-        )
+    route = respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": [{"sum_totalCost": 1.5}]}
+    )
+    result = await c._metrics(
+        24,
+        metrics=[{"measure": "totalCost", "aggregation": "sum"}],
+    )
     assert len(result) == 1
     assert isinstance(result[0], LangfuseMetricsRow)
     assert result[0].sum_total_cost == 1.5
-    call_kwargs = mock_client.get.call_args.kwargs
-    assert "query" in call_kwargs["params"]
-    query = json.loads(call_kwargs["params"]["query"])
+    assert route.called
+    query = json.loads(route.calls[0].request.url.params["query"])
     assert query["view"] == "observations"
     assert query["metrics"] == [{"measure": "totalCost", "aggregation": "sum"}]
     assert query["dimensions"] == [{"field": "providedModelName"}]
@@ -183,116 +159,112 @@ async def test_metrics_basic_query() -> None:
     assert "toTimestamp" in query
 
 
-async def test_metrics_honors_explicit_view_and_empty_dimensions() -> None:
+async def test_metrics_honors_explicit_view_and_empty_dimensions(
+    respx_mock: respx.MockRouter,
+) -> None:
     c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": []}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        await c._metrics(
-            24,
-            metrics=[{"measure": "count", "aggregation": "count"}],
-            view="traces",
-            dimensions=[],
-        )
-    query = json.loads(mock_client.get.call_args.kwargs["params"]["query"])
+    route = respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": []}
+    )
+    await c._metrics(
+        24,
+        metrics=[{"measure": "count", "aggregation": "count"}],
+        view="traces",
+        dimensions=[],
+    )
+    assert route.called
+    query = json.loads(route.calls[0].request.url.params["query"])
     assert query["view"] == "traces"
     assert query["dimensions"] == []  # explicit [] is honored, not defaulted
 
 
-async def test_fetch_trace_count_window_uses_traces_count_metric() -> None:
+async def test_fetch_trace_count_window_uses_traces_count_metric(
+    respx_mock: respx.MockRouter,
+) -> None:
     c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": [{"count_count": 5266}]}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        count = await c.fetch_trace_count_window(168)
+    route = respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": [{"count_count": 5266}]}
+    )
+    count = await c.fetch_trace_count_window(168)
     assert count == 5266
-    query = json.loads(mock_client.get.call_args.kwargs["params"]["query"])
+    assert route.called
+    query = json.loads(route.calls[0].request.url.params["query"])
     assert query["view"] == "traces"
     assert query["metrics"] == [{"measure": "count", "aggregation": "count"}]
     assert query["dimensions"] == []
 
 
-async def test_fetch_trace_count_window_empty_data_is_zero() -> None:
+async def test_fetch_trace_count_window_empty_data_is_zero(
+    respx_mock: respx.MockRouter,
+) -> None:
     c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": []}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        assert await c.fetch_trace_count_window(24) == 0
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": []}
+    )
+    assert await c.fetch_trace_count_window(24) == 0
 
 
-async def test_metrics_with_time_dimension() -> None:
+async def test_metrics_with_time_dimension(respx_mock: respx.MockRouter) -> None:
     c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": []}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        await c._metrics(
-            48,
-            metrics=[{"measure": "totalCost", "aggregation": "sum"}],
-            time_dimension={"granularity": "hour"},
-        )
-    call_kwargs = mock_client.get.call_args.kwargs
-    query = json.loads(call_kwargs["params"]["query"])
+    route = respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": []}
+    )
+    await c._metrics(
+        48,
+        metrics=[{"measure": "totalCost", "aggregation": "sum"}],
+        time_dimension={"granularity": "hour"},
+    )
+    assert route.called
+    query = json.loads(route.calls[0].request.url.params["query"])
     assert query["timeDimension"] == {"granularity": "hour"}
 
 
-async def test_metrics_without_time_dimension() -> None:
+async def test_metrics_without_time_dimension(respx_mock: respx.MockRouter) -> None:
     """When time_dimension is None, it should NOT be in the query."""
     c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": []}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        await c._metrics(
-            12,
-            metrics=[{"measure": "count", "aggregation": "count"}],
-        )
-    call_kwargs = mock_client.get.call_args.kwargs
-    query = json.loads(call_kwargs["params"]["query"])
+    route = respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": []}
+    )
+    await c._metrics(
+        12,
+        metrics=[{"measure": "count", "aggregation": "count"}],
+    )
+    assert route.called
+    query = json.loads(route.calls[0].request.url.params["query"])
     assert "timeDimension" not in query
 
 
-async def test_metrics_multiple_metrics() -> None:
+async def test_metrics_multiple_metrics(respx_mock: respx.MockRouter) -> None:
     c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": []}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        await c._metrics(
-            24,
-            metrics=[
-                {"measure": "totalCost", "aggregation": "sum"},
-                {"measure": "inputTokens", "aggregation": "sum"},
-                {"measure": "outputTokens", "aggregation": "sum"},
-                {"measure": "totalTokens", "aggregation": "sum"},
-                {"measure": "count", "aggregation": "count"},
-            ],
-        )
-    call_kwargs = mock_client.get.call_args.kwargs
-    query = json.loads(call_kwargs["params"]["query"])
+    route = respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": []}
+    )
+    await c._metrics(
+        24,
+        metrics=[
+            {"measure": "totalCost", "aggregation": "sum"},
+            {"measure": "inputTokens", "aggregation": "sum"},
+            {"measure": "outputTokens", "aggregation": "sum"},
+            {"measure": "totalTokens", "aggregation": "sum"},
+            {"measure": "count", "aggregation": "count"},
+        ],
+    )
+    assert route.called
+    query = json.loads(route.calls[0].request.url.params["query"])
     assert len(query["metrics"]) == 5
 
 
-async def test_metrics_empty_data_returns_empty_list() -> None:
+async def test_metrics_empty_data_returns_empty_list(
+    respx_mock: respx.MockRouter,
+) -> None:
     c = _client()
-    mock_client = _async_client_mock(_response(200, {}))  # no 'data' key
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c._metrics(
-            24,
-            metrics=[{"measure": "totalCost", "aggregation": "sum"}],
-        )
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={}
+    )  # no 'data' key
+    result = await c._metrics(
+        24,
+        metrics=[{"measure": "totalCost", "aggregation": "sum"}],
+    )
     assert result == []
 
 
@@ -301,7 +273,7 @@ async def test_metrics_empty_data_returns_empty_list() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_model_usage_basic_aggregation() -> None:
+async def test_model_usage_basic_aggregation(respx_mock: respx.MockRouter) -> None:
     c = _client()
     rows = [
         {
@@ -321,12 +293,10 @@ async def test_model_usage_basic_aggregation() -> None:
             "count_count": 1,
         },
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_model_usage_window(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_model_usage_window(hours=24)
     assert len(result) == 2
     # opus should be first (higher cost)
     assert result[0]["model"] == "opus"
@@ -339,7 +309,9 @@ async def test_model_usage_basic_aggregation() -> None:
     assert result[1]["cost"] == 0.5
 
 
-async def test_model_usage_merges_same_model_across_rows() -> None:
+async def test_model_usage_merges_same_model_across_rows(
+    respx_mock: respx.MockRouter,
+) -> None:
     c = _client()
     rows = [
         {
@@ -359,19 +331,19 @@ async def test_model_usage_merges_same_model_across_rows() -> None:
             "count_count": 3,
         },
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_model_usage_window(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_model_usage_window(hours=24)
     assert len(result) == 1
     assert result[0]["cost"] == 3.0
     assert result[0]["input_tokens"] == 150
     assert result[0]["observations"] == 5
 
 
-async def test_model_usage_skips_missing_model_name() -> None:
+async def test_model_usage_skips_missing_model_name(
+    respx_mock: respx.MockRouter,
+) -> None:
     c = _client()
     rows = [
         {
@@ -391,28 +363,26 @@ async def test_model_usage_skips_missing_model_name() -> None:
             "count_count": 1,
         },
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_model_usage_window(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_model_usage_window(hours=24)
     assert len(result) == 1
     assert result[0]["model"] == "opus"
 
 
-async def test_model_usage_handles_missing_fields() -> None:
+async def test_model_usage_handles_missing_fields(
+    respx_mock: respx.MockRouter,
+) -> None:
     """Rows with missing metric fields default to 0."""
     c = _client()
     rows = [
         {"providedModelName": "opus"},  # no metric fields
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_model_usage_window(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_model_usage_window(hours=24)
     assert len(result) == 1
     assert result[0]["cost"] == 0.0
     assert result[0]["input_tokens"] == 0
@@ -421,7 +391,9 @@ async def test_model_usage_handles_missing_fields() -> None:
     assert result[0]["observations"] == 0
 
 
-async def test_model_usage_handles_null_metrics() -> None:
+async def test_model_usage_handles_null_metrics(
+    respx_mock: respx.MockRouter,
+) -> None:
     """Rows with None metric values default to 0."""
     c = _client()
     rows = [
@@ -434,12 +406,10 @@ async def test_model_usage_handles_null_metrics() -> None:
             "count_count": None,
         },
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_model_usage_window(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_model_usage_window(hours=24)
     assert len(result) == 1
     assert result[0]["cost"] == 0.0
 
@@ -449,59 +419,57 @@ async def test_model_usage_handles_null_metrics() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_cost_by_backend_groups_by_backend() -> None:
+async def test_cost_by_backend_groups_by_backend(
+    respx_mock: respx.MockRouter,
+) -> None:
     c = _client()
     rows = [
         {"providedModelName": "openai/gpt-4", "sum_totalCost": 3.0},
         {"providedModelName": "anthropic/claude-3", "sum_totalCost": 2.0},
         {"providedModelName": "opus", "sum_totalCost": 1.0},
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_cost_by_backend(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_cost_by_backend(hours=24)
     assert result == {"openrouter": 5.0, "claude-sdk": 1.0}
 
 
-async def test_cost_by_backend_skips_nameless_observations() -> None:
+async def test_cost_by_backend_skips_nameless_observations(
+    respx_mock: respx.MockRouter,
+) -> None:
     c = _client()
     rows = [
         {"providedModelName": "opus", "sum_totalCost": 1.0},
         {"providedModelName": None, "sum_totalCost": 99.0},
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_cost_by_backend(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_cost_by_backend(hours=24)
     assert result == {"claude-sdk": 1.0}
 
 
-async def test_cost_by_backend_empty() -> None:
+async def test_cost_by_backend_empty(respx_mock: respx.MockRouter) -> None:
     c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": []}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_cost_by_backend(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": []}
+    )
+    result = await c.fetch_cost_by_backend(hours=24)
     assert result == {}
 
 
-async def test_cost_by_backend_handles_null_cost() -> None:
+async def test_cost_by_backend_handles_null_cost(
+    respx_mock: respx.MockRouter,
+) -> None:
     c = _client()
     rows = [
         {"providedModelName": "opus", "sum_totalCost": None},
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_cost_by_backend(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_cost_by_backend(hours=24)
     assert result == {"claude-sdk": 0.0}
 
 
@@ -510,72 +478,68 @@ async def test_cost_by_backend_handles_null_cost() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_backend_cost_window_minute_granularity() -> None:
+async def test_backend_cost_window_minute_granularity(
+    respx_mock: respx.MockRouter,
+) -> None:
     """hours <= 1 → 'minute' granularity."""
     c = _client()
-    mock_client = _async_client_mock(
-        _response(
-            200,
-            {
-                "data": [
-                    {
-                        "providedModelName": "opus",
-                        "time_dimension": "2026-01-01T12:00:00Z",
-                        "sum_totalCost": 1.0,
-                    }
-                ]
-            },
-        )
+    route = respx_mock.get("http://localhost/api/public/metrics").respond(
+        200,
+        json={
+            "data": [
+                {
+                    "providedModelName": "opus",
+                    "time_dimension": "2026-01-01T12:00:00Z",
+                    "sum_totalCost": 1.0,
+                }
+            ]
+        },
     )
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        await c.fetch_backend_cost_window(hours=1)
-    call_kwargs = mock_client.get.call_args.kwargs
-    query = json.loads(call_kwargs["params"]["query"])
+    await c.fetch_backend_cost_window(hours=1)
+    assert route.called
+    query = json.loads(route.calls[0].request.url.params["query"])
     assert query["timeDimension"] == {"granularity": "minute"}
 
 
-async def test_backend_cost_window_hour_granularity() -> None:
+async def test_backend_cost_window_hour_granularity(
+    respx_mock: respx.MockRouter,
+) -> None:
     """1 < hours <= 72 → 'hour' granularity."""
     c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": []}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        await c.fetch_backend_cost_window(hours=24)
-    call_kwargs = mock_client.get.call_args.kwargs
-    query = json.loads(call_kwargs["params"]["query"])
+    route = respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": []}
+    )
+    await c.fetch_backend_cost_window(hours=24)
+    assert route.called
+    query = json.loads(route.calls[0].request.url.params["query"])
     assert query["timeDimension"] == {"granularity": "hour"}
 
 
-async def test_backend_cost_window_hour_granularity_boundary() -> None:
+async def test_backend_cost_window_hour_granularity_boundary(
+    respx_mock: respx.MockRouter,
+) -> None:
     """hours=72 → 'hour' granularity (<= 72)."""
     c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": []}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        await c.fetch_backend_cost_window(hours=72)
-    call_kwargs = mock_client.get.call_args.kwargs
-    query = json.loads(call_kwargs["params"]["query"])
+    route = respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": []}
+    )
+    await c.fetch_backend_cost_window(hours=72)
+    assert route.called
+    query = json.loads(route.calls[0].request.url.params["query"])
     assert query["timeDimension"] == {"granularity": "hour"}
 
 
-async def test_backend_cost_window_day_granularity() -> None:
+async def test_backend_cost_window_day_granularity(
+    respx_mock: respx.MockRouter,
+) -> None:
     """hours > 72 → 'day' granularity."""
     c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": []}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        await c.fetch_backend_cost_window(hours=168)
-    call_kwargs = mock_client.get.call_args.kwargs
-    query = json.loads(call_kwargs["params"]["query"])
+    route = respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": []}
+    )
+    await c.fetch_backend_cost_window(hours=168)
+    assert route.called
+    query = json.loads(route.calls[0].request.url.params["query"])
     assert query["timeDimension"] == {"granularity": "day"}
 
 
@@ -584,7 +548,9 @@ async def test_backend_cost_window_day_granularity() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_backend_cost_window_folds_by_bucket() -> None:
+async def test_backend_cost_window_folds_by_bucket(
+    respx_mock: respx.MockRouter,
+) -> None:
     c = _client()
     rows = [
         {
@@ -603,12 +569,10 @@ async def test_backend_cost_window_folds_by_bucket() -> None:
             "sum_totalCost": 3.0,
         },
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_backend_cost_window(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_backend_cost_window(hours=24)
     assert set(result.keys()) == {"2026-01-01T12:00:00Z", "2026-01-01T13:00:00Z"}
     bucket_12 = result["2026-01-01T12:00:00Z"]
     assert bucket_12 == {"claude-sdk": 2.5}
@@ -616,7 +580,9 @@ async def test_backend_cost_window_folds_by_bucket() -> None:
     assert bucket_13 == {"openrouter": 3.0}
 
 
-async def test_backend_cost_window_skips_nameless() -> None:
+async def test_backend_cost_window_skips_nameless(
+    respx_mock: respx.MockRouter,
+) -> None:
     c = _client()
     rows = [
         {
@@ -630,23 +596,19 @@ async def test_backend_cost_window_skips_nameless() -> None:
             "sum_totalCost": 999.0,
         },
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_backend_cost_window(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_backend_cost_window(hours=24)
     assert result == {"2026-01-01T12:00:00Z": {"claude-sdk": 1.0}}
 
 
-async def test_backend_cost_window_empty() -> None:
+async def test_backend_cost_window_empty(respx_mock: respx.MockRouter) -> None:
     c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": []}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_backend_cost_window(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": []}
+    )
+    result = await c.fetch_backend_cost_window(hours=24)
     assert result == {}
 
 
@@ -655,7 +617,7 @@ async def test_backend_cost_window_empty() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_agent_usage_basic_aggregation() -> None:
+async def test_agent_usage_basic_aggregation(respx_mock: respx.MockRouter) -> None:
     """A single (stage, backend) pair aggregates cost and count, sorted desc."""
     c = _client()
     rows = [
@@ -672,12 +634,10 @@ async def test_agent_usage_basic_aggregation() -> None:
             "count_count": 1,
         },
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_agent_usage_window(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_agent_usage_window(hours=24)
     assert len(result) == 2
     # implement (opus) is first — higher cost
     assert result[0] == {
@@ -694,7 +654,9 @@ async def test_agent_usage_basic_aggregation() -> None:
     }
 
 
-async def test_agent_usage_merges_same_stage_backend() -> None:
+async def test_agent_usage_merges_same_stage_backend(
+    respx_mock: respx.MockRouter,
+) -> None:
     """Multiple rows for the same (stage, backend) are summed."""
     c = _client()
     rows = [
@@ -711,12 +673,10 @@ async def test_agent_usage_merges_same_stage_backend() -> None:
             "count_count": 3,
         },
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_agent_usage_window(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_agent_usage_window(hours=24)
     assert len(result) == 1
     assert result[0]["name"] == "implement"
     assert result[0]["backend"] == "claude-sdk"
@@ -724,7 +684,9 @@ async def test_agent_usage_merges_same_stage_backend() -> None:
     assert result[0]["count"] == 5
 
 
-async def test_agent_usage_splits_stage_across_backends() -> None:
+async def test_agent_usage_splits_stage_across_backends(
+    respx_mock: respx.MockRouter,
+) -> None:
     """One stage using models from two backends yields TWO rows."""
     c = _client()
     rows = [
@@ -741,19 +703,19 @@ async def test_agent_usage_splits_stage_across_backends() -> None:
             "count_count": 1,
         },
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_agent_usage_window(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_agent_usage_window(hours=24)
     assert len(result) == 2
     backends = {(r["name"], r["backend"]): r["cost"] for r in result}
     assert backends[("implement", "openrouter")] == 3.0
     assert backends[("implement", "claude-sdk")] == 2.0
 
 
-async def test_agent_usage_skips_missing_model_name() -> None:
+async def test_agent_usage_skips_missing_model_name(
+    respx_mock: respx.MockRouter,
+) -> None:
     """Rows with no model are skipped (they carry no cost)."""
     c = _client()
     rows = [
@@ -770,18 +732,18 @@ async def test_agent_usage_skips_missing_model_name() -> None:
             "count_count": 1,
         },
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_agent_usage_window(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_agent_usage_window(hours=24)
     assert len(result) == 1
     assert result[0]["backend"] == "claude-sdk"
     assert result[0]["cost"] == 1.0
 
 
-async def test_agent_usage_skips_missing_trace_name() -> None:
+async def test_agent_usage_skips_missing_trace_name(
+    respx_mock: respx.MockRouter,
+) -> None:
     """Rows with no trace name are skipped."""
     c = _client()
     rows = [
@@ -798,55 +760,49 @@ async def test_agent_usage_skips_missing_trace_name() -> None:
             "count_count": 1,
         },
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_agent_usage_window(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_agent_usage_window(hours=24)
     assert len(result) == 1
     assert result[0]["name"] == "review"
 
 
-async def test_agent_usage_handles_missing_metric_fields() -> None:
+async def test_agent_usage_handles_missing_metric_fields(
+    respx_mock: respx.MockRouter,
+) -> None:
     """Rows with missing metric fields default to 0."""
     c = _client()
     rows = [
         {"traceName": "audit", "providedModelName": "haiku"},
     ]
-    mock_client = _async_client_mock(_response(200, {"data": rows}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_agent_usage_window(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": rows}
+    )
+    result = await c.fetch_agent_usage_window(hours=24)
     assert len(result) == 1
     assert result[0]["cost"] == 0.0
     assert result[0]["count"] == 0
 
 
-async def test_agent_usage_empty() -> None:
+async def test_agent_usage_empty(respx_mock: respx.MockRouter) -> None:
     c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": []}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        result = await c.fetch_agent_usage_window(hours=24)
+    respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": []}
+    )
+    result = await c.fetch_agent_usage_window(hours=24)
     assert result == []
 
 
-async def test_agent_uses_custom_dimensions() -> None:
+async def test_agent_uses_custom_dimensions(respx_mock: respx.MockRouter) -> None:
     """Verify fetch_agent_usage_window asks for traceName + providedModelName."""
     c = _client()
-    mock_client = _async_client_mock(_response(200, {"data": []}))
-    with patch(
-        "robotsix_cost_monitor.clients.langfuse.httpx.AsyncClient",
-        return_value=mock_client,
-    ):
-        await c.fetch_agent_usage_window(hours=24)
-    call_kwargs = mock_client.get.call_args.kwargs
-    query = json.loads(call_kwargs["params"]["query"])
+    route = respx_mock.get("http://localhost/api/public/metrics").respond(
+        200, json={"data": []}
+    )
+    await c.fetch_agent_usage_window(hours=24)
+    assert route.called
+    query = json.loads(route.calls[0].request.url.params["query"])
     assert query["dimensions"] == [
         {"field": "traceName"},
         {"field": "providedModelName"},
