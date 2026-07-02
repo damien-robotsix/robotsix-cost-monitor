@@ -1,5 +1,7 @@
 # robotsix-cost-monitor — Agent Guide
 
+This repo follows the [robotsix stack standards](https://github.com/damien-robotsix/robotsix-standards).
+
 ## Testing conventions
 
 - Tests live under `tests/` and run with `pytest`.
