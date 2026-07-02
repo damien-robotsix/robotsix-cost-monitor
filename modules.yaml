@@ -1,0 +1,98 @@
+# Module taxonomy for robotsix-cost-monitor
+# Each entry lists the dotted Python module name, its file paths, and a one-line
+# description of its role.
+
+modules:
+  - id: robotsix_cost_monitor
+    paths:
+      - src/robotsix_cost_monitor/__init__.py
+      - src/robotsix_cost_monitor/py.typed
+    role: Package root (version + re-exports + PEP 561 type marker)
+
+  - id: robotsix_cost_monitor.aggregations
+    paths:
+      - src/robotsix_cost_monitor/aggregations.py
+      - tests/robotsix_cost_monitor/test_aggregations.py
+    role: Pure cost-aggregation and transformation functions over trace dicts (no I/O)
+
+  - id: robotsix_cost_monitor.app
+    paths:
+      - src/robotsix_cost_monitor/app.py
+      - src/robotsix_cost_monitor/web/index.html
+      - src/robotsix_cost_monitor/web/static/dashboard.js
+      - src/robotsix_cost_monitor/web/static/dashboard.css
+      - tests/robotsix_cost_monitor/test_app.py
+      - tests/web/dashboard.test.js
+    role: FastAPI app factory, server-rendered UI, static files
+
+  - id: robotsix_cost_monitor.cli
+    paths:
+      - src/robotsix_cost_monitor/cli.py
+      - tests/robotsix_cost_monitor/test_cli.py
+    role: CLI entrypoint (serve, summary, reconcile)
+
+  - id: robotsix_cost_monitor.config
+    paths:
+      - src/robotsix_cost_monitor/config.py
+      - tests/robotsix_cost_monitor/test_config.py
+    role: YAML config models + loader (config/projects.yaml)
+
+  - id: robotsix_cost_monitor.service
+    paths:
+      - src/robotsix_cost_monitor/service.py
+      - tests/robotsix_cost_monitor/test_service.py
+    role: Cross-project cost aggregation with TTL cache
+
+  - id: robotsix_cost_monitor.reconcile
+    paths:
+      - src/robotsix_cost_monitor/reconcile.py
+      - tests/robotsix_cost_monitor/test_reconcile.py
+    role: OpenRouter ↔ Langfuse cost reconciliation via snapshots
+
+  - id: robotsix_cost_monitor.analyst
+    paths:
+      - src/robotsix_cost_monitor/analyst.py
+      - src/robotsix_cost_monitor/web/analyst.html
+      - src/robotsix_cost_monitor/web/static/analyst.js
+      - tests/robotsix_cost_monitor/test_analyst.py
+      - tests/web/analyst.test.js
+    role: Deterministic cost digest + optional LLM proposal pass and analyst UI
+
+  - id: robotsix_cost_monitor.routes
+    paths:
+      - src/robotsix_cost_monitor/routes.py
+      - tests/robotsix_cost_monitor/test_routes.py
+    role: HTTP route handlers (APIRouter) and exception handlers
+
+  - id: robotsix_cost_monitor.clients
+    paths:
+      - src/robotsix_cost_monitor/clients/__init__.py
+      - src/robotsix_cost_monitor/clients/models.py
+      - src/robotsix_cost_monitor/clients/langfuse.py
+      - tests/clients/test_langfuse.py
+      - tests/clients/test_models.py
+    role: Package init for the external API clients sub-package (Langfuse, OpenRouter)
+
+  - id: robotsix_cost_monitor.web.static.shared
+    paths:
+      - src/robotsix_cost_monitor/web/static/shared.js
+      - tests/web/shared.test.js
+    role: Shared JS helpers for cost-monitor UI pages (getJSON, fmt, esc, $)
+
+
+
+  - id: tests.conftest
+    paths:
+      - tests/conftest.py
+    role: Shared pytest fixtures and factory helpers (event_loop, _proj, _config, _mock_client)
+
+  - id: tests.helpers
+    paths:
+      - tests/helpers.py
+    role: Pure data-builder helper for test trace dicts (trace())
+
+  - id: docs.site
+    paths:
+      - docs/index.md
+      - docs/api.md
+    role: MkDocs documentation site source files (landing page + API reference))
