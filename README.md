@@ -59,6 +59,10 @@ background loop lifecycle, optional `analyst` extra, and key invariants.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for dev setup, running tests/lint,
 PR workflow, and the git-dependency upgrade process.
 
+## Standards
+
+This repo follows the [robotsix stack standards](https://github.com/damien-robotsix/robotsix-standards).
+
 ## Development
 
 ```bash
