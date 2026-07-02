@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Enable `changelog_autofill` periodic workflow to auto-insert changelog entries for PRs failing the `changelog` check.
 - Add link to robotsix-standards repo in README.md and AGENT.md.
 - Rename `data_dir_audit` periodic workflow to `data_dir_gc` for `.data/` directory cleanup
 - Consolidated JS web test module entries (`tests.web.analyst`, `tests.web.dashboard`, `tests.web.shared`) into their source modules in `docs/modules.yaml`, matching the Pattern A convention used for Python test modules.
