@@ -39,3 +39,11 @@ export async function getJSON(path) {
   if (!r.ok) throw new Error(`${path} → ${r.status}`);
   return r.json();
 }
+
+/**
+ * Update the status text element.
+ * @param {string} msg
+ */
+export const setStatus = (msg) => {
+  $('status').textContent = msg;
+};

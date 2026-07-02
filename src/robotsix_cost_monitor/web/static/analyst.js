@@ -1,4 +1,4 @@
-import { $, esc, fmt, getJSON } from './shared.js';
+import { $, esc, fmt, getJSON, setStatus } from './shared.js';
 
 /**
  * @typedef {object} AnalystRun
@@ -52,14 +52,6 @@ import { $, esc, fmt, getJSON } from './shared.js';
  * @property {string} name
  * @property {number} cost
  */
-
-/**
- * Update the status text element.
- * @param {string} m
- */
-export const setStatus = (m) => {
-  $('status').textContent = m;
-};
 
 /**
  * Render a metric card as HTML.
