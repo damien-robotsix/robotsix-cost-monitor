@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Adopt `respx` for HTTP mocking in Langfuse client tests, replacing hand-rolled `_async_client_mock()` / `_response()` helpers and `unittest.mock.patch` blocks with `respx_mock` fixtures for higher-fidelity httpx transport interception.
 - Enable `changelog_autofill` periodic workflow to auto-insert changelog entries for PRs failing the `changelog` check.
 - Add link to robotsix-standards repo in README.md and AGENT.md.
 - Deduplicated `setStatus` into `shared.js`, removing local copies from `dashboard.js` and `analyst.js`
