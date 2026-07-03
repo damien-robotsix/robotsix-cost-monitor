@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Removed the broker filing panel from the analyst dashboard (`filingHTML`, `managerReply`, and `FilingResult` typedef in `analyst.js`).
 - Align Docker image to round-4 fleet standard: runtime user `app` with home `/home/app`, persistent data at `/data` (from `/home/appuser/.data`), updated compose bind-mounts accordingly.
 - **Remove `robotsix-agent-comm` broker dependency and analyst ticket-filing.**  
   The LLM cost-analyst no longer files board tickets through the central broker.

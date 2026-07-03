@@ -1,8 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   card,
-  filingHTML,
-  managerReply,
   proposalsHTML,
   render,
   renderTargeted,
@@ -26,21 +24,6 @@ describe('card', () => {
     expect(html).toContain('&lt;b&gt;');
     expect(html).toContain('&amp;');
     expect(html).toContain('&quot;');
-  });
-});
-
-describe('managerReply', () => {
-  it('returns empty string for falsy input', () => {
-    expect(managerReply(null)).toBe('');
-    expect(managerReply(undefined)).toBe('');
-  });
-
-  it('returns error when present and no reply', () => {
-    expect(managerReply({ error: 'timeout' })).toBe('timeout');
-  });
-
-  it('returns empty string when neither reply nor error', () => {
-    expect(managerReply({})).toBe('');
   });
 });
 
@@ -99,7 +82,7 @@ describe('render', () => {
     expect(document.getElementById('run-meta').innerHTML).toContain('no data for this window');
   });
 
-  it('renders full run with traces, proposals, and filed ticket', () => {
+  it('renders full run with traces and proposals', () => {
     fixture(`
       <section id="run-meta"></section>
       <div id="summary"></div>
@@ -129,10 +112,6 @@ describe('render', () => {
           rationale: 'switch to smaller model',
         },
       ],
-      filing_result: {
-        filed: true,
-        reply: 'thanks, will review',
-      },
     };
     render(run);
 
@@ -142,7 +121,7 @@ describe('render', () => {
     expect(meta.innerHTML).toContain('traces analyzed');
     expect(meta.innerHTML).toContain('1'); // trace count
     expect(meta.innerHTML).toContain('proposals');
-    expect(meta.innerHTML).toContain('filed');
+    expect(meta.innerHTML).not.toContain('tickets');
 
     // Summary
     expect(document.getElementById('summary').innerHTML).toContain('Overall fleet summary text.');
@@ -161,53 +140,6 @@ describe('render', () => {
     expect(proposals.innerHTML).toContain('reduce tokens');
     expect(proposals.innerHTML).toContain('~$10/mo');
     expect(proposals.innerHTML).toContain('switch to smaller model');
-
-    // Ticket — filed
-    const ticket = document.getElementById('ticket');
-    expect(ticket.innerHTML).toContain('✓ filed');
-    expect(ticket.innerHTML).toContain('thanks, will review');
-  });
-
-  it('renders filing failed branch', () => {
-    fixture(`
-      <section id="run-meta"></section>
-      <div id="summary"></div>
-      <div id="analyzed"></div>
-      <div id="proposals"></div>
-      <div id="ticket"></div>
-    `);
-    render({
-      enabled: true,
-      generated_at: '2025-06-01T12:00:00Z',
-      window_hours: 24,
-      analyzed_traces: [],
-      proposals: [],
-      filing_result: { error: 'API key missing' },
-    });
-    const ticket = document.getElementById('ticket');
-    expect(ticket.innerHTML).toContain('filing failed');
-    expect(ticket.innerHTML).toContain('✗');
-    expect(ticket.innerHTML).toContain('API key missing');
-  });
-
-  it('renders not-filed branch when filing_result is null', () => {
-    fixture(`
-      <section id="run-meta"></section>
-      <div id="summary"></div>
-      <div id="analyzed"></div>
-      <div id="proposals"></div>
-      <div id="ticket"></div>
-    `);
-    render({
-      enabled: true,
-      generated_at: '2025-06-01T12:00:00Z',
-      window_hours: 24,
-      analyzed_traces: [],
-      proposals: [],
-      filing_result: null,
-    });
-    const ticket = document.getElementById('ticket');
-    expect(ticket.innerHTML).toContain('not filed');
   });
 
   it('renders empty traces placeholder', () => {
@@ -224,7 +156,6 @@ describe('render', () => {
       window_hours: 24,
       analyzed_traces: [],
       proposals: [],
-      filing_result: null,
     });
     expect(document.getElementById('analyzed').innerHTML).toContain('no traces were analyzed');
   });
@@ -243,7 +174,6 @@ describe('render', () => {
       window_hours: 24,
       analyzed_traces: [],
       proposals: [],
-      filing_result: null,
     });
     expect(document.getElementById('proposals').innerHTML).toContain('no proposals');
   });
@@ -262,7 +192,6 @@ describe('render', () => {
       window_hours: 24,
       analyzed_traces: [],
       proposals: [],
-      filing_result: null,
     });
     expect(document.getElementById('summary').innerHTML).toContain('—');
   });
@@ -304,7 +233,6 @@ describe('renderTargeted', () => {
       history_available: true,
       summary: 'costly due to loops',
       proposals: [{ title: 'fix loop', estimated_saving: '$30', rationale: 'remove retry' }],
-      filing_result: { filed: true },
     };
     renderTargeted('target', run, headerFn);
     const el = document.getElementById('target');
@@ -330,19 +258,3 @@ describe('proposalsHTML', () => {
   });
 });
 
-describe('filingHTML', () => {
-  it('returns empty string for falsy input', () => {
-    expect(filingHTML(null)).toBe('');
-  });
-
-  it('renders board manager reply', () => {
-    const html = filingHTML({ reply: 'done' });
-    expect(html).toContain('board manager');
-    expect(html).toContain('done');
-  });
-
-  it('renders error when present', () => {
-    const html = filingHTML({ error: 'fail' });
-    expect(html).toContain('fail');
-  });
-});
