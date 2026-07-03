@@ -12,8 +12,10 @@ concurrency:
 
 jobs:
   sbom:
+    name: Generate and attest SBOM
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # id-token: write and attestations: write needed to generate provenance attestation
     permissions:
       contents: read
       id-token: write
@@ -37,7 +39,9 @@ jobs:
           path: sbom.cyclonedx.json
 
   publish:
+    name: Publish release
     needs: sbom
+    # packages: write to push Docker image, id-token: write and attestations: write to sign and attest
     permissions:
       contents: read
       packages: write
