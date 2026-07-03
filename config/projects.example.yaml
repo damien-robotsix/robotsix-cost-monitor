@@ -34,8 +34,8 @@ settings:
   subscription_call_cap: 0
   # LLM cost-analyst (optional). Disabled until openrouter_key is set.
   # Runs a level-2 (robotsix-llmio tier-2) agent over the cost digest with a
-  # level-3 sub-agent that drills into the most expensive traces, and — when a
-  # broker is configured — files a board ticket via agent-comm when warranted.
+  # level-3 sub-agent that drills into the most expensive traces and stores
+  # cost-reduction proposals under .data/analyst/.
   analyst:
     openrouter_key: null        # OpenRouter key for the analyst's own LLM calls
     global_model: null          # level-3 orchestrator model (null → llmio tier-3 default)
@@ -45,14 +45,6 @@ settings:
     traces_per_agent: 1         # top-N traces per agent before the overall cap
     max_trace_analyses: 12      # overall cap on traces analyzed per run
     schedule_hours: 0           # >0 → run automatically on this cadence
-    # Ticket filing through the central agent-comm broker (optional).
-    broker_host: null           # e.g. ai-broker.robotsix.net
-    broker_port: 443
-    broker_scheme: https
-    broker_token: null          # the cost-analyst's broker bearer token
-    board_manager_id: board-manager-robotsix-mill  # LLM manager it files through (dedups)
-    board_agent_id: board-robotsix-mill            # structured responder (optional reads)
-    board_repo_id: robotsix-cost-monitor
     # The analyst's own Langfuse project, so its L2/L3 runs are themselves traced.
     langfuse_public_key: null
     langfuse_secret_key: null

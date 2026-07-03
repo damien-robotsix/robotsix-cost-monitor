@@ -5,9 +5,7 @@ The digest (stage table + specimens) is always available and needs no LLM. When
 runs a **level-3** orchestrator over the digest, with a **level-2** sub-agent
 it can call to drill into the most expensive traces, and stores
 cost-reduction proposals under ``.data/analyst/proposals.json`` (surfaced in the
-dashboard). When a broker is configured and the analysis warrants it, the
-analyst also files a board ticket via agent-comm (pull/mailbox → the central
-broker → the board agent).
+dashboard).
 """
 
 from __future__ import annotations
@@ -300,56 +298,9 @@ def _parse_analysis(raw: str) -> Analysis:
     return Analysis(summary=raw[:1000])
 
 
-def _file_proposals(a: AnalystConfig, analysis: Analysis) -> dict[str, Any]:
-    """Hand the run's proposals to the board MANAGER, which creates/refines the
-    tickets (one per distinct actionable issue, deduped, sourced).
-
-    Synchronous (the agent-comm pull client is sync); the caller runs it in a
-    thread. Returns the manager's reply body, or an ``error`` entry.
-    """
-    from robotsix_agent_comm.sdk.brokered_request import BrokeredRequester
-
-    requester = BrokeredRequester(
-        "cost-analyst",
-        a.board_manager_id,
-        broker_host=a.broker_host or "",
-        broker_port=a.broker_port,
-        broker_scheme=a.broker_scheme,
-        broker_token=a.broker_token or "",
-        timeout=240.0,
-    )
-    lines = "\n".join(
-        f"{i}. {p.title}\n   rationale: {p.rationale}"
-        + (f"\n   est. saving: {p.estimated_saving}" if p.estimated_saving else "")
-        for i, p in enumerate(analysis.proposals, 1)
-    )
-    message = (
-        f"A cost-analysis run for the fleet produced {len(analysis.proposals)} "
-        "cost-reduction proposal(s). Please create or refine board tickets for the "
-        "ones that warrant tracking — one ticket per distinct actionable issue on "
-        "the appropriate board — deduplicating against existing open tickets "
-        "(comment on / update instead of duplicating) and skipping anything "
-        "trivial or already covered.\n\n"
-        f"Run summary: {analysis.summary}\n\n"
-        f"Proposals:\n{lines}\n\n"
-        "Reply with the tickets you created or updated (ids + which proposal each "
-        "maps to)."
-    )
-    try:
-        reply = requester.request(
-            {"message": message, "repo_id": a.board_repo_id},
-            timeout=240.0,
-        )
-    except Exception as exc:  # noqa: BLE001 — surface as status, not a crash
-        logger.warning("proposal filing failed: %s", exc)
-        return {"filed": False, "error": str(exc)}
-    return {"filed": True, "reply": reply}
-
-
 def _build_analysis_response(
     a: AnalystConfig,
     analysis: Analysis,
-    filing_result: dict[str, Any] | None = None,
     *,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -364,7 +315,6 @@ def _build_analysis_response(
         "window_hours": a.window_hours,
         "summary": analysis.summary,
         "proposals": [p.model_dump() for p in analysis.proposals],
-        "filing_result": filing_result,
     }
     if extra:
         out.update(extra)
@@ -397,12 +347,7 @@ async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
         _run_agents, a, digest, candidates, details
     )
 
-    # Hand all proposals to the board manager, which owns ticket creation.
-    filing_result: dict[str, Any] | None = None
-    if analysis.proposals and a.can_file_tickets:
-        filing_result = await asyncio.to_thread(_file_proposals, a, analysis)
-
-    out = _build_analysis_response(a, analysis, filing_result)
+    out = _build_analysis_response(a, analysis)
     out["analyzed_traces"] = findings
     _store_path().write_text(json.dumps(out, indent=2))
     return out
@@ -440,39 +385,6 @@ def _split_session(session_id: str) -> tuple[str, str]:
     return "", session_id.strip()
 
 
-def _fetch_ticket_context(a: AnalystConfig, ticket_id: str) -> dict[str, Any]:
-    """Read a ticket's board context (ticket + history + description) via the
-    broker's read-only responder ops. Best-effort — missing pieces are skipped.
-    """
-    from robotsix_agent_comm.sdk.brokered_request import BrokeredRequester
-
-    requester = BrokeredRequester(
-        "cost-analyst",
-        a.board_agent_id,
-        broker_host=a.broker_host or "",
-        broker_port=a.broker_port,
-        broker_scheme=a.broker_scheme,
-        broker_token=a.broker_token or "",
-        timeout=30.0,
-        default_reply="",
-    )
-    ctx: dict[str, Any] = {}
-    try:
-        for key, op in (
-            ("ticket", "get_ticket"),
-            ("history", "history"),
-            ("description", "description"),
-        ):
-            with contextlib.suppress(Exception):
-                ctx[key] = requester.request(
-                    {"op": op, "args": {"ticket_id": ticket_id}},
-                    timeout=30.0,
-                )
-    except Exception as exc:  # noqa: BLE001 — context is optional
-        logger.warning("ticket context fetch failed: %s", exc)
-    return ctx
-
-
 async def _run_opus_analysis_and_file(
     a: AnalystConfig,
     system_prompt: str,
@@ -481,14 +393,11 @@ async def _run_opus_analysis_and_file(
     out_prefix: str,
     extra_out: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Run Opus analysis, optionally file proposals, and store the result."""
+    """Run Opus analysis and store the result."""
     analysis = await asyncio.to_thread(
         _opus_analysis, a, system_prompt=system_prompt, payload=payload, name=name
     )
-    filing_result: dict[str, Any] | None = None
-    if analysis.proposals and a.can_file_tickets:
-        filing_result = await asyncio.to_thread(_file_proposals, a, analysis)
-    out = _build_analysis_response(a, analysis, filing_result, extra=extra_out)
+    out = _build_analysis_response(a, analysis, extra=extra_out)
     _targeted_store_path(out_prefix).write_text(json.dumps(out, indent=2))
     return out
 
@@ -508,9 +417,6 @@ async def run_ticket_analyst(config: Config, service: CostService) -> dict[str, 
         return _no_top_early_return("ticket", "no ticket sessions in the window")
 
     board_id, ticket_id = _split_session(top["session_id"])
-    context: dict[str, Any] = {}
-    if ticket_id and a.can_file_tickets:
-        context = await asyncio.to_thread(_fetch_ticket_context, a, ticket_id)
 
     payload = json.dumps(
         {
@@ -520,9 +426,9 @@ async def run_ticket_analyst(config: Config, service: CostService) -> dict[str, 
             "trace_count": top["count"],
             "cost_by_stage": top["by_stage"],
             "traces": top["traces"],
-            "ticket": context.get("ticket"),
-            "history": context.get("history"),
-            "description": context.get("description"),
+            "ticket": None,
+            "history": None,
+            "description": None,
         }
     )[:_TARGET_CHAR_CAP]
     return await _run_opus_analysis_and_file(
@@ -539,7 +445,7 @@ async def run_ticket_analyst(config: Config, service: CostService) -> dict[str, 
             "trace_count": top["count"],
             "by_stage": top["by_stage"],
             "traces": top["traces"],
-            "history_available": bool(context.get("history")),
+            "history_available": False,
         },
     )
 

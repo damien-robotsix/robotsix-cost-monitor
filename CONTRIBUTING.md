@@ -79,17 +79,15 @@ hook.
 
 ## Git-dependency upgrade process
 
-The `analyst` extra pins two private git dependencies with exact commit
+The `analyst` extra pins a private git dependency with exact commit
 SHAs:
 
 - `robotsix-llmio` (LLM agent framework)
-- `robotsix-agent-comm` (broker ticket-filing client)
 
-To upgrade either to a newer revision:
-
+To upgrade it to a newer revision:
 1. Update the commit SHA in the `[project.optional-dependencies]` table of
    `pyproject.toml`.
-2. Remove the git dependency line(s) **temporarily** from `pyproject.toml`
+2. Remove the git dependency line **temporarily** from `pyproject.toml`
    and its `[tool.uv.sources]` block (if present), then run:
    ```bash
    uv lock

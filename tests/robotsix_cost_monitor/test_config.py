@@ -47,53 +47,18 @@ def test_data_dir_default(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_analyst_defaults_disabled() -> None:
     cfg = AnalystConfig()
     assert cfg.enabled is False
-    assert cfg.can_file_tickets is False
 
 
 def test_analyst_enabled_with_openrouter_key() -> None:
     cfg = AnalystConfig(openrouter_key="sk-abc123")
     assert cfg.enabled is True
-    assert cfg.can_file_tickets is False  # no broker configured
-
-
-def test_analyst_can_file_tickets_with_full_broker() -> None:
-    cfg = AnalystConfig(
-        openrouter_key="sk-abc123",
-        broker_host="broker.example.com",
-        broker_token="tok-xyz",
-    )
-    assert cfg.enabled is True
-    assert cfg.can_file_tickets is True
-
-
-def test_analyst_cannot_file_tickets_without_token() -> None:
-    cfg = AnalystConfig(
-        openrouter_key="sk-abc123",
-        broker_host="broker.example.com",
-        # broker_token missing
-    )
-    assert cfg.enabled is True
-    assert cfg.can_file_tickets is False
-
-
-def test_analyst_cannot_file_tickets_without_host() -> None:
-    cfg = AnalystConfig(
-        openrouter_key="sk-abc123",
-        broker_token="tok-xyz",
-        # broker_host missing
-    )
-    assert cfg.enabled is True
-    assert cfg.can_file_tickets is False
 
 
 def test_analyst_empty_strings_are_falsy() -> None:
     cfg = AnalystConfig(
         openrouter_key="",
-        broker_host="",
-        broker_token="",
     )
     assert cfg.enabled is False
-    assert cfg.can_file_tickets is False
 
 
 def test_example_yaml_max_trace_analyses_matches_code_default() -> None:
@@ -120,14 +85,8 @@ def test_analyst_field_defaults() -> None:
     assert cfg.max_trace_analyses == 12
     assert cfg.traces_per_agent == 1
     assert cfg.schedule_hours == 24.0
-    assert cfg.broker_port == 443
-    assert cfg.broker_scheme == "https"
-    assert cfg.board_agent_id == "board-robotsix-mill"
-    assert cfg.board_repo_id == "robotsix-cost-monitor"
     assert cfg.global_model is None
     assert cfg.trace_model is None
-    assert cfg.broker_host is None
-    assert cfg.broker_token is None
     assert cfg.openrouter_key is None
     assert cfg.langfuse_public_key is None
     assert cfg.langfuse_secret_key is None

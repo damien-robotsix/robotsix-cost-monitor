@@ -1,7 +1,7 @@
 {
   "$defs": {
     "AnalystConfig": {
-      "description": "LLM cost-analyst settings (optional \u2014 disabled without an OpenRouter key).\n\nThe analyst runs a level-2 (llmio tier-2) agent over the deterministic cost\ndigest, with a level-3 sub-agent that drills into the most expensive traces,\nand \u2014 when configured with a broker \u2014 files a board ticket via agent-comm\nwhen a cost problem warrants it.",
+      "description": "LLM cost-analyst settings (optional \u2014 disabled without an OpenRouter key).\n\nThe analyst runs a level-2 (llmio tier-2) agent over the deterministic cost\ndigest, with a level-3 sub-agent that drills into the most expensive traces,\nproducing and storing cost-reduction proposals.",
       "properties": {
         "openrouter_key": {
           "anyOf": [
@@ -63,55 +63,6 @@
           "default": 24.0,
           "title": "Schedule Hours",
           "type": "number"
-        },
-        "broker_host": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Broker Host"
-        },
-        "broker_port": {
-          "default": 443,
-          "title": "Broker Port",
-          "type": "integer"
-        },
-        "broker_scheme": {
-          "default": "https",
-          "title": "Broker Scheme",
-          "type": "string"
-        },
-        "broker_token": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Broker Token"
-        },
-        "board_manager_id": {
-          "default": "board-manager-robotsix-mill",
-          "title": "Board Manager Id",
-          "type": "string"
-        },
-        "board_agent_id": {
-          "default": "board-robotsix-mill",
-          "title": "Board Agent Id",
-          "type": "string"
-        },
-        "board_repo_id": {
-          "default": "robotsix-cost-monitor",
-          "title": "Board Repo Id",
-          "type": "string"
         },
         "langfuse_public_key": {
           "anyOf": [

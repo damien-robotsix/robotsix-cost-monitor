@@ -35,8 +35,7 @@ class AnalystConfig(BaseModel):
 
     The analyst runs a level-2 (llmio tier-2) agent over the deterministic cost
     digest, with a level-3 sub-agent that drills into the most expensive traces,
-    and — when configured with a broker — files a board ticket via agent-comm
-    when a cost problem warrants it.
+    producing and storing cost-reduction proposals under ``.data/analyst/``.
     """
 
     # -- LLM (robotsix-llmio) --
@@ -59,18 +58,6 @@ class AnalystConfig(BaseModel):
     # this cadence; default daily. 0 disables the scheduler (manual only).
     schedule_hours: float = 24.0
 
-    # -- Ticket filing via the agent-comm broker (optional) --
-    broker_host: str | None = None
-    broker_port: int = 443
-    broker_scheme: str = "https"
-    broker_token: str | None = None
-    # The analyst files tickets by *messaging the board manager* (which dedups +
-    # acts), never the dumb responder — so there's no filing path that bypasses
-    # the manager. board_agent_id is kept for optional read queries.
-    board_manager_id: str = "board-manager-robotsix-mill"
-    board_agent_id: str = "board-robotsix-mill"
-    board_repo_id: str = "robotsix-cost-monitor"
-
     # -- The analyst's own Langfuse project (so its L2/L3 runs are traced) --
     langfuse_public_key: str | None = None
     langfuse_secret_key: str | None = None
@@ -80,10 +67,6 @@ class AnalystConfig(BaseModel):
     @property
     def enabled(self) -> bool:
         return bool(self.openrouter_key)
-
-    @property
-    def can_file_tickets(self) -> bool:
-        return bool(self.broker_host and self.broker_token)
 
 
 class Settings(BaseModel):
