@@ -63,7 +63,8 @@ def test_analyst_empty_strings_are_falsy() -> None:
 
 def test_example_yaml_max_trace_analyses_matches_code_default() -> None:
     """The example config must ship with the same max_trace_analyses as the
-    Pydantic default, so users who copy it verbatim get the intended cap."""
+    Pydantic default, so users who copy it verbatim get the intended cap.
+    """
     from pathlib import Path
 
     from robotsix_yaml_config import read_yaml_file

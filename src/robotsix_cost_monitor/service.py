@@ -30,7 +30,10 @@ _T = TypeVar("_T")
 
 
 class CostService:
+    """Cross-project cost aggregation service with per-window TTL cache."""
+
     def __init__(self, config: Config) -> None:
+        """Initialise the service with a validated config and per-project clients."""
         self.config = config
         self._clients: dict[str, LangfuseClient] = {
             p.slug: LangfuseClient(
@@ -188,7 +191,7 @@ class CostService:
         return selected
 
     async def top_ticket(self, slug: str | None, hours: int) -> dict[str, Any] | None:
-        """The most expensive session (= board ticket) in the window.
+        """Return the most expensive session (= board ticket) in the window.
 
         Returns the session id, total cost, trace count, the per-stage cost
         breakdown (where the ticket's spend went), and its traces — the basis
@@ -225,7 +228,7 @@ class CostService:
     async def top_stage(
         self, slug: str | None, hours: int, sample: int = 8
     ) -> dict[str, Any] | None:
-        """The most expensive stage (agent / trace name) in the window.
+        """Return the most expensive stage (agent / trace name) in the window.
 
         Returns the stage, its total cost + share of traced spend, and a sample
         of its priciest traces (with project) — the basis for the stage-level
@@ -320,8 +323,7 @@ class CostService:
         return aggregate_by_name_backend(all_rows, backend)
 
     async def by_agent_segmented(self, slug: str | None, hours: int) -> dict[str, Any]:
-        """Cost by stage, split into OpenRouter-marginal and subscription-estimated
-        pools.
+        """Return cost by stage, split into OpenRouter vs subscription pools.
 
         Returns::
 
@@ -369,7 +371,8 @@ class CostService:
     async def by_model(self, slug: str | None, hours: int) -> list[dict[str, Any]]:
         """Cost + token usage by model, merged across selected projects.
 
-        Window-accurate (see :meth:`LangfuseClient.fetch_model_usage_window`)."""
+        Window-accurate (see :meth:`LangfuseClient.fetch_model_usage_window`).
+        """
         all_rows = await self._gather_list_results(slug, hours, self._model_usage)
         return merge_model_costs([all_rows])
 
@@ -396,9 +399,10 @@ class CostService:
     async def backend_trend(
         self, slug: str | None, hours: int, backend: str
     ) -> list[dict[str, Any]]:
-        """Cost trend for *backend* (or all-backends total when ``all``),
-        merged across selected projects. Window-accurate; time-bucket
-        granularity scales with the window."""
+        """Return the cost trend for a backend, merged across selected projects.
+
+        Window-accurate; time-bucket granularity scales with the window.
+        """
         parts: list[dict[str, dict[str, float]]] = []
         for p in self._projects(slug):
             try:
@@ -410,11 +414,13 @@ class CostService:
     async def trend(
         self, slug: str | None, hours: int, buckets: int = 48
     ) -> list[dict[str, Any]]:
+        """Return a cost trend series across the window."""
         gathered = await self._gather(slug, hours)
         all_traces = [t for _, traces in gathered for t in traces]
         return cost_trend(all_traces, hours, buckets)
 
     async def highlights(self, slug: str | None, hours: int) -> dict[str, Any]:
+        """Return dashboard highlights: top trace, session, and summary stats."""
         gathered = await self._gather(slug, hours)
         all_traces = [t for _, traces in gathered for t in traces]
         return {

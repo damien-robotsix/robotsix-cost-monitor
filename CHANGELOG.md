@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Enable ruff pydocstyle (D) rules — all public API items now require docstrings; tests are excluded.
 - Enable `triage_boilerplate` periodic workflow (`.robotsix-mill/periodic/triage_boilerplate.yaml`).
 - Sync ``_TICKET_SYSTEM`` prompt with actual payload: remove promise of board
   history and ticket description (both still ``None``), and note their

@@ -115,7 +115,8 @@ def test_reconcile_last_served_from_disk(
 ) -> None:
     """The persisted last reconcile is served by ``/api/reconcile/last`` — this is
     what lets the dashboard show the last run after a page reload or container
-    restart (the file is on the persisted data volume)."""
+    restart (the file is on the persisted data volume).
+    """
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
     recon = tmp_path / "reconcile"
     recon.mkdir()
@@ -219,7 +220,8 @@ def test_initial_analyst_delay_waits_only_the_remainder() -> None:
 
 def test_initial_analyst_delay_future_last_run_falls_back_to_interval() -> None:
     """A last-run timestamp in the future (clock skew) waits a full interval
-    rather than firing immediately."""
+    rather than firing immediately.
+    """
     from robotsix_cost_monitor.app import _initial_analyst_delay
 
     now = datetime(2026, 6, 21, 12, 0, tzinfo=UTC)
@@ -229,7 +231,8 @@ def test_initial_analyst_delay_future_last_run_falls_back_to_interval() -> None:
 
 def test_last_analyst_run_picks_most_recent(monkeypatch: pytest.MonkeyPatch) -> None:
     """``_last_analyst_run`` returns the newest generated_at across the three
-    persisted analyses (and handles naive timestamps as UTC)."""
+    persisted analyses (and handles naive timestamps as UTC).
+    """
     from robotsix_cost_monitor import app
 
     monkeypatch.setattr(

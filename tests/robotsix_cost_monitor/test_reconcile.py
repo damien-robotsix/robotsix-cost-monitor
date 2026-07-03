@@ -33,7 +33,8 @@ from robotsix_cost_monitor.reconcile import (
 @dataclass
 class KeyUsage:
     """Drop-in for ``robotsix_llmio.openrouter.KeyUsage`` when the real
-    package is not installed."""
+    package is not installed.
+    """
 
     usage: float
 

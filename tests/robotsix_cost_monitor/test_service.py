@@ -588,7 +588,7 @@ async def test_exception_isolation_by_agent() -> None:
 
 
 async def test_exception_isolation_summary() -> None:
-    """summary catches per-project exceptions; dead project appears with zeros."""
+    """Summary catches per-project exceptions; dead project appears with zeros."""
     svc = _svc(_proj("good"), _proj("bad"))
     object.__setattr__(
         svc._clients["good"],
@@ -1282,7 +1282,8 @@ async def test_by_agent_segmented_subscription_cap_nonzero() -> None:
 
 async def test_by_agent_segmented_refine_attribution() -> None:
     """A refine trace with rows on both claude-sdk and vendor/model OpenRouter
-    produces a refine row with both subscription_cost > 0 and openrouter_cost > 0."""
+    produces a refine row with both subscription_cost > 0 and openrouter_cost > 0.
+    """
     svc = _svc(_proj("a"))
     agent_rows = [
         # refine: uses BOTH claude-sdk (opus) and openrouter (deepseek/deepseek-v4-pro)

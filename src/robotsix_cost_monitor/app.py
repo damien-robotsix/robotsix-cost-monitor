@@ -72,13 +72,16 @@ def _parse_iso(value: Any) -> datetime | None:
 
 
 def _last_analyst_run() -> datetime | None:
-    """The most recent ``generated_at`` across the persisted fleet/ticket/stage
+    """Return the most recent analyst run timestamp.
+
+    The most recent ``generated_at`` across the persisted fleet/ticket/stage
     analyses, or ``None`` when none has run yet.
 
     Used to resume the analyst cadence across process restarts: the dashboard's
     scheduler lives in-process and is redeployed often (Watchtower), so a timer
     that simply sleeps a full interval on every start would keep resetting and
-    the daily analysis would rarely fire."""
+    the daily analysis would rarely fire.
+    """
     stamps = (
         load_proposals().get("generated_at"),
         load_targeted_analysis("ticket").get("generated_at"),
@@ -91,12 +94,13 @@ def _last_analyst_run() -> datetime | None:
 def _initial_analyst_delay(
     interval: float, last_run: datetime | None, now: datetime
 ) -> float:
-    """Seconds to wait before the first scheduled analysis.
+    """Calculate seconds to wait before the first scheduled analysis.
 
     ``0`` when a full *interval* has already elapsed since *last_run* (or nothing
     has ever run), else only the remaining time — so the ~daily cadence is stable
     regardless of how often the container restarts. A *last_run* in the future
-    (clock skew) falls back to a full interval rather than running immediately."""
+    (clock skew) falls back to a full interval rather than running immediately.
+    """
     if last_run is None:
         return 0.0
     elapsed = (now - last_run).total_seconds()
@@ -106,12 +110,14 @@ def _initial_analyst_delay(
 
 
 async def _analyst_loop(cfg: Config, service: CostService, hours: float) -> None:
-    """Run all analyses (fleet + most-costly ticket + most-costly stage) every
-    *hours* hours until cancelled.
+    """Run all analyses on a schedule until cancelled.
 
-    The first delay is derived from the last persisted run (not a fresh full
-    sleep) so frequent redeploys don't starve the schedule: if a full interval
-    has already elapsed it runs at once, otherwise it waits only the remainder."""
+    Analyses: fleet + most-costly ticket + most-costly stage, every *hours*
+    hours. The first delay is derived from the last persisted run (not a fresh
+    full sleep) so frequent redeploys don't starve the schedule: if a full
+    interval has already elapsed it runs at once, otherwise it waits only the
+    remainder.
+    """
     interval = max(1.0, hours) * 3600
     analyses = (
         ("fleet", run_analyst),
@@ -133,8 +139,11 @@ async def _analyst_loop(cfg: Config, service: CostService, hours: float) -> None
 
 
 async def _reconcile_loop(cfg: Config, hours: float) -> None:
-    """Reconcile all projects every *hours* hours (with an initial run so the
-    banner has data immediately) until cancelled."""
+    """Reconcile all projects on a schedule until cancelled.
+
+    Runs every *hours* hours (with an initial run so the banner has data
+    immediately).
+    """
     interval = max(1.0, hours) * 3600
     while True:
         try:
@@ -166,6 +175,7 @@ def create_app(config: Config | None = None) -> FastAPI:
 
     @contextlib.asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+        """ASGI lifespan: set up / tear down application state."""
         tasks: list[asyncio.Task[None]] = []
         a = cfg.settings.analyst
         if a.enabled and a.schedule_hours > 0:
