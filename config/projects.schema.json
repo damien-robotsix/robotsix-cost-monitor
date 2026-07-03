@@ -1,0 +1,269 @@
+{
+  "$defs": {
+    "AnalystConfig": {
+      "description": "LLM cost-analyst settings (optional \u2014 disabled without an OpenRouter key).\n\nThe analyst runs a level-2 (llmio tier-2) agent over the deterministic cost\ndigest, with a level-3 sub-agent that drills into the most expensive traces,\nand \u2014 when configured with a broker \u2014 files a board ticket via agent-comm\nwhen a cost problem warrants it.",
+      "properties": {
+        "openrouter_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Openrouter Key"
+        },
+        "global_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Global Model"
+        },
+        "trace_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trace Model"
+        },
+        "window_hours": {
+          "default": 24,
+          "title": "Window Hours",
+          "type": "integer"
+        },
+        "top_stages": {
+          "default": 8,
+          "title": "Top Stages",
+          "type": "integer"
+        },
+        "traces_per_agent": {
+          "default": 1,
+          "title": "Traces Per Agent",
+          "type": "integer"
+        },
+        "max_trace_analyses": {
+          "default": 12,
+          "title": "Max Trace Analyses",
+          "type": "integer"
+        },
+        "schedule_hours": {
+          "default": 24.0,
+          "title": "Schedule Hours",
+          "type": "number"
+        },
+        "broker_host": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Broker Host"
+        },
+        "broker_port": {
+          "default": 443,
+          "title": "Broker Port",
+          "type": "integer"
+        },
+        "broker_scheme": {
+          "default": "https",
+          "title": "Broker Scheme",
+          "type": "string"
+        },
+        "broker_token": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Broker Token"
+        },
+        "board_manager_id": {
+          "default": "board-manager-robotsix-mill",
+          "title": "Board Manager Id",
+          "type": "string"
+        },
+        "board_agent_id": {
+          "default": "board-robotsix-mill",
+          "title": "Board Agent Id",
+          "type": "string"
+        },
+        "board_repo_id": {
+          "default": "robotsix-cost-monitor",
+          "title": "Board Repo Id",
+          "type": "string"
+        },
+        "langfuse_public_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Langfuse Public Key"
+        },
+        "langfuse_secret_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Langfuse Secret Key"
+        },
+        "langfuse_base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Langfuse Base Url"
+        },
+        "langfuse_project_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Langfuse Project Id"
+        }
+      },
+      "title": "AnalystConfig",
+      "type": "object"
+    },
+    "ProjectConfig": {
+      "description": "One Langfuse project to monitor.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "public_key": {
+          "pattern": "^pk-lf-",
+          "title": "Public Key",
+          "type": "string"
+        },
+        "secret_key": {
+          "pattern": "^sk-lf-",
+          "title": "Secret Key",
+          "type": "string"
+        },
+        "base_url": {
+          "default": "https://cloud.langfuse.com",
+          "format": "uri",
+          "title": "Base Url",
+          "type": "string"
+        },
+        "openrouter_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Openrouter Key"
+        }
+      },
+      "required": [
+        "name",
+        "base_url",
+        "public_key",
+        "secret_key"
+      ],
+      "title": "ProjectConfig",
+      "type": "object"
+    },
+    "Settings": {
+      "description": "Global dashboard settings.",
+      "properties": {
+        "default_window_hours": {
+          "default": 168,
+          "title": "Default Window Hours",
+          "type": "integer"
+        },
+        "cache_ttl_seconds": {
+          "default": 60,
+          "title": "Cache Ttl Seconds",
+          "type": "integer"
+        },
+        "reconcile_tolerance_usd": {
+          "default": 1.0,
+          "title": "Reconcile Tolerance Usd",
+          "type": "number"
+        },
+        "reconcile_schedule_hours": {
+          "default": 24.0,
+          "title": "Reconcile Schedule Hours",
+          "type": "number"
+        },
+        "subscription_call_cap": {
+          "default": 0,
+          "title": "Subscription Call Cap",
+          "type": "integer"
+        },
+        "analyst": {
+          "$ref": "#/$defs/AnalystConfig"
+        }
+      },
+      "title": "Settings",
+      "type": "object"
+    }
+  },
+  "description": "JSON Schema for robotsix-cost-monitor config/projects.yaml. Generated from Pydantic models.",
+  "properties": {
+    "projects": {
+      "items": {
+        "$ref": "#/$defs/ProjectConfig"
+      },
+      "minItems": 1,
+      "title": "Projects",
+      "type": "array"
+    },
+    "settings": {
+      "$ref": "#/$defs/Settings"
+    }
+  },
+  "required": [
+    "projects"
+  ],
+  "title": "robotsix-cost-monitor configuration schema",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}
