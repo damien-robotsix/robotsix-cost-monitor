@@ -1,8 +1,8 @@
 """Offline tests for the cost-analyst orchestration (no LLM / network).
 
-The level-2/level-3 llmio agents and the agent-comm client are stubbed; these
-tests exercise the wiring around them: the disabled path, the stored output
-shape, and the proposal-filing branch (the board manager owns ticket creation).
+The level-2/level-3 llmio agents are stubbed; these tests exercise the wiring
+around them: the disabled path, the stored output shape, and the proposal
+persistence path.
 """
 
 from __future__ import annotations
@@ -151,7 +151,7 @@ async def test_disabled_without_key() -> None:
     }
 
 
-async def test_run_stores_proposals_and_files(
+async def test_run_stores_proposals(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
@@ -165,49 +165,15 @@ async def test_run_stores_proposals_and_files(
         ],
     )
     monkeypatch.setattr(analyst_mod, "_run_agents", lambda *a, **k: (analysis, []))
-    filed: dict[str, Any] = {}
 
-    def _fake_file(a: Any, analysis: Analysis) -> dict[str, Any]:
-        filed["analysis"] = analysis
-        return {"filed": True, "reply": {"reply": "created T-9 from proposal 1"}}
-
-    monkeypatch.setattr(analyst_mod, "_file_proposals", _fake_file)
-
-    cfg = _config(
-        openrouter_key="sk-x",
-        broker_host="ai-broker.example",
-        broker_token="tok",
-    )
+    cfg = _config(openrouter_key="sk-x")
     out = await run_analyst(cfg, _FakeService())  # type: ignore[arg-type]
 
     assert out["enabled"] is True
     assert out["proposals"][0]["title"] == "Drop explore to L2"
-    assert out["filing_result"] == {
-        "filed": True,
-        "reply": {"reply": "created T-9 from proposal 1"},
-    }
-    # The whole analysis (all proposals) is handed to the board manager.
-    assert filed["analysis"].proposals[0].title == "Drop explore to L2"
     # Persisted for the dashboard / analyst page.
     stored = json.loads((tmp_path / "analyst" / "proposals.json").read_text())
     assert stored["proposals"][0]["title"] == "Drop explore to L2"
-
-
-async def test_no_filing_when_broker_unconfigured(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-    analysis = Analysis(proposals=[Proposal(title="x", rationale="y")])
-    monkeypatch.setattr(analyst_mod, "_run_agents", lambda *a, **k: (analysis, []))
-    called = {"n": 0}
-    monkeypatch.setattr(
-        analyst_mod, "_file_proposals", lambda *a, **k: called.__setitem__("n", 1)
-    )
-
-    # openrouter_key set (enabled) but no broker → proposals are not filed.
-    out = await run_analyst(_config(openrouter_key="sk-x"), _FakeService())  # type: ignore[arg-type]
-    assert called["n"] == 0
-    assert out["filing_result"] is None
 
 
 async def test_build_digest_shape() -> None:
@@ -269,7 +235,6 @@ async def test_run_ticket_analyst_normal(
             "proposals": [
                 {"title": "Reduce tier", "rationale": "...", "estimated_saving": "$10"}
             ],
-            "filing_result": None,
             **(extra_out or {}),
         }
 
@@ -283,34 +248,6 @@ async def test_run_ticket_analyst_normal(
     assert out["summary"] == "test summary"
     assert out["proposals"][0]["title"] == "Reduce tier"
     assert out["ticket_id"] == "20250101T000000Z-test-1a2b"
-
-
-async def test_run_ticket_analyst_no_board_context_when_no_broker(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-
-    async def _fake_opus_and_file(
-        a: Any,
-        **kw: Any,
-    ) -> dict[str, Any]:
-        return {
-            "enabled": True,
-            "generated_at": "2025-01-01T00:00:00Z",
-            "summary": "ok",
-            "proposals": [],
-            "filing_result": None,
-            "history_available": kw.get("extra_out", {}).get("history_available", None),
-        }
-
-    monkeypatch.setattr(analyst_mod, "_run_opus_analysis_and_file", _fake_opus_and_file)
-
-    # openrouter_key set but no broker → context fetch skipped, history_available=False
-    out = await analyst_mod.run_ticket_analyst(
-        _config(openrouter_key="sk-x"),
-        _FakeService(),  # type: ignore[arg-type]
-    )
-    assert out["history_available"] is False
 
 
 async def test_run_stage_analyst_disabled() -> None:
@@ -357,7 +294,6 @@ async def test_run_stage_analyst_normal(
             "proposals": [
                 {"title": "Cache prompts", "rationale": "...", "estimated_saving": "$5"}
             ],
-            "filing_result": None,
             **(extra_out or {}),
         }
 
@@ -407,17 +343,8 @@ async def test_run_opus_analysis_and_file(
         "_opus_analysis",
         lambda *a, **kw: analysis,
     )
-    monkeypatch.setattr(
-        analyst_mod,
-        "_file_proposals",
-        lambda a, analysis: {"filed": True, "reply": {"ok": True}},
-    )
 
-    a = _config(
-        openrouter_key="sk-x",
-        broker_host="ai-broker.example",
-        broker_token="tok",
-    ).settings.analyst
+    a = _config(openrouter_key="sk-x").settings.analyst
 
     out = await analyst_mod._run_opus_analysis_and_file(
         a,
@@ -430,11 +357,10 @@ async def test_run_opus_analysis_and_file(
     assert out["enabled"] is True
     assert out["summary"] == "test"
     assert out["proposals"][0]["title"] == "P1"
-    assert out["filing_result"] == {"filed": True, "reply": {"ok": True}}
     assert out["extra"] == "data"
 
 
-async def test_run_opus_analysis_and_file_no_broker(
+async def test_run_opus_analysis_and_file_without_filing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
@@ -449,7 +375,7 @@ async def test_run_opus_analysis_and_file_no_broker(
         lambda *a, **kw: analysis,
     )
 
-    a = _config(openrouter_key="sk-x").settings.analyst  # no broker config
+    a = _config(openrouter_key="sk-x").settings.analyst
 
     out = await analyst_mod._run_opus_analysis_and_file(
         a,
@@ -460,7 +386,6 @@ async def test_run_opus_analysis_and_file_no_broker(
     )
     assert out["enabled"] is True
     assert out["proposals"][0]["title"] == "P1"
-    assert out["filing_result"] is None
 
 
 class TestMaybeSetupTracing:

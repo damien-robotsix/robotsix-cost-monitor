@@ -1,5 +1,13 @@
 ## 0.0.0 (unreleased)
 
+- **Remove `robotsix-agent-comm` broker dependency and analyst ticket-filing.**  
+  The LLM cost-analyst no longer files board tickets through the central broker.
+  Removed the `robotsix-agent-comm` optional dependency, all broker fields from
+  `AnalystConfig` (`broker_host`, `broker_port`, `broker_scheme`, `broker_token`,
+  `board_manager_id`, `board_agent_id`, `board_repo_id`), the `can_file_tickets`
+  property, `_file_proposals`, `_fetch_ticket_context`, and all filing code paths.
+  The analyst still produces cost-reduction proposals and persists them to
+  `.data/analyst/` as before.
 - Align `.pre-commit-config.yaml` to 2026-07 standards: remove `bandit` (CI-only), add `check-json`, `check-merge-conflict`, `check-added-large-files`, `detect-private-key`, `actionlint`, and `hadolint` hooks
 - Update all `robotsix-github-workflows` reusable workflow SHA pins to current HEAD (`77e10e28…`) and add `baseline-check` caller to CI pipeline
 - **Onboard to central-deploy; retire Watchtower continuous-deploy stack.**  

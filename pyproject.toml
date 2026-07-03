@@ -18,11 +18,9 @@ dependencies = [
 [project.optional-dependencies]
 # The LLM cost-analyst (optional — the dashboard + reconciliation work without it).
 # robotsix-llmio is already a core dependency; the analyst extra adds its
-# openrouter + claude_sdk extras, plus robotsix-agent-comm for the
-# pull/mailbox client that files board tickets through the central broker.
+# openrouter + claude_sdk extras.
 analyst = [
     "robotsix-llmio[openrouter,claude_sdk] @ git+https://github.com/damien-robotsix/robotsix-llmio.git@2fd2be4dcf7f0a44e91012fd1167517e5e09180e",
-    "robotsix-agent-comm @ git+https://github.com/damien-robotsix/robotsix-agent-comm.git@c57e9d7483f3e283d3e421cd24b60f0a442971c9",
 ]
 
 [project.scripts]
@@ -50,8 +48,7 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/robotsix_cost_monitor"]
 
-# Allow the direct git references for robotsix-llmio (core dep) and
-# robotsix-agent-comm (optional `analyst` extra).
+# Allow the direct git reference for robotsix-llmio (core dep).
 [tool.hatch.metadata]
 allow-direct-references = true
 
@@ -85,7 +82,6 @@ warn_unused_ignores = true
 [[tool.mypy.overrides]]
 module = [
     "robotsix_llmio.*",
-    "robotsix_agent_comm.*",
 ]
 ignore_missing_imports = true
 

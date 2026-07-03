@@ -14,7 +14,7 @@
 │   ├── config.py               #   Pydantic settings models + YAML loader
 │   ├── service.py              #   Cross-project cost aggregation layer + TTL cache
 │   ├── reconcile.py            #   OpenRouter ↔ Langfuse reconciliation engine
-│   ├── analyst.py              #   Optional LLM cost-analyst (robotsix-llmio + agent-comm)
+│   ├── analyst.py              #   Optional LLM cost-analyst (robotsix-llmio)
 │   ├── aggregations.py         #   Pure cost-aggregation functions (no I/O)
 │   ├── clients/
 │   │   └── langfuse.py         #   Self-contained async Langfuse REST client (httpx)
@@ -119,14 +119,13 @@ CLI commands work without it. It requires two packages installed via the
 | Package | Role |
 |---|---|
 | `robotsix-llmio` | Level-2 (DeepSeek via OpenRouter) and Level-3 (Claude Opus) LLM agents that analyse cost patterns |
-| `robotsix-agent-comm` | Pull/mailbox client that files board tickets through the central broker |
 
 - All imports of these packages are **lazy** (inside function bodies in
   `analyst.py`), guarded by `analyst.enabled` checks in `app.py`.
 - The analyst runs **three analyses** per cycle: a **fleet-wide** analysis,
   a **most-costly ticket** analysis, and a **most-costly stage** analysis.
-- Each analysis produces proposals; when a broker is configured, proposals
-  are filed as board tickets via the board manager agent.
+- Each analysis produces proposals which are stored under `.data/analyst/` for
+  surfacing in the dashboard.
 
 ## Key invariants
 

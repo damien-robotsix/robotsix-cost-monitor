@@ -58,11 +58,8 @@ Config                       # top-level: projects + settings
       └── analyst: AnalystConfig
             openrouter_key?, global_model?, trace_model?, window_hours,
             top_stages, traces_per_agent, max_trace_analyses, schedule_hours,
-            broker_host?, broker_port, broker_scheme, broker_token?,
-            board_manager_id, board_agent_id, board_repo_id,
             langfuse_* (own tracing project)
-            ├── .enabled       (bool — openrouter_key is set)
-            └── .can_file_tickets  (bool — broker configured)
+            └── .enabled       (bool — openrouter_key is set)
 ```
 
 All config loading goes through `load_config()` → `Config.model_validate()`.
