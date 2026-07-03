@@ -111,6 +111,20 @@ class CostService:
                 out.append((p, []))
         return out
 
+    async def _gather_list_results(
+        self,
+        slug: str | None,
+        hours: int,
+        fetch: Callable[[ProjectConfig, int], Awaitable[list[dict[str, Any]]]],
+    ) -> list[dict[str, Any]]:
+        parts: list[list[dict[str, Any]]] = []
+        for p in self._projects(slug):
+            try:
+                parts.append(await fetch(p, hours))
+            except Exception:  # noqa: BLE001 — a dead project must not 500 the page
+                parts.append([])
+        return [r for part in parts for r in part]
+
     async def _build_trace_rows(
         self, slug: str | None, hours: int
     ) -> list[dict[str, Any]]:
@@ -302,13 +316,7 @@ class CostService:
             all_traces = [t for _, traces in gathered for t in traces]
             return aggregate_by_name(all_traces)
 
-        parts: list[list[dict[str, Any]]] = []
-        for p in self._projects(slug):
-            try:
-                parts.append(await self._agent_usage(p, hours))
-            except Exception:  # noqa: BLE001 — a dead project must not 500 the page
-                parts.append([])
-        all_rows: list[dict[str, Any]] = [r for part in parts for r in part]
+        all_rows = await self._gather_list_results(slug, hours, self._agent_usage)
         return aggregate_by_name_backend(all_rows, backend)
 
     async def by_agent_segmented(self, slug: str | None, hours: int) -> dict[str, Any]:
@@ -330,13 +338,7 @@ class CostService:
         is ``subscription_count_total / subscription_cap`` when the cap > 0,
         otherwise ``None``.
         """
-        parts: list[list[dict[str, Any]]] = []
-        for p in self._projects(slug):
-            try:
-                parts.append(await self._agent_usage(p, hours))
-            except Exception:  # noqa: BLE001 — a dead project must not 500 the page
-                parts.append([])
-        all_rows: list[dict[str, Any]] = [r for part in parts for r in part]
+        all_rows = await self._gather_list_results(slug, hours, self._agent_usage)
         rows = aggregate_by_name_split(all_rows)
         openrouter_marginal_total = sum(r["openrouter_cost"] for r in rows)
         subscription_estimate_total = sum(r["subscription_cost"] for r in rows)
@@ -368,13 +370,8 @@ class CostService:
         """Cost + token usage by model, merged across selected projects.
 
         Window-accurate (see :meth:`LangfuseClient.fetch_model_usage_window`)."""
-        parts: list[list[dict[str, Any]]] = []
-        for p in self._projects(slug):
-            try:
-                parts.append(await self._model_usage(p, hours))
-            except Exception:  # noqa: BLE001 — a dead project must not 500 the page
-                parts.append([])
-        return merge_model_costs(parts)
+        all_rows = await self._gather_list_results(slug, hours, self._model_usage)
+        return merge_model_costs([all_rows])
 
     async def _backend_cost(
         self, project: ProjectConfig, hours: int
