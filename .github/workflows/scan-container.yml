@@ -1,5 +1,9 @@
 name: Weekly container vulnerability rescan
 
+# Kept standalone: no shared reusable workflow for weekly scheduled container
+# vulnerability rescanning exists in damien-robotsix/robotsix-github-workflows.
+# Hand-rolled per standard exception rule.
+
 on:
   schedule:
     - cron: '0 6 * * 1'
