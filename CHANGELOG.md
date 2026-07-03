@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Align Docker image to round-4 fleet standard: runtime user `app` with home `/home/app`, persistent data at `/data` (from `/home/appuser/.data`), updated compose bind-mounts accordingly.
 - **Remove `robotsix-agent-comm` broker dependency and analyst ticket-filing.**  
   The LLM cost-analyst no longer files board tickets through the central broker.
   Removed the `robotsix-agent-comm` optional dependency, all broker fields from

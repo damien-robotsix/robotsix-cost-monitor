@@ -28,7 +28,7 @@ services:
 
     volumes:
       # Config bind-mount — projects.yaml available without an image rebuild.
-      - ./config:/home/appuser/config
+      - ./config:/home/app/config
       # Runtime state — reconciliation snapshots + analyst proposals persist
-      # across restarts (git-ignored ./.data on the host).
-      - ./.data:/home/appuser/.data
+      # across restarts (git-ignored ./.data on the host, mapped to /data).
+      - ./.data:/data
