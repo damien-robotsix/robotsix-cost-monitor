@@ -257,4 +257,3 @@ describe('proposalsHTML', () => {
     expect(html).toContain('r1');
   });
 });
-
