@@ -9,7 +9,6 @@ import { $, esc, fmt, getJSON, setStatus } from './shared.js';
  * @property {string} [summary]
  * @property {TraceAnalysis[]} [analyzed_traces]
  * @property {Proposal[]} [proposals]
- * @property {FilingResult} [filing_result]
  * @property {number} [total_cost]
  * @property {number} [trace_count]
  * @property {boolean} [history_available]
@@ -41,13 +40,6 @@ import { $, esc, fmt, getJSON, setStatus } from './shared.js';
  */
 
 /**
- * @typedef {object} FilingResult
- * @property {boolean} [filed]
- * @property {string} [error]
- * @property {string} [reply]
- */
-
-/**
  * @typedef {object} StageBreakdown
  * @property {string} name
  * @property {number} cost
@@ -62,18 +54,6 @@ import { $, esc, fmt, getJSON, setStatus } from './shared.js';
  */
 export function card(label, value, sub) {
   return `<div class="card"><div class="label">${esc(label)}</div><div class="value">${esc(String(value))}</div><div class="sub">${esc(String(sub))}</div></div>`;
-}
-
-/**
- * Extract the human-readable reply from a manager FilingResult.
- * @param {FilingResult | null | undefined} rr
- * @returns {string}
- */
-export function managerReply(rr) {
-  if (!rr) return '';
-  if (typeof rr.reply === 'string') return rr.reply; // BrokeredRequester returns string
-  if (rr.error) return rr.error;
-  return '';
 }
 
 /**
@@ -94,13 +74,11 @@ export function render(run) {
 
   const traces = run.analyzed_traces || [];
   const props = run.proposals || [];
-  const fr = run.filing_result || null;
 
   $('run-meta').innerHTML = [
     card('last run', new Date(run.generated_at).toLocaleString(), `window ${run.window_hours}h`),
     card('traces analyzed', traces.length, ''),
     card('proposals', props.length, ''),
-    card('tickets', fr?.filed ? 'filed' : '—', fr?.filed ? 'via board manager' : ''),
   ].join('');
 
   $('summary').innerHTML = run.summary ? `<p>${esc(run.summary)}</p>` : "<p class='muted'>—</p>";
@@ -125,27 +103,7 @@ export function render(run) {
 
   $('proposals').innerHTML = proposalsHTML(props);
 
-  if (!fr) {
-    $('ticket').innerHTML =
-      "<p class='muted'>proposals not filed (no broker configured, or no proposals)</p>";
-  } else if (fr.error) {
-    $('ticket').innerHTML = `
-      <div class="item">
-        <div class="item-head"><span>filing failed</span><span class="bad">✗</span></div>
-        <div class="item-body">${esc(fr.error)}</div>
-      </div>`;
-  } else {
-    const reply = managerReply(fr);
-    $('ticket').innerHTML = `
-      <div class="item">
-        <div class="item-head">
-          <span>board manager</span>
-          <span class="ok">✓ filed</span>
-        </div>
-        <div class="item-body">${esc(reply || '(no reply)')}</div>
-        <div class="muted">tickets created/refined by the board manager from the ${props.length} proposal(s) above.</div>
-      </div>`;
-  }
+  $('ticket').innerHTML = "<p class='muted'>—</p>";
 }
 
 /**
@@ -207,17 +165,6 @@ export function proposalsHTML(props) {
 }
 
 /**
- * Render filing result as HTML (board manager reply).
- * @param {FilingResult | null | undefined} fr
- * @returns {string}
- */
-export function filingHTML(fr) {
-  if (!fr) return '';
-  const reply = managerReply(fr);
-  return `<div class="item-body muted"><b>board manager:</b> ${esc(reply || fr.error || '')}</div>`;
-}
-
-/**
  * Render a targeted analysis (ticket or stage) into a container.
  * @param {string} id - container element id
  * @param {AnalystRun | null} run
@@ -236,8 +183,7 @@ export function renderTargeted(id, run, headerHTML) {
   el.innerHTML = `
     <div class="item">${headerHTML(run)}</div>
     ${run.summary ? `<div class="item-body"><b>why it's costly:</b> ${esc(run.summary)}</div>` : ''}
-    ${proposalsHTML(run.proposals)}
-    ${filingHTML(run.filing_result)}`;
+    ${proposalsHTML(run.proposals)}`;
 }
 
 /**
