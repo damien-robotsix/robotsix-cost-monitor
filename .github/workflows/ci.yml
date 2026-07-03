@@ -10,10 +10,12 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
+  # Minimal default: only need to read repository contents
   contents: read
 
 jobs:
   lockfile-check:
+    name: Lockfile integrity check
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -27,9 +29,11 @@ jobs:
       - run: uv sync --locked
 
   dependency-review:
+    name: Dependency review
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # contents: read for checkout, pull-requests: write to post dependency review comments
     permissions:
       contents: read
       pull-requests: write
@@ -42,6 +46,7 @@ jobs:
           fail-on-severity: moderate
 
   dependency-hygiene:
+    name: Dependency hygiene
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -56,6 +61,7 @@ jobs:
       - run: uv run --with deptry deptry .
 
   vulnerability-audit:
+    name: Vulnerability audit
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -70,6 +76,7 @@ jobs:
       - run: uv audit --frozen
 
   ci:
+    name: CI (Python tests)
     # The reusable python-ci.yml's nested `tests` job uploads SARIF, so it
     # requests `security-events: write`. A caller job MUST grant at least that
     # or GitHub rejects the reusable-workflow call with a startup_failure
@@ -88,6 +95,8 @@ jobs:
     secrets: inherit  # zizmor: ignore[secrets-inherit] -- reusable workflow needs full secret access
 
   security:
+    name: Security scans
+    # security-events: write needed to upload SARIF results to the Security tab
     permissions:
       contents: read
       security-events: write
@@ -99,6 +108,8 @@ jobs:
     secrets: inherit  # zizmor: ignore[secrets-inherit] -- reusable workflow needs full secret access
 
   baseline:
+    name: Baseline check
+    # Minimal permissions: only need to read the repository
     permissions:
       contents: read
     uses: damien-robotsix/robotsix-github-workflows/.github/workflows/baseline-check.yml@77e10e286717cfe0eeb6b8d9ce985f3794236d15 # main
@@ -106,6 +117,7 @@ jobs:
       has-docker: true
 
   workflow-audit:
+    name: Workflow audit
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -119,8 +131,10 @@ jobs:
       - run: uvx zizmor --min-severity medium .github/workflows/
 
   sbom:
+    name: Generate SBOM
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # actions: read needed to download artifacts from prior jobs
     permissions:
       contents: read
       actions: read
@@ -141,8 +155,10 @@ jobs:
           path: sbom.cyclonedx.json
 
   js-tests:
+    name: JavaScript tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # pull-requests: write needed for Socket.dev to post PR comments
     permissions:
       contents: read
       pull-requests: write

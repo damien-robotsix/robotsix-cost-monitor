@@ -5,7 +5,9 @@ on:
 
 jobs:
   auto-merge:
+    name: Dependabot auto-merge
     if: github.actor == 'dependabot[bot]'
+    # contents: write and pull-requests: write needed to approve and merge Dependabot PRs
     permissions:
       contents: write
       pull-requests: write

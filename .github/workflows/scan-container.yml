@@ -4,8 +4,10 @@ on:
     - cron: '0 6 * * 1'
   workflow_dispatch:
 permissions:
+  # contents: read to check out the repo, security-events: write to upload vulnerability scan results
   contents: read
   security-events: write
 jobs:
   rescan:
+    name: Weekly container vulnerability rescan
     uses: damien-robotsix/robotsix-github-workflows/.github/workflows/scan-container.yml@5fdc956e980cfb70ea36e33bc670a0376750dec6  # main

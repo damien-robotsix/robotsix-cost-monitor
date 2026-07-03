@@ -6,6 +6,8 @@ on:
 
 jobs:
   docs:
+    name: Build and deploy docs
+    # contents: write needed to push built docs to the gh-pages branch
     permissions:
       contents: write
     uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-docs.yml@77e10e286717cfe0eeb6b8d9ce985f3794236d15  # main

@@ -8,11 +8,14 @@ on:
       - '**/*.js'
       - '**/*.ts'
 permissions:
+  # Minimal default: only need to read repository contents
   contents: read
 jobs:
   codeql:
+    name: CodeQL analysis
     uses: damien-robotsix/robotsix-github-workflows/.github/workflows/codeql.yml@5fdc956e980cfb70ea36e33bc670a0376750dec6  # main
     permissions:
+      # security-events: write needed to upload CodeQL SARIF results
       contents: read
       security-events: write
     with:
