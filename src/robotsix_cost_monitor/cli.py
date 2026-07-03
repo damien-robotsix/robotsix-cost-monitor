@@ -15,6 +15,7 @@ from .service import CostService
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI entrypoint: dispatch to serve, summary, or reconcile."""
     parser = argparse.ArgumentParser(prog="robotsix-cost-monitor")
     sub = parser.add_subparsers(dest="cmd")
 

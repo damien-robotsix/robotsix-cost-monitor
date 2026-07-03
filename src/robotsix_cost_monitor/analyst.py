@@ -159,6 +159,7 @@ async def build_digest(
 
 
 def load_proposals() -> dict[str, Any]:
+    """Load previously stored cost-reduction proposals from disk."""
     return _safe_load_json(_store_path(), {"generated_at": None, "proposals": []})
 
 

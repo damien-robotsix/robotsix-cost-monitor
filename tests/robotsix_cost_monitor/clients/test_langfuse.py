@@ -70,7 +70,8 @@ def test_init_custom_timeout() -> None:
 
 async def test_fetch_traces_window_delegates_to_async_client() -> None:
     """fetch_traces_window delegates to _LangfuseRESTClient.fetch_traces_window
-    and collects the async iterator into a list of LangfuseTrace models."""
+    and collects the async iterator into a list of LangfuseTrace models.
+    """
     c = _client()
     raw_traces = [{"id": "t1"}, {"id": "t2"}]
 
@@ -121,7 +122,8 @@ async def test_fetch_traces_window_passes_hours() -> None:
 
 async def test_fetch_trace_detail_delegates() -> None:
     """fetch_trace_detail delegates to _LangfuseRESTClient.fetch_trace_detail
-    and returns a LangfuseTrace model."""
+    and returns a LangfuseTrace model.
+    """
     c = _client()
     detail = {"id": "tr-99", "name": "implement", "observations": []}
     mock = AsyncMock(return_value=detail)
@@ -481,7 +483,7 @@ async def test_cost_by_backend_handles_null_cost(
 async def test_backend_cost_window_minute_granularity(
     respx_mock: respx.MockRouter,
 ) -> None:
-    """hours <= 1 → 'minute' granularity."""
+    """Hours <= 1 → 'minute' granularity."""
     c = _client()
     route = respx_mock.get("http://localhost/api/public/metrics").respond(
         200,
@@ -532,7 +534,7 @@ async def test_backend_cost_window_hour_granularity_boundary(
 async def test_backend_cost_window_day_granularity(
     respx_mock: respx.MockRouter,
 ) -> None:
-    """hours > 72 → 'day' granularity."""
+    """Hours > 72 → 'day' granularity."""
     c = _client()
     route = respx_mock.get("http://localhost/api/public/metrics").respond(
         200, json={"data": []}

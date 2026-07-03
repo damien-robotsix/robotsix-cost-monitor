@@ -302,7 +302,7 @@ class TestLangfuseTrace:
         assert trace.calculated_total_cost is None
 
     def test_session_id_resolution_via_alias(self) -> None:
-        """sessionId alias is the canonical Langfuse key; resolves correctly."""
+        """SessionId alias is the canonical Langfuse key; resolves correctly."""
         trace = LangfuseTrace.model_validate({"sessionId": "sess-alias-only"})
         assert trace.session_id == "sess-alias-only"
 

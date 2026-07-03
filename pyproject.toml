@@ -63,11 +63,11 @@ line-length = 88
 target-version = "py312"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "S"]
+select = ["E", "F", "I", "UP", "B", "S", "D"]
 ignore = ["S101"]  # assert in tests
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S", "E501"]
+"tests/**" = ["S", "E501", "D"]
 "tests/test_routes.py" = ["S", "E501", "I001", "E402"]
 "vulture_whitelist.py" = ["B018", "F821"]
 "src/robotsix_cost_monitor/routes.py" = ["B008"]
@@ -103,3 +103,4 @@ show_missing = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+

@@ -36,6 +36,7 @@ def trace(
         tid: explicit trace ``id``; if ``None``, derived from *cost* + *name*.
         ago_h: if given, a ``timestamp`` derived from ``now - ago_h hours``
             is included (ISO-8601 with ``Z`` suffix).
+
     """
     trace_id = tid if tid is not None else f"tr-{cost}-{name}"
     data: dict[str, str | float | None] = {

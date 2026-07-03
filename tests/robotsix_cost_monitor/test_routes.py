@@ -161,7 +161,8 @@ def test_require_project_unknown_slug_raises_404() -> None:
 
 def test_require_project_case_sensitive_slug() -> None:
     """The slug derived from the name is lowercase; an uppercase variant must
-    fail because Config.project does an exact slug match."""
+    fail because Config.project does an exact slug match.
+    """
     cfg = _config(_proj("Demo"))
     with pytest.raises(HTTPException) as exc:
         _require_project("Demo", cfg)
@@ -239,7 +240,8 @@ async def test_validation_handler_strips_body_from_field_path() -> None:
 
 async def test_validation_handler_missing_type_defaults_to_validation_error() -> None:
     """When ``type`` is absent from the error dict, code defaults to
-    ``"validation_error"``."""
+    ``"validation_error"``.
+    """
     req = _make_request(FastAPI())
     exc = RequestValidationError(errors=[{"loc": ("body",), "msg": "bad"}])
     resp = await validation_handler(req, exc)
@@ -287,7 +289,8 @@ async def test_unhandled_handler_returns_500_sanitized() -> None:
 
 async def test_unhandled_handler_logs_exception() -> None:
     """The handler must log the full exception (without leaking details to the
-    HTTP response)."""
+    HTTP response).
+    """
     req = _make_request(FastAPI())
     exc = RuntimeError("test bug")
 
@@ -372,7 +375,8 @@ def test_projects_returns_slug(client: TestClient) -> None:
 
 def test_summary_window_defaults_to_config_default(client: TestClient) -> None:
     """``hours`` query param defaults to 0, so _window falls back to
-    settings.default_window_hours (168)."""
+    settings.default_window_hours (168).
+    """
     r = client.get("/api/summary?project=all")
     assert r.status_code == 200
     # The mock service returns whatever we stubbed, but the route's _window

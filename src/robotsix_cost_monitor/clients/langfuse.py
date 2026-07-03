@@ -46,6 +46,7 @@ class LangfuseClient:
         base_url: str,
         timeout: float = 30.0,
     ) -> None:
+        """Initialise the Langfuse client with credentials and a timeout."""
         self._lf = AsyncLangfuseReadClient(
             public_key=public_key,
             secret_key=secret_key,
@@ -82,10 +83,12 @@ class LangfuseClient:
         dimensions: list[dict[str, str]] | None = None,
         time_dimension: dict[str, str] | None = None,
     ) -> list[LangfuseMetricsRow]:
-        """Run a Langfuse metrics query over *view* (``observations`` or
-        ``traces``) for the exact last *hours*, grouped by *dimensions* (``None``
-        → group by model; pass ``[]`` for an ungrouped total). Returns the raw
-        ``data`` rows parsed as :class:`LangfuseMetricsRow`.
+        """Run a Langfuse metrics query and return parsed rows.
+
+        Queries *view* (``observations`` or ``traces``) for the exact last
+        *hours*, grouped by *dimensions* (``None`` → group by model; pass
+        ``[]`` for an ungrouped total). Returns the raw ``data`` rows parsed
+        as :class:`LangfuseMetricsRow`.
 
         ``/api/public/metrics`` aggregates server-side and, unlike the
         daily-metrics endpoint, honors the exact ``from``/``to`` window (the
@@ -120,11 +123,11 @@ class LangfuseClient:
             ]
 
     async def fetch_trace_count_window(self, hours: float) -> int:
-        """Count traces in the exact last *hours* via a server-side metrics
-        query (``view=traces``, ungrouped ``count``).
+        """Count traces in the exact last *hours* via a server-side metrics query.
 
-        One ``/api/public/metrics`` request — O(1), vs paging every trace just to
-        ``len()`` them (which is ~27s over a week of all-project data).
+        Uses ``view=traces``, ungrouped ``count``. One ``/api/public/metrics``
+        request — O(1), vs paging every trace just to ``len()`` them (which is
+        ~27s over a week of all-project data).
         """
         rows = await self._metrics(
             hours,

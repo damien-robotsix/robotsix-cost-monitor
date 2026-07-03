@@ -93,7 +93,8 @@ def test_aggregate_by_name_unnamed_falls_back_to_session() -> None:
 
 def test_aggregate_by_name_periodic_session_uses_stage() -> None:
     """Unnamed traces from periodic-agent runs (stage-timestamp-hash)
-    should group under the stage name, not a per-run "(unnamed) …" bucket."""
+    should group under the stage name, not a per-run "(unnamed) …" bucket.
+    """
     rows = aggregate_by_name(
         [
             LangfuseTrace.model_validate(
@@ -130,7 +131,8 @@ def test_aggregate_by_name_periodic_session_uses_stage() -> None:
 
 def test_aggregate_by_name_ticket_session_keeps_fallback() -> None:
     """Ticket sessions (timestamp-slug, no stage prefix) keep the
-    "(unnamed) <session>" fallback."""
+    "(unnamed) <session>" fallback.
+    """
     rows = aggregate_by_name(
         [
             LangfuseTrace.model_validate(

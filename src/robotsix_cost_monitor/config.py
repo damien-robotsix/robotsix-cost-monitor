@@ -66,6 +66,7 @@ class AnalystConfig(BaseModel):
 
     @property
     def enabled(self) -> bool:
+        """Whether the cost-analyst mode is enabled in the effective config."""
         return bool(self.openrouter_key)
 
 
@@ -90,6 +91,7 @@ class Config(BaseModel):
     settings: Settings = Field(default_factory=Settings)
 
     def project(self, slug: str) -> ProjectConfig | None:
+        """Return the project config matching the given slug."""
         for p in self.projects:
             if p.slug == slug:
                 return p
@@ -109,8 +111,7 @@ def _config_path() -> Path:
 
 
 def data_dir() -> Path:
-    """Resolve the runtime-state directory (reconciliation snapshots, analyst
-    proposals).
+    """Resolve the runtime-state directory for persistence.
 
     Honors ``COST_MONITOR_DATA``; otherwise ``.data`` relative to the repo root
     (two parents up from this file's package). In a container the package lives

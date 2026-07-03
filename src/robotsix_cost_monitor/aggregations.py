@@ -89,9 +89,12 @@ def _sorted_cost_rows(
 def backend_cost_series(
     parts: list[dict[str, dict[str, float]]], backend: str
 ) -> list[dict[str, Any]]:
-    """Merge per-project ``{time_bucket -> {backend -> cost}}`` maps into a cost
+    """Merge per-project cost maps into a sorted time series.
+
+    ``{time_bucket -> {backend -> cost}}`` maps are merged into a cost
     series ``[{bucket_start, cost}]`` for *backend* (or the all-backends total
-    when *backend* is ``"all"``), sorted by time bucket."""
+    when *backend* is ``"all"``), sorted by time bucket.
+    """
     merged: dict[str, dict[str, float]] = {}
     for part in parts:
         for date, by_backend in part.items():
@@ -207,14 +210,13 @@ def cost_trend(
 def aggregate_by_name_backend(
     rows: list[dict[str, Any]], backend: str
 ) -> list[dict[str, Any]]:
-    """Merge per-(stage, backend) observation rows for *backend* into the
-    ``{"name", "cost", "count"}`` shape returned by
-    :func:`aggregate_by_name`.
+    """Merge per-(stage, backend) observation rows for a single backend.
 
     ``rows`` are pre-flattened dicts (each with at least ``name``, ``backend``,
     ``cost`` and ``count``).  Rows whose ``backend`` does not match are
     silently dropped.  Multiple projects' rows can be passed together — they
-    are summed by stage name.
+    are summed by stage name, producing the ``{"name", "cost", "count"}``
+    shape returned by :func:`aggregate_by_name`.
     """
     acc: dict[str, dict[str, float]] = {}
     for r in rows:
@@ -230,8 +232,7 @@ def aggregate_by_name_backend(
 def aggregate_by_name_split(
     rows: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Segment per-(stage, backend) observation rows into per-stage
-    OpenRouter-marginal vs subscription-estimated pools.
+    """Segment per-(stage, backend) rows into OpenRouter vs subscription pools.
 
     ``rows`` are pre-flattened dicts (each with at least ``name``, ``backend``,
     ``cost`` and ``count``).  Multiple projects' rows can be passed together —
@@ -295,6 +296,7 @@ def aggregate_by_name_split(
 
 
 def most_expensive_trace(traces: list[LangfuseTrace]) -> dict[str, Any] | None:
+    """Return the single most-expensive trace for cost display."""
     if not traces:
         return None
     top = max(traces, key=_trace_cost)
@@ -308,5 +310,6 @@ def most_expensive_trace(traces: list[LangfuseTrace]) -> dict[str, Any] | None:
 
 
 def most_expensive_session(traces: list[LangfuseTrace]) -> dict[str, Any] | None:
+    """Return the single most-expensive session for cost display."""
     rows = aggregate_by_session(traces)
     return rows[0] if rows else None

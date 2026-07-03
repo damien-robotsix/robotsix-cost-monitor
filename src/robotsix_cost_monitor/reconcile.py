@@ -196,7 +196,7 @@ async def reconcile_all(config: Config) -> dict[str, Any]:
 
 
 def load_last_reconcile() -> dict[str, Any]:
-    """The last stored reconcile result (for the banner); empty when none yet."""
+    """Return the last stored reconcile result (for the banner); empty when none yet."""
     return _safe_load_json(
         _last_path(),
         {"generated_at": None, "status": "unknown", "results": []},
