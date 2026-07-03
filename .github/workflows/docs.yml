@@ -8,4 +8,4 @@ jobs:
   docs:
     permissions:
       contents: write
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-docs.yml@5cd8c1facb02299da618979e7a55f1953f9c075a  # maintainers: update SHA and version together
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-docs.yml@77e10e286717cfe0eeb6b8d9ce985f3794236d15  # main

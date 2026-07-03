@@ -78,7 +78,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-ci.yml@5cd8c1facb02299da618979e7a55f1953f9c075a # v0.0.1
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-ci.yml@77e10e286717cfe0eeb6b8d9ce985f3794236d15 # main
     with:
       # The project requires Python >=3.14 (see pyproject `requires-python`); a
       # 3.12 runner fails dependency install with "No interpreter found".
@@ -91,12 +91,19 @@ jobs:
     permissions:
       contents: read
       security-events: write
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-security.yml@5cd8c1facb02299da618979e7a55f1953f9c075a # v0.0.1
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-security.yml@77e10e286717cfe0eeb6b8d9ce985f3794236d15 # main
     with:
       install-extras: ""
       trufflehog-pr-diff: true
       trufflehog-extra-args: "--results=verified,unknown"
     secrets: inherit  # zizmor: ignore[secrets-inherit] -- reusable workflow needs full secret access
+
+  baseline:
+    permissions:
+      contents: read
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/baseline-check.yml@77e10e286717cfe0eeb6b8d9ce985f3794236d15 # main
+    with:
+      has-docker: true
 
   workflow-audit:
     runs-on: ubuntu-latest

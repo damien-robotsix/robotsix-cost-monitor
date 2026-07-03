@@ -1,5 +1,8 @@
 name: CodeQL Analysis
 
+# Kept standalone: no shared reusable workflow for CodeQL analysis exists in
+# damien-robotsix/robotsix-github-workflows. Hand-rolled per standard exception rule.
+
 on:
   push:
     branches: [main]
