@@ -9,8 +9,8 @@ FROM python:3.14-slim AS builder
 # Bring in the uv static binary (pinned to a released version for reproducibility).
 COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /usr/local/bin/uv
 
-# git is needed to install the `analyst` extra's git dependencies
-# (robotsix-llmio / robotsix-agent-comm) during the uv pip install below.
+# git is needed to install the `analyst` extra's git dependency
+# (robotsix-llmio) during the uv pip install below.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
@@ -33,9 +33,8 @@ COPY src ./src
 
 # Export the EXACT revisions pinned in uv.lock (no fresh resolution), install
 # them, then install the project itself with --no-deps so they are not
-# re-resolved. The `analyst` extra (robotsix-llmio + robotsix-agent-comm) is
-# included so the optional LLM cost-analyst + broker ticket filing work when
-# configured; the dashboard runs fine without it.
+# re-resolved. The `analyst` extra (robotsix-llmio) is included so the optional
+# LLM cost-analyst works when configured; the dashboard runs fine without it.
 RUN uv export --frozen --no-emit-project --no-hashes --extra analyst > requirements.txt \
     && uv pip install --python /opt/venv/bin/python -r requirements.txt \
     && uv pip install --python /opt/venv/bin/python --no-deps . \
@@ -51,7 +50,7 @@ FROM python:3.14-slim AS runtime
 COPY --from=builder /opt/venv /opt/venv
 
 # Include the CycloneDX SBOM generated in the builder stage.
-COPY --from=builder /app/sbom.cyclonedx.json /home/appuser/sbom.cyclonedx.json
+COPY --from=builder /app/sbom.cyclonedx.json /home/app/sbom.cyclonedx.json
 ENV VIRTUAL_ENV=/opt/venv \
     PATH="/opt/venv/bin:$PATH"
 
@@ -67,24 +66,25 @@ RUN apt-get update \
     && claude --version \
     && rm -rf /var/lib/apt/lists/*
 
-# Run as a non-root user with a writable home/work directory. The UID/GID match
+# Run as a non-root user with a writable home directory. The UID/GID match
 # the deploy host's user (robotsix = 1001) so the bind-mounted ~/.claude (whose
 # mode-600 credentials are owned by that user) is readable and the `claude` CLI
-# can write its state back. Pre-create an appuser-owned ~/.claude as a fallback
-# when no mount is present.
+# can write its state back. Pre-create an app-owned ~/.claude as a fallback
+# when no mount is present. Persistent runtime state lives under /data
+# (bind-mounted or volume-backed in production).
 ARG APP_UID=1001
 ARG APP_GID=1001
-RUN groupadd --gid ${APP_GID} appuser \
-    && useradd --create-home --uid ${APP_UID} --gid ${APP_GID} appuser \
-    && mkdir -p /home/appuser/config /home/appuser/.data /home/appuser/.claude \
-    && chown -R appuser:appuser /home/appuser/config /home/appuser/.data /home/appuser/.claude
-WORKDIR /home/appuser
-USER appuser
+RUN groupadd --gid ${APP_GID} app \
+    && useradd --create-home --uid ${APP_UID} --gid ${APP_GID} app \
+    && mkdir -p /home/app/config /home/app/.claude /data \
+    && chown -R app:app /home/app/config /home/app/.claude /data
+WORKDIR /home/app
+USER app
 
 # Config + runtime-state locations resolved via env vars (see config.py).
-# Both point at bind-mounted / persisted paths under the home directory.
-ENV COST_MONITOR_CONFIG=/home/appuser/config/projects.yaml \
-    COST_MONITOR_DATA=/home/appuser/.data
+# COST_MONITOR_DATA points at the persistent /data mount.
+ENV COST_MONITOR_CONFIG=/home/app/config/projects.yaml \
+    COST_MONITOR_DATA=/data
 
 # Serve on all interfaces inside the container on 8080 (the stack convention;
 # a host nginx terminates TLS + auth and proxies to 127.0.0.1:8080).
