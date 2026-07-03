@@ -14,14 +14,10 @@
 # Bring-up and one-shot commands are documented in ./README.md.
 # -------------------------------------------------------------------------
 
-name: robotsix-cost-monitor
-
 x-central-deploy:
   contract-version: "1.0"
-  description: >
-    robotsix-cost-monitor — Langfuse cost dashboard for server.robotsix.net.
-    Pulls the published GHCR image and serves on 127.0.0.1:8099 behind
-    the shared host nginx.
+
+name: robotsix-cost-monitor
 
 services:
   cost-monitor:
@@ -30,7 +26,7 @@ services:
     command: serve --host 0.0.0.0 --port 8080
     restart: unless-stopped
     labels:
-      robotsix.deploy.config-target: rcm-config
+      robotsix.deploy.config-target: cost_monitor_config
 
     # Loopback-only publish: the dashboard has NO auth of its own, so it must
     # never be reachable directly from the internet. The shared host nginx
@@ -40,25 +36,13 @@ services:
 
     volumes:
       # Named volumes — the central-deploy system manages lifecycle.
-      - rcm-config:/home/appuser/config
-      - rcm-data:/home/appuser/.data
-
-    environment:
-      # Runtime state directory — the named volume mounts at /home/appuser/.data,
-      # but the app also looks for COST_MONITOR_DATA. Set it explicitly so the
-      # env-var path takes precedence over the (container-irrelevant) relative
-      # path fallback in config.py.
-      COST_MONITOR_CONFIG: /home/appuser/config/projects.yaml
-      COST_MONITOR_DATA: /home/appuser/.data
+      - cost_monitor_config:/home/appuser/config
+      - cost_monitor_data:/home/appuser/.data
 
 volumes:
-  rcm-config:
+  cost_monitor_config:
     labels:
       robotsix.deploy.stateful: "true"
-    # Config is provisioned externally by the central-deploy system.
-    # On first deploy, copy config/projects.yaml from the release artifact.
-  rcm-data:
+  cost_monitor_data:
     labels:
       robotsix.deploy.stateful: "true"
-    # Runtime state (reconciliation snapshots, analyst proposals) persists
-    # across redeploys.

@@ -252,6 +252,7 @@
       "items": {
         "$ref": "#/$defs/ProjectConfig"
       },
+      "minItems": 1,
       "title": "Projects",
       "type": "array"
     },

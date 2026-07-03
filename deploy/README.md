@@ -49,31 +49,33 @@ $EDITOR .env          # IMAGE_TAG, MONITOR_PORT
 
 ### 3. Provision configuration
 
-The stack uses **named volumes** (`rcm-config`, `rcm-data`) managed by the
-central-deploy system. Provide a config file on first deploy:
+The stack uses **named volumes** (`cost_monitor_config`, `cost_monitor_data`)
+managed by the central-deploy system. Provide a config file on first deploy:
 
 ```sh
 # Create the config named volume and copy the example config into it.
-docker volume create rcm-config
-docker run --rm -v rcm-config:/data alpine mkdir -p /data
-docker run --rm -v rcm-config:/data -v /tmp/rcm/config:/src alpine cp /src/projects.example.yaml /data/projects.yaml
+docker volume create cost_monitor_config
+docker run --rm \
+  -v cost_monitor_config:/data \
+  -v /tmp/rcm/config/projects.example.yaml:/src/projects.example.yaml:ro \
+  alpine cp /src/projects.example.yaml /data/projects.yaml
 
 # Create the data volume for runtime state.
-docker volume create rcm-data
+docker volume create cost_monitor_data
 ```
 
 Set ownership so the container (UID 1001, `appuser`) can read config and write
 runtime data:
 
 ```sh
-docker run --rm -v rcm-config:/data alpine chown -R 1001:1001 /data
-docker run --rm -v rcm-data:/data alpine chown -R 1001:1001 /data
+docker run --rm -v cost_monitor_config:/data alpine chown -R 1001:1001 /data
+docker run --rm -v cost_monitor_data:/data alpine chown -R 1001:1001 /data
 ```
 
 Then edit the config:
 
 ```sh
-docker run --rm -it -v rcm-config:/data alpine vi /data/projects.yaml
+docker run --rm -it -v cost_monitor_config:/data alpine vi /data/projects.yaml
 ```
 
 To enable the optional LLM cost-analyst, fill in the `settings.analyst` block
@@ -126,30 +128,25 @@ If you previously relied on bind-mounted host directories (`./config` and
 `./data`) and need to preserve existing data, copy the contents into the new
 named volumes before bringing up the stack for the first time.
 
-### Migrate the config directory
-
 ```sh
-# Create the named volume.
-docker volume create rcm-config
+# Create named volumes (stack name prefix matches docker-compose.yml `name:`)
+docker volume create robotsix-cost-monitor_cost_monitor_config
+docker volume create robotsix-cost-monitor_cost_monitor_data
 
-# Copy the host ./config directory into the volume.
+# Copy existing bind-mount config into the named volume
 docker run --rm \
-  -v rcm-config:/target \
-  -v /opt/robotsix-cost-monitor/config:/source \
-  alpine cp -a /source/. /target/
-```
+  -v "$(pwd)/config":/src:ro \
+  -v robotsix-cost-monitor_cost_monitor_config:/dst \
+  alpine sh -c "cp -a /src/. /dst/"
 
-### Migrate the data directory
-
-```sh
-# Create the named volume.
-docker volume create rcm-data
-
-# Copy the host ./data directory into the volume.
+# Copy existing bind-mount data into the named volume
 docker run --rm \
-  -v rcm-data:/target \
-  -v /opt/robotsix-cost-monitor/data:/source \
-  alpine cp -a /source/. /target/
+  -v "$(pwd)/data":/src:ro \
+  -v robotsix-cost-monitor_cost_monitor_data:/dst \
+  alpine sh -c "cp -a /src/. /dst/"
+
+# Bring the new stack up
+docker compose -f deploy/docker-compose.yml up -d
 ```
 
 After the migration, the stack can be started with `docker compose up -d` and
