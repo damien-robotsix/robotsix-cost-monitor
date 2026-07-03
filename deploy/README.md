@@ -119,3 +119,39 @@ immediate manual pull:
 ```sh
 docker compose pull && docker compose up -d
 ```
+
+## Migrating from bind-mounts to named volumes
+
+If you previously relied on bind-mounted host directories (`./config` and
+`./data`) and need to preserve existing data, copy the contents into the new
+named volumes before bringing up the stack for the first time.
+
+### Migrate the config directory
+
+```sh
+# Create the named volume.
+docker volume create rcm-config
+
+# Copy the host ./config directory into the volume.
+docker run --rm \
+  -v rcm-config:/target \
+  -v /opt/robotsix-cost-monitor/config:/source \
+  alpine cp -a /source/. /target/
+```
+
+### Migrate the data directory
+
+```sh
+# Create the named volume.
+docker volume create rcm-data
+
+# Copy the host ./data directory into the volume.
+docker run --rm \
+  -v rcm-data:/target \
+  -v /opt/robotsix-cost-monitor/data:/source \
+  alpine cp -a /source/. /target/
+```
+
+After the migration, the stack can be started with `docker compose up -d` and
+the old bind-mount directories can be removed once you have verified the
+service runs correctly against the named volumes.

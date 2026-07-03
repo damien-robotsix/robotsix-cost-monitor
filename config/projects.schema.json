@@ -173,15 +173,18 @@
           "type": "string"
         },
         "public_key": {
+          "pattern": "^pk-lf-",
           "title": "Public Key",
           "type": "string"
         },
         "secret_key": {
+          "pattern": "^sk-lf-",
           "title": "Secret Key",
           "type": "string"
         },
         "base_url": {
           "default": "https://cloud.langfuse.com",
+          "format": "uri",
           "title": "Base Url",
           "type": "string"
         },
@@ -200,6 +203,7 @@
       },
       "required": [
         "name",
+        "base_url",
         "public_key",
         "secret_key"
       ],
@@ -255,6 +259,9 @@
       "$ref": "#/$defs/Settings"
     }
   },
+  "required": [
+    "projects"
+  ],
   "title": "robotsix-cost-monitor configuration schema",
   "type": "object",
   "$schema": "https://json-schema.org/draft/2020-12/schema"

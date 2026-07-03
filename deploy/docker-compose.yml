@@ -29,6 +29,8 @@ services:
     # The image healthcheck probes :8080, so the server must serve on 8080.
     command: serve --host 0.0.0.0 --port 8080
     restart: unless-stopped
+    labels:
+      robotsix.deploy.config-target: rcm-config
 
     # Loopback-only publish: the dashboard has NO auth of its own, so it must
     # never be reachable directly from the internet. The shared host nginx
@@ -51,8 +53,12 @@ services:
 
 volumes:
   rcm-config:
+    labels:
+      robotsix.deploy.stateful: "true"
     # Config is provisioned externally by the central-deploy system.
     # On first deploy, copy config/projects.yaml from the release artifact.
   rcm-data:
+    labels:
+      robotsix.deploy.stateful: "true"
     # Runtime state (reconciliation snapshots, analyst proposals) persists
     # across redeploys.

@@ -1,10 +1,10 @@
 ## 0.0.0 (unreleased)
 
 - **Onboard to central-deploy; retire Watchtower continuous-deploy stack.**  
-  - Rewrite `deploy/docker-compose.yml` for central-deploy compatibility: add `x-central-deploy` extension with `contract-version: "1.0"`, replace bind-mount volumes with named volumes (`rcm-config`, `rcm-data`), remove Watchtower service and labels, and set `COST_MONITOR_CONFIG`/`COST_MONITOR_DATA` environment variables.  
+  - Rewrite `deploy/docker-compose.yml` for central-deploy compatibility: add `x-central-deploy` extension with `contract-version: "1.0"`, replace bind-mount volumes with named volumes (`rcm-config`, `rcm-data`), remove Watchtower service and labels, set `COST_MONITOR_CONFIG`/`COST_MONITOR_DATA` environment variables, add `robotsix.deploy.stateful` labels to named volumes, and add `robotsix.deploy.config-target` label to the cost-monitor service.  
   - Fix `.github/dependabot.yml`: add `docker` package-ecosystem as a properly separated list entry (was previously inserted as a sibling key under `uv`, breaking the YAML structure).  
-  - Generate `config/projects.schema.json` from the Pydantic `Config` model for IDE validation of `config/projects.yaml`.  
-  - Update `deploy/README.md` to reflect central-deploy button-triggered updates (replacing Watchtower polling) and named-volume provisioning steps.
+  - Generate `config/projects.schema.json` from the Pydantic `Config` model for IDE validation of `config/projects.yaml`; add `format: uri` to `base_url`, `pattern: "^pk-lf-"`/`"^sk-lf-"` to `public_key`/`secret_key`, and add `base_url`/`projects` to their respective `required` arrays.  
+  - Update `deploy/README.md` to reflect central-deploy button-triggered updates (replacing Watchtower polling), named-volume provisioning steps, and add a "Migrating from bind-mounts to named volumes" section with `docker volume create` + `docker run --rm alpine cp` commands for both config and data.
 - Extract `_gather_list_results` helper in `CostService` to eliminate duplicated project-gather-with-error-isolation pattern across `by_agent`, `by_agent_segmented`, and `by_model`.
 - Extract repeated `_window`/`_require_project` boilerplate from seven route handlers into a composable `ProjectWindow` FastAPI dependency (``resolve_project``, ``resolve_hours``, ``project_window``)
 - Add Dependabot auto-merge caller workflow to auto-merge Dependabot PRs once required checks pass.
