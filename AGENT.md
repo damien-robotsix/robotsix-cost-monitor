@@ -8,7 +8,7 @@ This repo follows the [robotsix stack standards](https://github.com/damien-robot
 - **No network / no live LLM in tests.** The suite is fully offline:
   - `robotsix_llmio.core.AsyncLangfuseReadClient` is mocked via
     `unittest.mock.patch.object` on the composed `LangfuseClient._lf` instance
-    (see `tests/clients/test_langfuse.py`).
+    (see `tests/robotsix_cost_monitor/clients/test_langfuse.py`).
   - The LLM analyst path is stubbed by monkeypatching the local `_run_agents`
     wrapper rather than `robotsix_llmio.core.run_agent` directly (see
     `tests/test_analyst.py`).
