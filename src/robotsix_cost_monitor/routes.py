@@ -8,7 +8,7 @@ from ``app.state``.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, NamedTuple, cast
 
 import structlog
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
@@ -52,6 +52,13 @@ def get_service(request: Request) -> CostService:
 # ---------------------------------------------------------------------------
 
 
+class ProjectWindow(NamedTuple):
+    """Resolved project slug and effective window hours for a request."""
+
+    project: str
+    hours: int
+
+
 def _require_project(project: str, cfg: Config) -> None:
     if project != "all" and not cfg.project(project):
         raise HTTPException(status_code=404, detail=f"Unknown project slug: {project}")
@@ -59,6 +66,29 @@ def _require_project(project: str, cfg: Config) -> None:
 
 def _window(hours: int, config: Config) -> int:
     return hours or config.settings.default_window_hours
+
+
+def resolve_project(
+    project: str = Query("all"), cfg: Config = Depends(get_config)
+) -> str:
+    """Validate *project* slug exists in config; raise 404 if not."""
+    _require_project(project, cfg)
+    return project
+
+
+def resolve_hours(
+    hours: int = Query(0, ge=0), cfg: Config = Depends(get_config)
+) -> int:
+    """Return *hours* or the config default if zero."""
+    return _window(hours, cfg)
+
+
+def project_window(
+    project: str = Depends(resolve_project),
+    hours: int = Depends(resolve_hours),
+) -> ProjectWindow:
+    """Composite dependency: validated project slug + resolved window hours."""
+    return ProjectWindow(project=project, hours=hours)
 
 
 # ---------------------------------------------------------------------------
@@ -129,96 +159,68 @@ def projects(cfg: Config = Depends(get_config)) -> list[dict[str, str]]:
 
 @router.get("/api/summary")
 async def summary(
-    project: str = Query("all"),
-    hours: int = Query(0, ge=0),
-    cfg: Config = Depends(get_config),
+    pw: ProjectWindow = Depends(project_window),
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
     """GET /api/summary — total cost and per-project totals for the window."""
-    h = _window(hours, cfg)
-    _require_project(project, cfg)
-    return await service.summary(project, h)
+    return await service.summary(pw.project, pw.hours)
 
 
 @router.get("/api/by-agent")
 async def by_agent(
-    project: str = Query("all"),
-    hours: int = Query(0, ge=0),
     backend: str = Query("all"),
-    cfg: Config = Depends(get_config),
+    pw: ProjectWindow = Depends(project_window),
     service: CostService = Depends(get_service),
 ) -> list[dict[str, Any]]:
     """GET /api/by-agent — cost breakdown by agent name for a project and window."""
-    h = _window(hours, cfg)
-    _require_project(project, cfg)
-    return await service.by_agent(project, h, backend)
+    return await service.by_agent(pw.project, pw.hours, backend)
 
 
 @router.get("/api/by-agent-segmented")
 async def by_agent_segmented(
-    project: str = Query("all"),
-    hours: int = Query(0, ge=0),
-    cfg: Config = Depends(get_config),
+    pw: ProjectWindow = Depends(project_window),
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
     """GET /api/by-agent-segmented — agent costs segmented by model and backend."""
-    h = _window(hours, cfg)
-    _require_project(project, cfg)
-    return await service.by_agent_segmented(project, h)
+    return await service.by_agent_segmented(pw.project, pw.hours)
 
 
 @router.get("/api/by-model")
 async def by_model(
-    project: str = Query("all"),
-    hours: int = Query(0, ge=0),
-    cfg: Config = Depends(get_config),
+    pw: ProjectWindow = Depends(project_window),
     service: CostService = Depends(get_service),
 ) -> list[dict[str, Any]]:
     """GET /api/by-model — cost breakdown by model for a project and window."""
-    h = _window(hours, cfg)
-    _require_project(project, cfg)
-    return await service.by_model(project, h)
+    return await service.by_model(pw.project, pw.hours)
 
 
 @router.get("/api/backend-trend")
 async def backend_trend(
-    project: str = Query("all"),
-    hours: int = Query(0, ge=0),
     backend: str = Query("all"),
-    cfg: Config = Depends(get_config),
+    pw: ProjectWindow = Depends(project_window),
     service: CostService = Depends(get_service),
 ) -> list[dict[str, Any]]:
     """GET /api/backend-trend — cost trend per backend for a project and window."""
-    h = _window(hours, cfg)
-    _require_project(project, cfg)
-    return await service.backend_trend(project, h, backend)
+    return await service.backend_trend(pw.project, pw.hours, backend)
 
 
 @router.get("/api/trend")
 async def trend(
-    project: str = Query("all"),
-    hours: int = Query(0, ge=0),
     buckets: int = Query(48, ge=1, le=200),
-    cfg: Config = Depends(get_config),
+    pw: ProjectWindow = Depends(project_window),
     service: CostService = Depends(get_service),
 ) -> list[dict[str, Any]]:
     """GET /api/trend — cost trend series bucketed by time for a project and window."""
-    h = _window(hours, cfg)
-    _require_project(project, cfg)
-    return await service.trend(project, h, buckets)
+    return await service.trend(pw.project, pw.hours, buckets)
 
 
 @router.get("/api/highlights")
 async def highlights(
-    project: str = Query("all"),
-    hours: int = Query(0, ge=0),
-    cfg: Config = Depends(get_config),
+    pw: ProjectWindow = Depends(project_window),
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
     """GET /api/highlights — summaries (total, change, top agents) for the window."""
-    h = _window(hours, cfg)
-    _require_project(project, cfg)
-    return await service.highlights(project, h)
+    return await service.highlights(pw.project, pw.hours)
 
 
 @router.get("/api/reconcile")

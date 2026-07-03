@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Extract repeated `_window`/`_require_project` boilerplate from seven route handlers into a composable `ProjectWindow` FastAPI dependency (``resolve_project``, ``resolve_hours``, ``project_window``)
 - Add Dependabot auto-merge caller workflow to auto-merge Dependabot PRs once required checks pass.
 - Adopt `respx` for HTTP mocking in Langfuse client tests, replacing hand-rolled `_async_client_mock()` / `_response()` helpers and `unittest.mock.patch` blocks with `respx_mock` fixtures for higher-fidelity httpx transport interception.
 - Enable `changelog_autofill` periodic workflow to auto-insert changelog entries for PRs failing the `changelog` check.
