@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Enable `triage_boilerplate` periodic workflow (`.robotsix-mill/periodic/triage_boilerplate.yaml`).
 - Sync ``_TICKET_SYSTEM`` prompt with actual payload: remove promise of board
   history and ticket description (both still ``None``), and note their
   unavailability so the LLM does not speculate about missing data.
