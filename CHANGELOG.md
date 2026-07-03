@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Align `.pre-commit-config.yaml` to 2026-07 standards: remove `bandit` (CI-only), add `check-json`, `check-merge-conflict`, `check-added-large-files`, `detect-private-key`, `actionlint`, and `hadolint` hooks
 - Update all `robotsix-github-workflows` reusable workflow SHA pins to current HEAD (`77e10e28…`) and add `baseline-check` caller to CI pipeline
 - **Onboard to central-deploy; retire Watchtower continuous-deploy stack.**  
   - Rewrite `deploy/docker-compose.yml` for central-deploy compatibility: add `x-central-deploy` extension with `contract-version: "1.0"` as the first non-blank line, replace bind-mount volumes with named volumes (`cost_monitor_config`, `cost_monitor_data`), remove Watchtower service and labels, add `robotsix.deploy.stateful` labels to named volumes, and add `robotsix.deploy.config-target: cost_monitor_config` label to the cost-monitor service.  
