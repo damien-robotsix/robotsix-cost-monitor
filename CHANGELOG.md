@@ -1,5 +1,8 @@
 ## 0.0.0 (unreleased)
 
+- Sync ``_TICKET_SYSTEM`` prompt with actual payload: remove promise of board
+  history and ticket description (both still ``None``), and note their
+  unavailability so the LLM does not speculate about missing data.
 - Removed the broker filing panel from the analyst dashboard (`filingHTML`, `managerReply`, and `FilingResult` typedef in `analyst.js`).
 - Align Docker image to round-4 fleet standard: runtime user `app` with home `/home/app`, persistent data at `/data` (from `/home/appuser/.data`), updated compose bind-mounts accordingly.
 - **Remove `robotsix-agent-comm` broker dependency and analyst ticket-filing.**  

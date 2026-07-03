@@ -86,9 +86,9 @@ _PROPOSAL_JSON = (
 _TICKET_SYSTEM = (
     "You are a cost analyst examining the single most EXPENSIVE BOARD TICKET over "
     "its whole lifecycle. You are given the ticket's total cost, its cost broken "
-    "down by stage (cost_by_stage — each stage/agent's spend on THIS ticket), its "
-    "traces, and the ticket's board history (state transitions, re-refinements, "
-    "retries, comments) + description. Diagnose WHY this ticket was so expensive "
+    "down by stage (cost_by_stage — each stage/agent's spend on THIS ticket), and "
+    "its traces. (Board history and ticket description are not yet available.) "
+    "Diagnose WHY this ticket was so expensive "
     "across its lifecycle — process-level waste: repeated re-refinement, "
     "implement/audit retry loops, bouncing between states, oversized context "
     "carried across stages, redundant rework — not just per-trace token bloat. "
@@ -405,8 +405,9 @@ async def _run_opus_analysis_and_file(
 async def run_ticket_analyst(config: Config, service: CostService) -> dict[str, Any]:
     """Analyse the single most expensive ticket over its whole lifecycle.
 
-    Aggregates the ticket's per-stage trace cost + its board history, runs the
-    level-3 (Opus) global analysis, and files the proposals via the manager.
+    Aggregates the ticket's per-stage trace cost, runs the level-3 (Opus)
+    global analysis, and files the proposals via the manager. Board history
+    and ticket description are not yet fetched.
     """
     a = config.settings.analyst
     if not a.enabled:
