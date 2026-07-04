@@ -7,7 +7,7 @@ import {
   renderReconcile,
   renderSummary,
   renderTrend,
-} from '../../src/robotsix_cost_monitor/web/static/dashboard.js';
+} from '../../../../src/robotsix_cost_monitor/web/static/dashboard.js';
 
 function fixture(html) {
   document.body.innerHTML = html;

@@ -9,6 +9,7 @@
     "include": [
       "src/robotsix_cost_monitor/web/static/*.js",
       "tests/web/*.js",
+      "tests/robotsix_cost_monitor/web/static/*.js",
       "vitest.config.js"
     ],
     "ignore": ["node_modules/", ".venv/", ".data/"]

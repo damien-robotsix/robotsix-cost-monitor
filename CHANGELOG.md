@@ -1,6 +1,7 @@
 ## 0.0.0 (unreleased)
 
 - Added Configuration Reference and CLI Reference pages to the MkDocs documentation site.
+- Move `dashboard.test.js` from `tests/web/` to `tests/robotsix_cost_monitor/web/static/` to align with per-module test layout.
 - Remove orphaned `[tool.bandit]` section from `pyproject.toml` — bandit was never installed or invoked; security scanning is already covered by Ruff S rules, trufflehog, detect-secrets, and CodeQL in CI.
 - Refactor `_ORCHESTRATOR_SYSTEM` to reference shared `_PROPOSAL_JSON` constant instead of duplicating the JSON-output instruction inline.
 - Enable ruff pydocstyle (D) rules — all public API items now require docstrings; tests are excluded.
