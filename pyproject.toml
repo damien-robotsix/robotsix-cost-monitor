@@ -89,9 +89,6 @@ ignore_missing_imports = true
 module = "vulture_whitelist"
 ignore_errors = true
 
-[tool.bandit]
-exclude_dirs = ["tests", ".venv", "node_modules"]
-
 [tool.coverage.run]
 branch = true
 source = ["src"]
