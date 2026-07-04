@@ -253,8 +253,8 @@ class TestLangfuseTrace:
 
     # -- extra fields -------------------------------------------------------
 
-    def test_extra_fields_are_ignored(self) -> None:
-        """Pydantic's default extra='ignore' discards unknown keys silently."""
+    def test_extra_fields_are_preserved(self) -> None:
+        """extra='allow' preserves unknown keys (observations) in model_dump()."""
         trace = LangfuseTrace.model_validate(
             {
                 "id": "tr-extra",
@@ -265,6 +265,9 @@ class TestLangfuseTrace:
         )
         assert trace.id == "tr-extra"
         assert trace.total_cost == 5.0
+        dumped = trace.model_dump()
+        assert dumped.get("observations") == [1, 2, 3]
+        assert dumped.get("metadata") == {"key": "value"}
 
     # -- edge cases ---------------------------------------------------------
 
