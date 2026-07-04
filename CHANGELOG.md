@@ -2,6 +2,7 @@
 
 - Added Configuration Reference and CLI Reference pages to the MkDocs documentation site.
 - Remove orphaned `[tool.bandit]` section from `pyproject.toml` — bandit was never installed or invoked; security scanning is already covered by Ruff S rules, trufflehog, detect-secrets, and CodeQL in CI.
+- Change `[tool.ruff] target-version` from `py312` to `py314` to match `requires-python = ">=3.14"`.
 - Refactor `_ORCHESTRATOR_SYSTEM` to reference shared `_PROPOSAL_JSON` constant instead of duplicating the JSON-output instruction inline.
 - Enable ruff pydocstyle (D) rules — all public API items now require docstrings; tests are excluded.
 - Enable `triage_boilerplate` periodic workflow (`.robotsix-mill/periodic/triage_boilerplate.yaml`).
