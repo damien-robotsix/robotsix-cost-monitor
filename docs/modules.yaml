@@ -67,7 +67,7 @@ modules:
       - src/robotsix_cost_monitor/web/analyst.html
       - src/robotsix_cost_monitor/web/static/analyst.js
       - tests/robotsix_cost_monitor/test_analyst.py
-      - tests/web/analyst.test.js
+      - tests/robotsix_cost_monitor/web/static/analyst.test.js
     role: Deterministic cost digest + optional LLM proposal pass and analyst UI
 
   - id: robotsix_cost_monitor.routes
