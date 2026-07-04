@@ -74,6 +74,9 @@ jobs:
           cache-python: true
       - run: uv sync --locked
       - run: uv audit --frozen
+      - run: |
+          uv export --format requirements.txt -o /tmp/reqs.txt
+          uvx pip-audit -r /tmp/reqs.txt --require-hashes
 
   ci:
     name: CI (Python tests)
