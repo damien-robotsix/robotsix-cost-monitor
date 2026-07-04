@@ -44,6 +44,14 @@ _COST_MODEL_NOTE = (
     "accordingly and say which backend (subscription vs pay-per-token) each targets."
 )
 
+_PROPOSAL_JSON = (
+    'Return ONLY a JSON object (no prose, no code fences): {"summary": "...", '
+    '"proposals": [{"title": "...", "rationale": "...", "estimated_saving": '
+    '"..."}]}. Each proposal is a candidate board ticket: clear title + a '
+    "rationale with evidence and a concrete fix; list distinct issues separately; "
+    "omit anything trivial."
+)
+
 _ORCHESTRATOR_SYSTEM = (
     "You are a cost-reduction analyst for an LLM agent fleet. You are given a "
     "deterministic cost digest (per-stage spend + specimens) and `trace_findings` "
@@ -55,13 +63,7 @@ _ORCHESTRATOR_SYSTEM = (
     "ticket, so make it actionable: a clear `title`, and a `rationale` with the "
     "evidence (which stage/trace, the cost) AND a concrete fix. A downstream "
     "board manager turns these into tickets (deduping + refining), so DON'T "
-    "pre-merge distinct issues — list each separately; just omit anything trivial "
-    "or low-confidence.\n\n"
-    + _COST_MODEL_NOTE
-    + "\n\n"
-    + 'Return ONLY a JSON object (no prose, no code fences): {"summary": "...", '
-    '"proposals": [{"title": "...", "rationale": "...", "estimated_saving": '
-    '"..."}]}.'
+    "pre-merge distinct issues.\n\n" + _COST_MODEL_NOTE + "\n\n" + _PROPOSAL_JSON
 )
 
 _TRACE_SYSTEM = (
@@ -75,13 +77,6 @@ _TRACE_SYSTEM = (
 #: Cap the serialized payload for the ticket/stage analyses (history is large).
 _TARGET_CHAR_CAP = 48_000
 
-_PROPOSAL_JSON = (
-    'Return ONLY a JSON object (no prose, no code fences): {"summary": "...", '
-    '"proposals": [{"title": "...", "rationale": "...", "estimated_saving": '
-    '"..."}]}. Each proposal is a candidate board ticket: clear title + a '
-    "rationale with evidence and a concrete fix; list distinct issues separately; "
-    "omit anything trivial."
-)
 
 _TICKET_SYSTEM = (
     "You are a cost analyst examining the single most EXPENSIVE BOARD TICKET over "
