@@ -28,4 +28,7 @@ plugins:
 
 nav:
   - Home: index.md
+  - Reference:
+      - Configuration: reference/configuration.md
+      - CLI: reference/cli.md
   - API Reference: api.md
