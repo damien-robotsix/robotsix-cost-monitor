@@ -76,7 +76,9 @@ jobs:
       - run: uv audit --frozen
       - run: |
           uv export --format requirements.txt -o /tmp/reqs.txt
-          uvx pip-audit -r /tmp/reqs.txt --require-hashes
+          # pip-audit --require-hashes cannot handle editable installs (-e .)
+          grep -v '^-e \.' /tmp/reqs.txt > /tmp/reqs-filtered.txt
+          uvx pip-audit -r /tmp/reqs-filtered.txt --require-hashes
 
   ci:
     name: CI (Python tests)
