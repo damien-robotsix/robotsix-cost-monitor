@@ -95,4 +95,6 @@ modules:
     paths:
       - docs/index.md
       - docs/api.md
+      - docs/reference/configuration.md
+      - docs/reference/cli.md
     role: MkDocs documentation site source files (landing page + API reference))
