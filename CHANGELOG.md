@@ -3,6 +3,7 @@
 - Moved `analyst.test.js` from `tests/web/` to `tests/robotsix_cost_monitor/web/static/` (per-module layout; already satisfied by sibling ticket).
 - Move `mypy` and `vulture` from the `dev` dependency group to a new `typing` group so that `uv sync` does not require downloading `pathspec` (a mypy dependency) when only running tests.
 - Move `tests/web/shared.test.js` to `tests/robotsix_cost_monitor/web/static/shared.test.js` and update vitest config include pattern to align with per-module test layout convention. Both old (`tests/web/**`) and new (`tests/robotsix_cost_monitor/web/static/`) include patterns are kept so pending analyst/dashboard migrations continue to run.
+- Add inline module-taxonomy validation script (`scripts/validate-modules.py`) and CI validation step for `docs/modules.yaml`.
 - Add typed exception hierarchy (`CostMonitorError`, `ExternalServiceError`, `ExternalAuthError`, etc.) to distinguish retriable transient errors from terminal configuration errors
 - Add `RetryClient` (jittered exponential-backoff httpx wrapper) for Langfuse and OpenRouter HTTP calls
 - Add `cost_monitor_error_handler` to return consistent JSON error envelopes for cost-monitor errors
@@ -312,7 +313,7 @@
   `_agent_usage`) now delegate to a single `_cached_fetch` helper that
   encapsulates the key-lookup, monotonic-deadline check, TTL-based caching
   pattern. This removes ~22 lines of duplicate boilerplate and makes future
-  cache-behaviour changes (e.g. stale-while-revalidate) local to one method.
+  cache-behaviour changes (e.g. stale-while-rewrite) local to one method.
 - **Fixed example config `max_trace_analyses` drift.** The committed
   `config/projects.example.yaml` now sets `max_trace_analyses: 12`, matching the
   Pydantic default in `AnalystConfig`. A regression test loads the example YAML
