@@ -1,6 +1,7 @@
 ## 0.0.0 (unreleased)
 
 - Moved `analyst.test.js` from `tests/web/` to `tests/robotsix_cost_monitor/web/static/` (per-module layout; already satisfied by sibling ticket).
+- Move `tests/web/shared.test.js` to `tests/robotsix_cost_monitor/web/static/shared.test.js` and update vitest config include pattern to align with per-module test layout convention
 - Add typed exception hierarchy (`CostMonitorError`, `ExternalServiceError`, `ExternalAuthError`, etc.) to distinguish retriable transient errors from terminal configuration errors
 - Add `RetryClient` (jittered exponential-backoff httpx wrapper) for Langfuse and OpenRouter HTTP calls
 - Add `cost_monitor_error_handler` to return consistent JSON error envelopes for cost-monitor errors
