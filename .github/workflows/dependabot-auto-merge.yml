@@ -3,12 +3,14 @@ name: Dependabot auto-merge
 on:
   pull_request:
 
+permissions: {}  # no workflow-level default; the job grants its own
+
 jobs:
   auto-merge:
     name: Dependabot auto-merge
     if: github.actor == 'dependabot[bot]'
     # contents: write and pull-requests: write needed to approve and merge Dependabot PRs
     permissions:
-      contents: write
-      pull-requests: write
+      contents: write  # approve and merge Dependabot PRs
+      pull-requests: write  # approve Dependabot PRs
     uses: damien-robotsix/robotsix-github-workflows/.github/workflows/dependabot-auto-merge.yml@77e10e286717cfe0eeb6b8d9ce985f3794236d15  # main
