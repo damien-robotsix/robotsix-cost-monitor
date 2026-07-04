@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 
-from robotsix_cost_monitor.app import create_app
+from robotsix_cost_monitor.app import _analyst_loop, _reconcile_loop, create_app
 from robotsix_cost_monitor.config import Config, ProjectConfig, load_config
+from robotsix_cost_monitor.service import CostService
 
 
 def _empty_app() -> TestClient:
@@ -260,3 +264,261 @@ def test_last_analyst_run_none_when_unrun(monkeypatch: pytest.MonkeyPatch) -> No
     )
 
     assert app._last_analyst_run() is None
+
+
+# ---------------------------------------------------------------------------
+# _analyst_loop — schedule + error tolerance
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_analyst_loop_continues_after_single_failure() -> None:
+    """One analysis raising does not kill the loop — remaining analyses still
+    run, and the loop survives to schedule a second iteration."""
+    cfg = Config(projects=[])
+    svc = CostService(cfg)
+
+    stage_runs = 0
+
+    async def fleet_ok(_cfg: object, _svc: object) -> None:
+        pass
+
+    async def ticket_fail(_cfg: object, _svc: object) -> None:
+        raise RuntimeError("ticket analysis failed")
+
+    async def stage_ok(_cfg: object, _svc: object) -> None:
+        nonlocal stage_runs
+        stage_runs += 1
+
+    sleep_args: list[float] = []
+    _real_sleep = asyncio.sleep
+
+    async def fake_sleep(seconds: float) -> None:
+        sleep_args.append(seconds)
+        await _real_sleep(0)
+
+    with (
+        patch("robotsix_cost_monitor.app.asyncio.sleep", fake_sleep),
+        patch("robotsix_cost_monitor.app.run_analyst", fleet_ok),
+        patch("robotsix_cost_monitor.app.run_ticket_analyst", ticket_fail),
+        patch("robotsix_cost_monitor.app.run_stage_analyst", stage_ok),
+        patch("robotsix_cost_monitor.app._last_analyst_run", return_value=None),
+    ):
+        task = asyncio.create_task(_analyst_loop(cfg, svc, hours=1))
+        while stage_runs < 2:
+            await _real_sleep(0)
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+    assert stage_runs >= 2
+    assert len(sleep_args) >= 2
+    assert sleep_args[1] == 3600.0
+
+
+@pytest.mark.asyncio
+async def test_analyst_loop_all_three_raise_loop_continues() -> None:
+    """When every analysis raises on every iteration the loop does not die."""
+    cfg = Config(projects=[])
+    svc = CostService(cfg)
+
+    call_count = 0
+
+    async def always_fail(_cfg: object, _svc: object) -> None:
+        nonlocal call_count
+        call_count += 1
+        raise RuntimeError("boom")
+
+    _real_sleep = asyncio.sleep
+
+    async def fake_sleep(_seconds: float) -> None:
+        await _real_sleep(0)
+
+    with (
+        patch("robotsix_cost_monitor.app.asyncio.sleep", fake_sleep),
+        patch("robotsix_cost_monitor.app.run_analyst", always_fail),
+        patch("robotsix_cost_monitor.app.run_ticket_analyst", always_fail),
+        patch("robotsix_cost_monitor.app.run_stage_analyst", always_fail),
+        patch("robotsix_cost_monitor.app._last_analyst_run", return_value=None),
+    ):
+        task = asyncio.create_task(_analyst_loop(cfg, svc, hours=1))
+        while call_count < 6:
+            await _real_sleep(0)
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+    assert call_count >= 6  # at least 2 full iterations
+
+
+@pytest.mark.asyncio
+async def test_analyst_loop_delay_resets_to_interval() -> None:
+    """After the first iteration the delay resets from the initial-delay value
+    to the full interval (schedule-hours * 3600)."""
+    cfg = Config(projects=[])
+    svc = CostService(cfg)
+
+    sleep_args: list[float] = []
+    _real_sleep = asyncio.sleep
+
+    async def fake_sleep(seconds: float) -> None:
+        sleep_args.append(seconds)
+        await _real_sleep(0)
+
+    with (
+        patch("robotsix_cost_monitor.app.asyncio.sleep", fake_sleep),
+        patch("robotsix_cost_monitor.app.run_analyst", AsyncMock()),
+        patch("robotsix_cost_monitor.app.run_ticket_analyst", AsyncMock()),
+        patch("robotsix_cost_monitor.app.run_stage_analyst", AsyncMock()),
+        patch("robotsix_cost_monitor.app._initial_analyst_delay", return_value=42.0),
+    ):
+        task = asyncio.create_task(_analyst_loop(cfg, svc, hours=24))
+        while len(sleep_args) < 2:
+            await _real_sleep(0)
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+    assert sleep_args[0] == 42.0
+    assert sleep_args[1] == 24 * 3600
+
+
+@pytest.mark.asyncio
+async def test_analyst_loop_clamps_interval_at_one_hour() -> None:
+    """When ``hours`` < 1 the interval is clamped to 1 hour (3600 s)."""
+    cfg = Config(projects=[])
+    svc = CostService(cfg)
+
+    sleep_args: list[float] = []
+    _real_sleep = asyncio.sleep
+
+    async def fake_sleep(seconds: float) -> None:
+        sleep_args.append(seconds)
+        await _real_sleep(0)
+
+    with (
+        patch("robotsix_cost_monitor.app.asyncio.sleep", fake_sleep),
+        patch("robotsix_cost_monitor.app.run_analyst", AsyncMock()),
+        patch("robotsix_cost_monitor.app.run_ticket_analyst", AsyncMock()),
+        patch("robotsix_cost_monitor.app.run_stage_analyst", AsyncMock()),
+        patch("robotsix_cost_monitor.app._last_analyst_run", return_value=None),
+    ):
+        task = asyncio.create_task(_analyst_loop(cfg, svc, hours=0.1))
+        while len(sleep_args) < 2:
+            await _real_sleep(0)
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+    assert sleep_args[0] == 0.0
+    assert sleep_args[1] == 3600.0
+
+
+@pytest.mark.asyncio
+async def test_analyst_loop_cancellation() -> None:
+    """Cancelling the scheduler task raises ``CancelledError`` and stops the loop."""
+    cfg = Config(projects=[])
+    svc = CostService(cfg)
+
+    async def never_finishes(_cfg: object, _svc: object) -> None:
+        await asyncio.Event().wait()
+
+    with (
+        patch("robotsix_cost_monitor.app.run_analyst", never_finishes),
+        patch("robotsix_cost_monitor.app.run_ticket_analyst", AsyncMock()),
+        patch("robotsix_cost_monitor.app.run_stage_analyst", AsyncMock()),
+        patch("robotsix_cost_monitor.app._last_analyst_run", return_value=None),
+    ):
+        task = asyncio.create_task(_analyst_loop(cfg, svc, hours=1))
+        await asyncio.sleep(0)  # let the loop enter its first analysis
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+
+# ---------------------------------------------------------------------------
+# _reconcile_loop — schedule + error tolerance
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_reconcile_loop_continues_after_failure() -> None:
+    """A failing reconcile call does not kill the loop — it sleeps and retries."""
+    cfg = Config(projects=[])
+
+    reconcile_calls = 0
+
+    async def fail_then_pass(_cfg: object) -> None:
+        nonlocal reconcile_calls
+        reconcile_calls += 1
+        if reconcile_calls <= 1:
+            raise RuntimeError("reconcile failed")
+
+    sleep_args: list[float] = []
+    _real_sleep = asyncio.sleep
+
+    async def fake_sleep(seconds: float) -> None:
+        sleep_args.append(seconds)
+        await _real_sleep(0)
+
+    with (
+        patch("robotsix_cost_monitor.app.asyncio.sleep", fake_sleep),
+        patch("robotsix_cost_monitor.app.reconcile_all", fail_then_pass),
+    ):
+        task = asyncio.create_task(_reconcile_loop(cfg, hours=1))
+        while reconcile_calls < 2:
+            await _real_sleep(0)
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+    assert reconcile_calls >= 2
+    assert len(sleep_args) >= 2
+    assert sleep_args[0] == 3600.0
+    assert sleep_args[1] == 3600.0
+
+
+@pytest.mark.asyncio
+async def test_reconcile_loop_clamps_interval_at_one_hour() -> None:
+    """When ``hours`` < 1 the reconcile interval is clamped to 1 hour."""
+    cfg = Config(projects=[])
+
+    sleep_args: list[float] = []
+    _real_sleep = asyncio.sleep
+
+    async def fake_sleep(seconds: float) -> None:
+        sleep_args.append(seconds)
+        await _real_sleep(0)
+
+    with (
+        patch("robotsix_cost_monitor.app.asyncio.sleep", fake_sleep),
+        patch("robotsix_cost_monitor.app.reconcile_all", AsyncMock()),
+    ):
+        task = asyncio.create_task(_reconcile_loop(cfg, hours=0.01))
+        while len(sleep_args) < 2:
+            await _real_sleep(0)
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+    for s in sleep_args[:2]:
+        assert s == 3600.0
+
+
+@pytest.mark.asyncio
+async def test_reconcile_loop_cancellation() -> None:
+    """Cancelling the reconcile loop task raises ``CancelledError``."""
+    cfg = Config(projects=[])
+
+    async def blocked(_cfg: object) -> None:
+        await asyncio.Event().wait()
+
+    with (
+        patch("robotsix_cost_monitor.app.asyncio.sleep", AsyncMock()),
+        patch("robotsix_cost_monitor.app.reconcile_all", blocked),
+    ):
+        task = asyncio.create_task(_reconcile_loop(cfg, hours=1))
+        await asyncio.sleep(0)  # let the loop enter reconcile_all
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
