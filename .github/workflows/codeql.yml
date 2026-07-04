@@ -17,6 +17,6 @@ jobs:
     permissions:
       # security-events: write needed to upload CodeQL SARIF results
       contents: read
-      security-events: write
+      security-events: write  # upload CodeQL SARIF results to the Security tab
     with:
       languages: python,javascript-typescript

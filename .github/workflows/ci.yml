@@ -36,7 +36,7 @@ jobs:
     # contents: read for checkout, pull-requests: write to post dependency review comments
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: write  # dependency-review-action posts findings as PR comments
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -89,7 +89,7 @@ jobs:
     # `security` job below already does this; the `ci` job was missing it.
     permissions:
       contents: read
-      security-events: write
+      security-events: write  # nested python-ci 'tests' job uploads SARIF
     uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-ci.yml@77e10e286717cfe0eeb6b8d9ce985f3794236d15 # main
     with:
       # The project requires Python >=3.14 (see pyproject `requires-python`); a
@@ -104,7 +104,7 @@ jobs:
     # security-events: write needed to upload SARIF results to the Security tab
     permissions:
       contents: read
-      security-events: write
+      security-events: write  # upload SARIF scan results to the Security tab
     uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-security.yml@77e10e286717cfe0eeb6b8d9ce985f3794236d15 # main
     with:
       install-extras: ""
@@ -142,7 +142,7 @@ jobs:
     # actions: read needed to download artifacts from prior jobs
     permissions:
       contents: read
-      actions: read
+      actions: read  # download build artifacts from prior jobs
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -166,7 +166,7 @@ jobs:
     # pull-requests: write needed for Socket.dev to post PR comments
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: write  # Socket.dev posts firewall findings as PR comments
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
