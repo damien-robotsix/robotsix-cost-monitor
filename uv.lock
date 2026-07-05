@@ -1178,6 +1178,7 @@ dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "respx" },
+    { name = "robotsix-modules" },
     { name = "ruff" },
 ]
 docs = [
@@ -1210,6 +1211,7 @@ dev = [
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-asyncio", specifier = ">=0.24" },
     { name = "respx", specifier = ">=0.22" },
+    { name = "robotsix-modules", git = "https://github.com/damien-robotsix/robotsix-modules.git" },
     { name = "ruff", specifier = ">=0.15.20" },
 ]
 docs = [
@@ -1238,6 +1240,15 @@ claude-sdk = [
 ]
 openrouter = [
     { name = "pydantic-ai-slim", extra = ["openrouter"] },
+]
+
+[[package]]
+name = "robotsix-modules"
+version = "0.2.0"
+source = { git = "https://github.com/damien-robotsix/robotsix-modules.git#377a0f785e4b713be8ab8cbf97a26f4e4e9a79d7" }
+dependencies = [
+    { name = "jsonschema" },
+    { name = "pyyaml" },
 ]
 
 [[package]]

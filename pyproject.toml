@@ -31,6 +31,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=0.24",
     "respx>=0.22",
+    "robotsix-modules",
     "ruff>=0.15.20",
     "mypy>=1.13,<2",
 ]
@@ -55,11 +56,16 @@ packages = ["src/robotsix_cost_monitor"]
 [tool.hatch.metadata]
 allow-direct-references = true
 
+[tool.uv.sources]
+robotsix-modules = { git = "https://github.com/damien-robotsix/robotsix-modules.git" }
+
 [tool.uv]
 # GHSA-4xgf-cpjx-pc3j: pydantic-settings <2.14.2 allows symlink traversal
 # outside secrets_dir.  Force the fixed version for all transitive dependants
 # (currently mcp → claude-agent-sdk → robotsix-llmio[claude_sdk]).
 constraint-dependencies = ["pydantic-settings>=2.14.2"]
+
+
 
 [tool.ruff]
 line-length = 88

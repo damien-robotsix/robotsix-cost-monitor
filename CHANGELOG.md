@@ -3,7 +3,8 @@
 - Moved `analyst.test.js` from `tests/web/` to `tests/robotsix_cost_monitor/web/static/` (per-module layout; already satisfied by sibling ticket).
 - Move `mypy` and `vulture` from the `dev` dependency group to a new `typing` group so that `uv sync` does not require downloading `pathspec` (a mypy dependency) when only running tests.
 - Move `tests/web/shared.test.js` to `tests/robotsix_cost_monitor/web/static/shared.test.js` and update vitest config include pattern to align with per-module test layout convention. Both old (`tests/web/**`) and new (`tests/robotsix_cost_monitor/web/static/`) include patterns are kept so pending analyst/dashboard migrations continue to run.
-- Add inline module-taxonomy validation script (`scripts/validate-modules.py`) and CI validation step for `docs/modules.yaml`.
+- Add `module-validation` CI job that validates `docs/modules.yaml` against the canonical robotsix-modules JSON Schema.  The job uses `robotsix-modules-validate` when the dev dependency is available, falling back to a vendored `scripts/validate_modules.py` (uses only `pyyaml` + `jsonschema`) when offline.
+- Adopt `robotsix-modules` as a dev dependency (Git source) and add a vendored inline validator (`scripts/validate_modules.py` + `scripts/modules.schema.yaml`) for offline resilience.
 - Add typed exception hierarchy (`CostMonitorError`, `ExternalServiceError`, `ExternalAuthError`, etc.) to distinguish retriable transient errors from terminal configuration errors
 - Add `RetryClient` (jittered exponential-backoff httpx wrapper) for Langfuse and OpenRouter HTTP calls
 - Add `cost_monitor_error_handler` to return consistent JSON error envelopes for cost-monitor errors
