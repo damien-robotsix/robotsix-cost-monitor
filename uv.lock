@@ -1268,10 +1268,13 @@ analyst = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
     { name = "respx" },
+    { name = "ruff" },
+    { name = "vulture" },
 ]
 docs = [
     { name = "mkdocs-material" },
@@ -1299,10 +1302,13 @@ provides-extras = ["analyst"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "mypy", specifier = ">=1.13" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-asyncio", specifier = ">=0.24" },
     { name = "pytest-cov", specifier = ">=6.0" },
     { name = "respx", specifier = ">=0.22" },
+    { name = "ruff", specifier = ">=0.15.20" },
+    { name = "vulture", specifier = ">=2.11" },
 ]
 docs = [
     { name = "mkdocs-material", specifier = ">=9" },

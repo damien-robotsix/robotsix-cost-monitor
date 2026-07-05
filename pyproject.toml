@@ -32,6 +32,9 @@ dev = [
     "pytest-asyncio>=0.24",
     "pytest-cov>=6.0",
     "respx>=0.22",
+    "ruff>=0.15.20",
+    "mypy>=1.13",
+    "vulture>=2.11",
 ]
 lint = [
     "ruff>=0.15.20",
