@@ -65,7 +65,7 @@ constraint-dependencies = ["pydantic-settings>=2.14.2"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "S", "D"]
