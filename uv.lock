@@ -1280,6 +1280,11 @@ docs = [
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extra = ["python"] },
 ]
+lint = [
+    { name = "mypy" },
+    { name = "ruff" },
+    { name = "vulture" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -1308,6 +1313,11 @@ dev = [
 docs = [
     { name = "mkdocs-material", specifier = ">=9" },
     { name = "mkdocstrings", extras = ["python"], specifier = ">=1.0.4" },
+]
+lint = [
+    { name = "mypy", specifier = ">=1.13" },
+    { name = "ruff", specifier = ">=0.15.20" },
+    { name = "vulture", specifier = ">=2.11" },
 ]
 
 [[package]]

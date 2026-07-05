@@ -1,0 +1,77 @@
+# syntax=docker/dockerfile:1
+
+# ---------------------------------------------------------------------------
+# Development / CI image — extends the production builder with dev + lint
+# dependency groups pre-installed so that `uv sync --locked --group dev` and
+# `uv run pytest` work without a PyPI round-trip (the sandbox has no outbound
+# internet).  Tag this image as `:dev` and use it as the test-harness sandbox.
+#
+# Build (from repo root):
+#   docker build -f Dockerfile.dev -t robotsix-cost-monitor:dev .
+# ---------------------------------------------------------------------------
+
+FROM python:3.14-slim AS builder
+
+COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /usr/local/bin/uv
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=0
+
+WORKDIR /app
+
+# Pre-create the virtual environment so uv sync can populate it.
+RUN python -m venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
+
+# Copy the manifest files first (layer caching: only re-sync when they change).
+COPY pyproject.toml uv.lock README.md ./
+COPY src ./src
+
+# Install the production dependency set + the project, then layer in the dev,
+# lint, and docs groups so the sandbox can run pytest, mypy, ruff, mkdocs, etc.
+# --active ensures uv sync installs into /opt/venv (the active venv) rather
+# than creating a separate .venv in the project directory.
+RUN uv export --frozen --no-emit-project --no-hashes --extra analyst > requirements.txt \
+    && uv pip install --python /opt/venv/bin/python -r requirements.txt \
+    && uv pip install --python /opt/venv/bin/python --no-deps . \
+    && uv sync --active --locked --group dev --group lint --group docs
+
+# ---------------------------------------------------------------------------
+# Runtime: the same slim Python 3.14 base, but with the full virtualenv.
+# ---------------------------------------------------------------------------
+FROM python:3.14-slim AS runtime
+
+COPY --from=builder /opt/venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
+
+# Install Node.js + claude-code (same as the production image) so the analyst
+# extra works if configured.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends nodejs npm \
+    && npm install -g @anthropic-ai/claude-code@2.1.158 \
+    && claude --version \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG APP_UID=1001
+ARG APP_GID=1001
+RUN groupadd --gid ${APP_GID} app \
+    && useradd --create-home --uid ${APP_UID} --gid ${APP_GID} app \
+    && mkdir -p /home/app/config /home/app/.claude /data \
+    && chown -R app:app /home/app/config /home/app/.claude /data
+
+WORKDIR /home/app
+USER app
+
+ENV COST_MONITOR_CONFIG=/home/app/config/projects.yaml \
+    COST_MONITOR_DATA=/data
+
+EXPOSE 8080
+
+ENTRYPOINT ["robotsix-cost-monitor"]
+CMD ["serve", "--host", "0.0.0.0", "--port", "8080"]

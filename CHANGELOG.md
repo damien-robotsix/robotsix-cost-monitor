@@ -1,5 +1,10 @@
 ## 0.0.0 (unreleased)
 
+- Simplify `test_command` in `.robotsix-mill/config.yaml`: always sync dev deps before running pytest instead of trying a fast-path that fails when pytest isn't installed.
+- Fix `Dockerfile.dev` to pass `--active` to `uv sync` so dev/lint/docs groups are installed into `/opt/venv` (the runtime-accessible venv) rather than a separate `.venv` in the build directory.  Also update the mill `test_command` to use `--active --no-sync` with a fallback that syncs when network is available.
+- Add `Dockerfile.dev` that pre-installs the `dev`, `lint`, and `docs` dependency groups at image-build time so the test sandbox can run `make test` / `uv run pytest` without a PyPI round-trip (the sandbox has no outbound internet).
+- Split `[dependency-groups] dev` into `dev` (test-only: pytest*, respx) and `lint` (ruff, mypy, vulture) so that `make test` no longer requires downloading lint tools — avoids transient DNS failures blocking CI.
+- Trace-level analyst prompt now instructs the agent to identify the current repo from `session.id` metadata before attempting to access paths, avoiding wasted calls chasing paths from other workspaces.
 - Added Configuration Reference and CLI Reference pages to the MkDocs documentation site.
 - Remove orphaned `[tool.bandit]` section from `pyproject.toml` — bandit was never installed or invoked; security scanning is already covered by Ruff S rules, trufflehog, detect-secrets, and CodeQL in CI.
 - Refactor `_ORCHESTRATOR_SYSTEM` to reference shared `_PROPOSAL_JSON` constant instead of duplicating the JSON-output instruction inline.

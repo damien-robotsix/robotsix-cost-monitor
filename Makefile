@@ -1,15 +1,25 @@
-.PHONY: test install lint typecheck format serve docs clean
+.PHONY: test install install-test install-lint lint typecheck format serve docs clean
 
 install:
-	uv sync --locked --all-extras
+	uv sync --locked --all-extras --all-groups
 
-test: install
-	uv run pytest
+install-test:
+	uv sync --locked --group dev
 
-lint:
+install-lint:
+	uv sync --locked --group lint
+
+# `make test` installs dev deps (requires network) then runs pytest.
+# For offline/CI use, the mill runs its own `test_command` from
+# .robotsix-mill/config.yaml, which uses `--no-sync` against a
+# pre-built venv (see Dockerfile.dev).
+test: install-test
+	uv run --no-sync pytest
+
+lint: install-lint
 	uv run pre-commit run --all-files
 
-typecheck:
+typecheck: install-lint
 	uv run mypy src/
 
 format:

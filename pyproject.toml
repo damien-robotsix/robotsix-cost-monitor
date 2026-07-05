@@ -36,6 +36,11 @@ dev = [
     "mypy>=1.13",
     "vulture>=2.11",
 ]
+lint = [
+    "ruff>=0.15.20",
+    "mypy>=1.13",
+    "vulture>=2.11",
+]
 docs = [
     "mkdocs-material>=9",
     "mkdocstrings[python]>=1.0.4",
