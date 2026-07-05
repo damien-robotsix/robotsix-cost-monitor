@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Fix `_TRACE_SYSTEM` prompt referencing non-existent `session.id` JSON key — changed to `sessionId` to match the aliased field in the trace payload.
 - Simplify `test_command` in `.robotsix-mill/config.yaml`: always sync dev deps before running pytest instead of trying a fast-path that fails when pytest isn't installed.
 - Fix `Dockerfile.dev` to pass `--active` to `uv sync` so dev/lint/docs groups are installed into `/opt/venv` (the runtime-accessible venv) rather than a separate `.venv` in the build directory.  Also update the mill `test_command` to use `--active --no-sync` with a fallback that syncs when network is available.
 - Add `Dockerfile.dev` that pre-installs the `dev`, `lint`, and `docs` dependency groups at image-build time so the test sandbox can run `make test` / `uv run pytest` without a PyPI round-trip (the sandbox has no outbound internet).

@@ -68,7 +68,7 @@ _ORCHESTRATOR_SYSTEM = (
 
 _TRACE_SYSTEM = (
     "First, determine which repo you are in. Check the trace metadata "
-    "`session.id` field (the repo name is the prefix before ` · `) or run "
+    "`sessionId` field (the repo name is the prefix before ` · `) or run "
     "`git remote -v | head -1` to identify the repo. DO NOT attempt to access "
     "paths from other workspaces found in the trace data — those belong to "
     "different repos that are NOT accessible from this sandbox.\n\n"
