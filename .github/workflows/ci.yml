@@ -18,6 +18,9 @@ jobs:
     name: Lockfile integrity check
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      UV_OFFLINE: "1"
+      UV_CACHE_DIR: .cache/uv
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -25,8 +28,8 @@ jobs:
       - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: true
-          cache-python: true
-      - run: uv sync --locked
+          cache-python: false
+      - run: uv lock --check
 
   dependency-review:
     name: Dependency review
@@ -49,6 +52,9 @@ jobs:
     name: Dependency hygiene
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      UV_OFFLINE: "1"
+      UV_CACHE_DIR: .cache/uv
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -56,7 +62,7 @@ jobs:
       - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: true
-          cache-python: true
+          cache-python: false
       - run: uv sync --locked --all-extras
       - run: uv run --with deptry deptry .
 
@@ -64,6 +70,8 @@ jobs:
     name: Vulnerability audit
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      UV_CACHE_DIR: .cache/uv
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -71,7 +79,7 @@ jobs:
       - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: true
-          cache-python: true
+          cache-python: false
       - run: uv sync --locked
       - run: uv audit --frozen
       - run: |
@@ -82,22 +90,28 @@ jobs:
 
   ci:
     name: CI (Python tests)
-    # The reusable python-ci.yml's nested `tests` job uploads SARIF, so it
-    # requests `security-events: write`. A caller job MUST grant at least that
-    # or GitHub rejects the reusable-workflow call with a startup_failure
-    # ("nested job 'tests' is requesting 'security-events: write'"). The
-    # `security` job below already does this; the `ci` job was missing it.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
-      security-events: write  # nested python-ci 'tests' job uploads SARIF
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-ci.yml@77e10e286717cfe0eeb6b8d9ce985f3794236d15 # main
-    with:
-      # The project requires Python >=3.14 (see pyproject `requires-python`); a
-      # 3.12 runner fails dependency install with "No interpreter found".
-      python-version: "3.14"
-      install-extras: "analyst"
-      cov-package: "robotsix_cost_monitor"
-    secrets: inherit  # zizmor: ignore[secrets-inherit] -- reusable workflow needs full secret access
+      security-events: write  # for SARIF upload (reserved; not used in air-gapped CI)
+    env:
+      UV_OFFLINE: "1"
+      UV_CACHE_DIR: .cache/uv
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          enable-cache: true
+          cache-python: false
+          python-version: "3.14"
+      - run: uv sync --locked --extra analyst --group dev
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy src/
+      - run: uv run pytest
 
   security:
     name: Security scans
@@ -139,6 +153,9 @@ jobs:
     name: Generate SBOM
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      UV_OFFLINE: "1"
+      UV_CACHE_DIR: .cache/uv
     # actions: read needed to download artifacts from prior jobs
     permissions:
       contents: read
@@ -150,7 +167,7 @@ jobs:
       - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
         with:
           enable-cache: true
-          cache-python: true
+          cache-python: false
       - run: uv sync --locked
       - name: Generate CycloneDX SBOM
         run: uv export --format cyclonedx1.5 --frozen --extra analyst --preview-features sbom-export > sbom.cyclonedx.json
@@ -173,7 +190,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "20"
+          node-version-file: '.nvmrc'
           cache: 'npm'
       - run: npm ci
       - run: npm audit signatures
