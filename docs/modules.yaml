@@ -37,6 +37,18 @@ modules:
       - tests/robotsix_cost_monitor/test_config.py
     role: YAML config models + loader (config/projects.yaml)
 
+  - id: robotsix_cost_monitor.exceptions
+    paths:
+      - src/robotsix_cost_monitor/exceptions.py
+      - tests/robotsix_cost_monitor/test_exceptions.py
+    role: Typed exception hierarchy (retriable vs terminal errors)
+
+  - id: robotsix_cost_monitor.clients._http
+    paths:
+      - src/robotsix_cost_monitor/clients/_http.py
+      - tests/robotsix_cost_monitor/clients/test_http.py
+    role: Typed httpx.AsyncClient wrapper with retry/backoff
+
   - id: robotsix_cost_monitor.service
     paths:
       - src/robotsix_cost_monitor/service.py

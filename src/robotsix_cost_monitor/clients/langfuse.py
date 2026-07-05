@@ -15,7 +15,6 @@ import json
 from datetime import timedelta
 from typing import Any
 
-import httpx
 from robotsix_llmio.core.langfuse_async_client import AsyncLangfuseReadClient
 
 from ..aggregations import (
@@ -24,6 +23,7 @@ from ..aggregations import (
     _utc_now,
     backend_for_model,
 )
+from ._http import RetryClient
 from .models import LangfuseMetricsRow, LangfuseTrace
 
 __all__ = [
@@ -109,18 +109,16 @@ class LangfuseClient:
         }
         if time_dimension is not None:
             query["timeDimension"] = time_dimension
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            resp = await client.get(
-                self._lf.url("/api/public/metrics"),
-                params={"query": json.dumps(query)},
-                headers={"Authorization": self._lf.auth_header()},
-            )
-            resp.raise_for_status()
-            data: dict[str, Any] = resp.json()
-            return [
-                LangfuseMetricsRow.model_validate(row)
-                for row in (data.get("data") or [])
-            ]
+        client = RetryClient(timeout=self._timeout)
+        resp = await client.get(
+            self._lf.url("/api/public/metrics"),
+            params={"query": json.dumps(query)},
+            headers={"Authorization": self._lf.auth_header()},
+        )
+        data: dict[str, Any] = resp.json()
+        return [
+            LangfuseMetricsRow.model_validate(row) for row in (data.get("data") or [])
+        ]
 
     async def fetch_trace_count_window(self, hours: float) -> int:
         """Count traces in the exact last *hours* via a server-side metrics query.

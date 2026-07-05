@@ -1,5 +1,9 @@
 ## 0.0.0 (unreleased)
 
+- Add typed exception hierarchy (`CostMonitorError`, `ExternalServiceError`, `ExternalAuthError`, etc.) to distinguish retriable transient errors from terminal configuration errors
+- Add `RetryClient` (jittered exponential-backoff httpx wrapper) for Langfuse and OpenRouter HTTP calls
+- Add `cost_monitor_error_handler` to return consistent JSON error envelopes for cost-monitor errors
+- Migrate all `except Exception` catch-sites in `service.py`, `app.py`, and `reconcile.py` to catch typed exceptions with a catch-all fallback
 - Fix `_TRACE_SYSTEM` prompt referencing non-existent `session.id` JSON key — changed to `sessionId` to match the aliased field in the trace payload.
 - Simplify `test_command` in `.robotsix-mill/config.yaml`: always sync dev deps before running pytest instead of trying a fast-path that fails when pytest isn't installed.
 - Fix `Dockerfile.dev` to pass `--active` to `uv sync` so dev/lint/docs groups are installed into `/opt/venv` (the runtime-accessible venv) rather than a separate `.venv` in the build directory.  Also update the mill `test_command` to use `--active --no-sync` with a fallback that syncs when network is available.

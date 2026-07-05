@@ -24,6 +24,7 @@ from .analyst import (
     run_ticket_analyst,
 )
 from .config import Config
+from .exceptions import CostMonitorError
 from .reconcile import load_last_reconcile, reconcile_all, reconcile_project
 from .service import CostService
 
@@ -122,6 +123,16 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     )
 
 
+async def cost_monitor_error_handler(
+    request: Request, exc: CostMonitorError
+) -> JSONResponse:
+    """Return a typed cost-monitor error in the consistent JSON envelope."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": {"code": exc.error_code, "detail": exc.detail}},
+    )
+
+
 async def unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch-all: log the full traceback, return sanitized 500."""
     logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
@@ -134,9 +145,10 @@ async def unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
 
 
 def register_exception_handlers(app: FastAPI) -> None:
-    """Wire the three exception handlers onto *app*."""
+    """Wire the exception handlers onto *app*."""
     app.add_exception_handler(RequestValidationError, validation_handler)  # type: ignore[arg-type]
     app.add_exception_handler(HTTPException, http_exception_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(CostMonitorError, cost_monitor_error_handler)  # type: ignore[arg-type]
     app.add_exception_handler(Exception, unhandled_handler)
 
 
