@@ -36,7 +36,7 @@ def _safe_load_json[T](path: Path, default: T) -> T:
         return default
     try:
         return cast(T, json.loads(path.read_text()))
-    except (json.JSONDecodeError, OSError):
+    except json.JSONDecodeError, OSError:
         return default
 
 
