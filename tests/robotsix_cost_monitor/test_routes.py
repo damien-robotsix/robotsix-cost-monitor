@@ -46,6 +46,7 @@ sys.modules["robotsix_llmio.core.langfuse_async_client"] = _llmio_core_langfuse
 from helpers import _config, _proj  # noqa: E402
 
 from robotsix_cost_monitor.config import Config  # noqa: E402
+from robotsix_cost_monitor.exceptions import ProjectNotFoundError  # noqa: E402
 from robotsix_cost_monitor.routes import (  # noqa: E402
     _require_project,
     _window,
@@ -153,7 +154,7 @@ def test_require_project_valid_slug_passes() -> None:
 
 def test_require_project_unknown_slug_raises_404() -> None:
     cfg = _config(_proj("Demo"))
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(ProjectNotFoundError) as exc:
         _require_project("nope", cfg)
     assert exc.value.status_code == 404
     assert "nope" in exc.value.detail
@@ -164,7 +165,7 @@ def test_require_project_case_sensitive_slug() -> None:
     fail because Config.project does an exact slug match.
     """
     cfg = _config(_proj("Demo"))
-    with pytest.raises(HTTPException) as exc:
+    with pytest.raises(ProjectNotFoundError) as exc:
         _require_project("Demo", cfg)
     assert exc.value.status_code == 404
 
@@ -445,7 +446,7 @@ def test_highlights_defaults(client: TestClient) -> None:
 def test_reconcile_project_not_found_404(client: TestClient) -> None:
     r = client.get("/api/reconcile?project=nonexistent")
     assert r.status_code == 404
-    assert r.json()["error"]["code"] == "HTTP_ERROR"
+    assert r.json()["error"]["code"] == "PROJECT_NOT_FOUND"
 
 
 def test_index_returns_html() -> None:
@@ -480,7 +481,7 @@ def test_not_found_uses_http_error_envelope(client: TestClient) -> None:
     r = client.get("/api/summary?project=nonexistent")
     assert r.status_code == 404
     body = r.json()
-    assert body["error"]["code"] == "HTTP_ERROR"
+    assert body["error"]["code"] == "PROJECT_NOT_FOUND"
     assert body["error"]["detail"] == "Unknown project slug: nonexistent"
 
 

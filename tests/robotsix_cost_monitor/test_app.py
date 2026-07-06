@@ -41,7 +41,7 @@ def test_summary_unknown_project_returns_404() -> None:
     r = _empty_app().get("/api/summary?project=nonexistent")
     assert r.status_code == 404
     body = r.json()
-    assert body["error"]["code"] == "HTTP_ERROR"
+    assert body["error"]["code"] == "PROJECT_NOT_FOUND"
     assert "nonexistent" in body["error"]["detail"]
 
 
@@ -67,7 +67,7 @@ def test_unknown_project_across_endpoints() -> None:
         r = c.get(ep)
         assert r.status_code == 404, f"{ep} returned {r.status_code}"
         body = r.json()
-        assert body["error"]["code"] == "HTTP_ERROR"
+        assert body["error"]["code"] == "PROJECT_NOT_FOUND"
         assert "nope" in body["error"]["detail"]
 
 
