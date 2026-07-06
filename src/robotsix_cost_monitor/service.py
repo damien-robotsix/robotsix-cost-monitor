@@ -36,6 +36,30 @@ from .exceptions import (
 
 _T = TypeVar("_T")
 logger = structlog.get_logger(__name__)
+K = TypeVar("K")
+V = TypeVar("V")
+
+
+class TTLCache[K, V]:
+    """Generic TTL cache keyed by ``K``, storing values of type ``V``.
+
+    Each value is paired with a monotonic deadline; ``get_or_fetch`` returns
+    the cached value while it is fresh and falls back to ``fetch_fn`` otherwise.
+    """
+
+    def __init__(self, ttl: float) -> None:
+        """Create a cache where every entry lives for *ttl* seconds."""
+        self._ttl = ttl
+        self._store: dict[K, tuple[V, float]] = {}
+
+    async def get_or_fetch(self, key: K, fetch_fn: Callable[[], Awaitable[V]]) -> V:
+        """Return the cached value for *key* if fresh, otherwise fetch + cache."""
+        hit = self._store.get(key)
+        if hit is not None and hit[1] > time.monotonic():
+            return hit[0]
+        result = await fetch_fn()
+        self._store[key] = (result, time.monotonic() + self._ttl)
+        return result
 
 
 class CostService:
@@ -52,22 +76,23 @@ class CostService:
             )
             for p in config.projects
         }
+        ttl = self.config.settings.cache_ttl_seconds
         # cache: (slug, hours) -> (traces, monotonic_deadline)
-        self._cache: dict[tuple[str, int], tuple[list[LangfuseTrace], float]] = {}
+        self._cache: TTLCache[tuple[str, int], list[LangfuseTrace]] = TTLCache(ttl)
         # cache: (slug, hours) -> (per-model usage rows, monotonic_deadline)
-        self._model_cache: dict[
-            tuple[str, int], tuple[list[dict[str, Any]], float]
-        ] = {}
+        self._model_cache: TTLCache[tuple[str, int], list[dict[str, Any]]] = TTLCache(
+            ttl
+        )
         # cache: (slug, hours) -> ({time_bucket -> {backend -> cost}}, deadline)
-        self._backend_cache: dict[
-            tuple[str, int], tuple[dict[str, dict[str, float]], float]
-        ] = {}
+        self._backend_cache: TTLCache[tuple[str, int], dict[str, dict[str, float]]] = (
+            TTLCache(ttl)
+        )
         # cache: (slug, hours) -> (per-(stage, backend) rows, monotonic_deadline)
-        self._agent_usage_cache: dict[
-            tuple[str, int], tuple[list[dict[str, Any]], float]
-        ] = {}
+        self._agent_usage_cache: TTLCache[tuple[str, int], list[dict[str, Any]]] = (
+            TTLCache(ttl)
+        )
         # cache: (slug, hours) -> (trace_count, monotonic_deadline)
-        self._trace_count_cache: dict[tuple[str, int], tuple[int, float]] = {}
+        self._trace_count_cache: TTLCache[tuple[str, int], int] = TTLCache(ttl)
 
     def _projects(self, slug: str | None) -> list[ProjectConfig]:
         if slug and slug != "all":
@@ -79,17 +104,11 @@ class CostService:
         self,
         project: ProjectConfig,
         hours: int,
-        cache_dict: dict[tuple[str, int], tuple[_T, float]],
+        cache: TTLCache[tuple[str, int], _T],
         fetch_fn: Callable[[int], Awaitable[_T]],
     ) -> _T:
         key = (project.slug, hours)
-        hit = cache_dict.get(key)
-        if hit and hit[1] > time.monotonic():
-            return hit[0]
-        result = await fetch_fn(hours)
-        ttl = self.config.settings.cache_ttl_seconds
-        cache_dict[key] = (result, time.monotonic() + ttl)
-        return result
+        return await cache.get_or_fetch(key, lambda: fetch_fn(hours))
 
     async def _traces(self, project: ProjectConfig, hours: int) -> list[LangfuseTrace]:
         return await self._cached_fetch(

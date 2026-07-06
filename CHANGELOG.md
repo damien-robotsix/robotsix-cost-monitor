@@ -18,6 +18,10 @@
 - Added Configuration Reference and CLI Reference pages to the MkDocs documentation site.
 - `LangfuseTrace` model now preserves extra fields (like `observations`) from the Langfuse API via `extra="allow"` in its `model_config`. This fixes the trace analyst agent receiving traces without their per-span observations.
 - Remove orphaned `[tool.bandit]` section from `pyproject.toml` — bandit was never installed or invoked; security scanning is already covered by Ruff S rules, trufflehog, detect-secrets, and CodeQL in CI.
+- Consolidated 5 duplicate TTL cache dicts into a reusable ``TTLCache[K, V]``
+  class with an ``async get_or_fetch(key, fetch_fn)`` method.  The old
+  manual dict lookups + deadline checks in ``_cached_fetch`` are replaced by
+  a single delegate call to ``cache.get_or_fetch``.
 - Refactor `_ORCHESTRATOR_SYSTEM` to reference shared `_PROPOSAL_JSON` constant instead of duplicating the JSON-output instruction inline.
 - Enable ruff pydocstyle (D) rules — all public API items now require docstrings; tests are excluded.
 - Enable `triage_boilerplate` periodic workflow (`.robotsix-mill/periodic/triage_boilerplate.yaml`).
