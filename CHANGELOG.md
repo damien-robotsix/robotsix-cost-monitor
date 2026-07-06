@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Fix deploy `docker-compose.yml` volume mount paths to match the Dockerfile: config volume now mounts to `/home/app/config` (not `/home/appuser/config`) and data volume to `/data` (not `/home/appuser/.data`), matching the `app` user's home directory and the `COST_MONITOR_DATA` env var.
 - Moved `analyst.test.js` from `tests/web/` to `tests/robotsix_cost_monitor/web/static/` (per-module layout; already satisfied by sibling ticket).
 - Move `mypy` and `vulture` from the `dev` dependency group to a new `typing` group so that `uv sync` does not require downloading `pathspec` (a mypy dependency) when only running tests.
 - Move `tests/web/shared.test.js` to `tests/robotsix_cost_monitor/web/static/shared.test.js` and update vitest config include pattern to align with per-module test layout convention. Both old (`tests/web/**`) and new (`tests/robotsix_cost_monitor/web/static/`) include patterns are kept so pending analyst/dashboard migrations continue to run.
