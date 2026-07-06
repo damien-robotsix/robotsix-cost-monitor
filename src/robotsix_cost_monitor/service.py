@@ -52,9 +52,7 @@ class TTLCache[K, V]:
         self._ttl = ttl
         self._store: dict[K, tuple[V, float]] = {}
 
-    async def get_or_fetch(
-        self, key: K, fetch_fn: Callable[[], Awaitable[V]]
-    ) -> V:
+    async def get_or_fetch(self, key: K, fetch_fn: Callable[[], Awaitable[V]]) -> V:
         """Return the cached value for *key* if fresh, otherwise fetch + cache."""
         hit = self._store.get(key)
         if hit is not None and hit[1] > time.monotonic():
