@@ -30,8 +30,6 @@ jobs:
           cache-python: true
           python-version: "3.14"
       - run: uv lock --check
-        env:
-          UV_OFFLINE: "1"
 
   dependency-review:
     name: Dependency review
@@ -66,8 +64,6 @@ jobs:
           cache-python: true
           python-version: "3.14"
       - run: uv sync --locked --all-extras
-        env:
-          UV_OFFLINE: "1"
       - run: uv run --with deptry deptry .
 
   vulnerability-audit:
@@ -111,8 +107,6 @@ jobs:
           cache-python: true
           python-version: "3.14"
       - run: uv sync --locked --extra analyst --group dev
-        env:
-          UV_OFFLINE: "1"
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy src/
@@ -174,8 +168,6 @@ jobs:
           cache-python: true
           python-version: "3.14"
       - run: uv sync --locked
-        env:
-          UV_OFFLINE: "1"
       - name: Generate CycloneDX SBOM
         run: uv export --format cyclonedx1.5 --frozen --extra analyst --preview-features sbom-export > sbom.cyclonedx.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
