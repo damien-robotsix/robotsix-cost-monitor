@@ -36,8 +36,8 @@ services:
 
     volumes:
       # Named volumes — the central-deploy system manages lifecycle.
-      - cost_monitor_config:/home/appuser/config
-      - cost_monitor_data:/home/appuser/.data
+      - cost_monitor_config:/home/app/config
+      - cost_monitor_data:/data
 
 volumes:
   cost_monitor_config:
