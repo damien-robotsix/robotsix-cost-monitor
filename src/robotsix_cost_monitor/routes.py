@@ -24,7 +24,7 @@ from .analyst import (
     run_ticket_analyst,
 )
 from .config import Config
-from .exceptions import CostMonitorError
+from .exceptions import CostMonitorError, ProjectNotFoundError
 from .reconcile import load_last_reconcile, reconcile_all, reconcile_project
 from .service import CostService
 
@@ -62,7 +62,7 @@ class ProjectWindow(NamedTuple):
 
 def _require_project(project: str, cfg: Config) -> None:
     if project != "all" and not cfg.project(project):
-        raise HTTPException(status_code=404, detail=f"Unknown project slug: {project}")
+        raise ProjectNotFoundError(f"Unknown project slug: {project}")
 
 
 def _window(hours: int, config: Config) -> int:
