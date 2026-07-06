@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Awaitable, Callable
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 import structlog
 
@@ -40,7 +40,7 @@ K = TypeVar("K")
 V = TypeVar("V")
 
 
-class TTLCache(Generic[K, V]):
+class TTLCache[K, V]:
     """Generic TTL cache keyed by ``K``, storing values of type ``V``.
 
     Each value is paired with a monotonic deadline; ``get_or_fetch`` returns
@@ -48,12 +48,14 @@ class TTLCache(Generic[K, V]):
     """
 
     def __init__(self, ttl: float) -> None:
+        """Create a cache where every entry lives for *ttl* seconds."""
         self._ttl = ttl
         self._store: dict[K, tuple[V, float]] = {}
 
     async def get_or_fetch(
         self, key: K, fetch_fn: Callable[[], Awaitable[V]]
     ) -> V:
+        """Return the cached value for *key* if fresh, otherwise fetch + cache."""
         hit = self._store.get(key)
         if hit is not None and hit[1] > time.monotonic():
             return hit[0]

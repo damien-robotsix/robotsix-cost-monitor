@@ -13,7 +13,7 @@
 - Added Configuration Reference and CLI Reference pages to the MkDocs documentation site.
 - Remove orphaned `[tool.bandit]` section from `pyproject.toml` — bandit was never installed or invoked; security scanning is already covered by Ruff S rules, trufflehog, detect-secrets, and CodeQL in CI.
 - Consolidated 5 duplicate TTL cache dicts into a reusable ``TTLCache[K, V]``
-  class with an ``async get_or_fetch(key, ttl, fetch_fn)`` method.  The old
+  class with an ``async get_or_fetch(key, fetch_fn)`` method.  The old
   manual dict lookups + deadline checks in ``_cached_fetch`` are replaced by
   a single delegate call to ``cache.get_or_fetch``.
 - Refactor `_ORCHESTRATOR_SYSTEM` to reference shared `_PROPOSAL_JSON` constant instead of duplicating the JSON-output instruction inline.
