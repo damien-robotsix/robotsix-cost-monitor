@@ -4,7 +4,7 @@ import {
   proposalsHTML,
   render,
   renderTargeted,
-} from '../../src/robotsix_cost_monitor/web/static/analyst.js';
+} from '../../../../src/robotsix_cost_monitor/web/static/analyst.js';
 
 function fixture(html) {
   document.body.innerHTML = html;

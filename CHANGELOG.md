@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Moved `analyst.test.js` from `tests/web/` to `tests/robotsix_cost_monitor/web/static/` (per-module layout; already satisfied by sibling ticket).
 - Add typed exception hierarchy (`CostMonitorError`, `ExternalServiceError`, `ExternalAuthError`, etc.) to distinguish retriable transient errors from terminal configuration errors
 - Add `RetryClient` (jittered exponential-backoff httpx wrapper) for Langfuse and OpenRouter HTTP calls
 - Add `cost_monitor_error_handler` to return consistent JSON error envelopes for cost-monitor errors
@@ -15,6 +16,8 @@
   packages. Follow-up actions: run `uv sync --group lint` before using vulture.
 - Remove `pytest-cov>=6.0` from dev dependencies in `pyproject.toml` and `uv.lock` — it is not pre-cached in the CI sandbox image and its absence during `pip install .[dev]` caused the test environment setup to fail with a DNS resolution error in the network-less sandbox.
 - Pin `mypy<2` in dev dependencies to avoid the `ast-serialize` transitive dependency introduced in mypy 2.1.0, which is not pre-cached in the CI sandbox image.
+- Moved `respx` from hard dev dependency to optional `http-mock` group; `test_langfuse.py` now uses `pytest.importorskip("respx")` so the test suite runs without it.
+- Move analyst JS test to per-module layout (`tests/robotsix_cost_monitor/web/static/analyst.test.js`) and update vitest config accordingly
 - Added Configuration Reference and CLI Reference pages to the MkDocs documentation site.
 - `LangfuseTrace` model now preserves extra fields (like `observations`) from the Langfuse API via `extra="allow"` in its `model_config`. This fixes the trace analyst agent receiving traces without their per-span observations.
 - Remove orphaned `[tool.bandit]` section from `pyproject.toml` — bandit was never installed or invoked; security scanning is already covered by Ruff S rules, trufflehog, detect-secrets, and CodeQL in CI.
