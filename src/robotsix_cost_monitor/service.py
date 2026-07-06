@@ -11,6 +11,8 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
+import structlog
+
 from .aggregations import (
     _trace_cost,
     aggregate_by_name,
@@ -25,8 +27,15 @@ from .aggregations import (
 from .clients.langfuse import LangfuseClient
 from .clients.models import LangfuseTrace
 from .config import Config, ProjectConfig
+from .exceptions import (
+    CacheError,
+    ExternalRateLimitError,
+    ExternalServiceError,
+    ProjectConfigError,
+)
 
 _T = TypeVar("_T")
+logger = structlog.get_logger(__name__)
 
 
 class CostService:
@@ -110,7 +119,18 @@ class CostService:
         for p in self._projects(slug):
             try:
                 out.append((p, await self._traces(p, hours)))
-            except Exception:  # noqa: BLE001 — a dead project must not 500 the page
+            except (ExternalServiceError, ExternalRateLimitError, CacheError):
+                logger.warning(
+                    "project %s failed transiently — returning empty data", p.slug
+                )
+                out.append((p, []))
+            except ProjectConfigError:
+                logger.warning("project %s misconfigured — skipping", p.slug)
+                out.append((p, []))
+            except Exception:
+                logger.exception(
+                    "project %s failed unexpectedly — returning empty data", p.slug
+                )
                 out.append((p, []))
         return out
 
@@ -124,7 +144,18 @@ class CostService:
         for p in self._projects(slug):
             try:
                 parts.append(await fetch(p, hours))
-            except Exception:  # noqa: BLE001 — a dead project must not 500 the page
+            except (ExternalServiceError, ExternalRateLimitError, CacheError):
+                logger.warning(
+                    "project %s failed transiently — returning empty data", p.slug
+                )
+                parts.append([])
+            except ProjectConfigError:
+                logger.warning("project %s misconfigured — skipping", p.slug)
+                parts.append([])
+            except Exception:
+                logger.exception(
+                    "project %s failed unexpectedly — returning empty data", p.slug
+                )
                 parts.append([])
         return [r for part in parts for r in part]
 
@@ -279,11 +310,33 @@ class CostService:
         for p in self._projects(slug):
             try:
                 models = await self._model_usage(p, hours)
-            except Exception:  # noqa: BLE001 — a dead project must not 500 the page
+            except (ExternalServiceError, ExternalRateLimitError, CacheError):
+                logger.warning(
+                    "project %s model-usage fetch failed transiently", p.slug
+                )
+                models = []
+            except ProjectConfigError:
+                logger.warning("project %s misconfigured — skipping", p.slug)
+                models = []
+            except Exception:
+                logger.exception(
+                    "project %s model-usage fetch failed unexpectedly", p.slug
+                )
                 models = []
             try:
                 trace_count = await self._trace_count(p, hours)
-            except Exception:  # noqa: BLE001
+            except (ExternalServiceError, ExternalRateLimitError, CacheError):
+                logger.warning(
+                    "project %s trace-count fetch failed transiently", p.slug
+                )
+                trace_count = 0
+            except ProjectConfigError:
+                logger.warning("project %s misconfigured — skipping", p.slug)
+                trace_count = 0
+            except Exception:
+                logger.exception(
+                    "project %s trace-count fetch failed unexpectedly", p.slug
+                )
                 trace_count = 0
             cost = round(sum(m["cost"] for m in models), 6)
             total += cost
@@ -407,7 +460,18 @@ class CostService:
         for p in self._projects(slug):
             try:
                 parts.append(await self._backend_cost(p, hours))
-            except Exception:  # noqa: BLE001 — a dead project must not 500 the page
+            except (ExternalServiceError, ExternalRateLimitError, CacheError):
+                logger.warning(
+                    "project %s backend-cost fetch failed transiently", p.slug
+                )
+                parts.append({})
+            except ProjectConfigError:
+                logger.warning("project %s misconfigured — skipping", p.slug)
+                parts.append({})
+            except Exception:
+                logger.exception(
+                    "project %s backend-cost fetch failed unexpectedly", p.slug
+                )
                 parts.append({})
         return backend_cost_series(parts, backend)
 

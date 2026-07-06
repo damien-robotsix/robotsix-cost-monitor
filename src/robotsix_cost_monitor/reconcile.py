@@ -15,10 +15,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, cast
 
-import httpx
+import structlog
 
+from .clients._http import RetryClient
 from .clients.langfuse import LangfuseClient
 from .config import Config, ProjectConfig, Settings, data_dir
+from .exceptions import ExternalServiceError
+
+logger = structlog.get_logger(__name__)
 
 
 def _state_dir() -> Path:
@@ -58,15 +62,14 @@ async def _fetch_credits(api_key: str) -> dict[str, float]:
     """Fetch account-level credit balance from OpenRouter (informational)."""
     url = "https://openrouter.ai/api/v1/credits"
     headers = {"Authorization": f"Bearer {api_key}"}
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        resp = await client.get(url, headers=headers)
-        resp.raise_for_status()
-        data = resp.json().get("data") or {}
-        return {
-            "total_credits": float(data.get("total_credits", 0) or 0),
-            "total_usage": float(data.get("total_usage", 0) or 0),
-            "remaining": float(data.get("remaining", 0) or 0),
-        }
+    client = RetryClient(timeout=20.0)
+    resp = await client.get(url, headers=headers)
+    data = resp.json().get("data") or {}
+    return {
+        "total_credits": float(data.get("total_credits", 0) or 0),
+        "total_usage": float(data.get("total_usage", 0) or 0),
+        "remaining": float(data.get("remaining", 0) or 0),
+    }
 
 
 async def reconcile_project(
@@ -103,7 +106,12 @@ async def reconcile_project(
     # consumer even when several keys share one OpenRouter account).
     try:
         cumulative = (await asyncio.to_thread(orc.fetch_key_usage)).usage
-    except Exception as exc:  # noqa: BLE001 — surface as status, not a crash
+    except ExternalServiceError as exc:
+        logger.warning("OpenRouter fetch transient failure: %s", exc)
+        result["error"] = f"OpenRouter fetch failed: {exc}"
+        return result
+    except Exception as exc:
+        logger.exception("OpenRouter fetch unexpected failure: %s", exc)
         result["error"] = f"OpenRouter fetch failed: {exc}"
         return result
 
