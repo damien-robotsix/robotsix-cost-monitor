@@ -22,6 +22,7 @@
 - Move analyst JS test to per-module layout (`tests/robotsix_cost_monitor/web/static/analyst.test.js`) and update vitest config accordingly
 - Add `UV_OFFLINE: "1"` to the `ci` job's `env` block in `.github/workflows/ci.yml` to prevent cold-cache DNS failures in air-gapped CI, consistent with the `lockfile-check`, `dependency-hygiene`, and `sbom` jobs.
 - Bump Node.js from 20 (EOL) to 22 LTS across `.nvmrc`, `.node-version`, and CI workflow (now uses `node-version-file: '.nvmrc'`)
+- Added `COST_MONITOR_CONFIG` and `COST_MONITOR_DATA` entries to `deploy/.env.example`, matching the mandatory env vars documented in AGENT.md. (mill: deploy/.env.example missing mandatory COST_MONITOR_CONFIG and COST_MONITOR_DATA env vars (20260705T091130Z-deploy-env-example-missing-mandatory-cos-63be) [WIP])
 - Added Configuration Reference and CLI Reference pages to the MkDocs documentation site.
 - `LangfuseTrace` model now preserves extra fields (like `observations`) from the Langfuse API via `extra="allow"` in its `model_config`. This fixes the trace analyst agent receiving traces without their per-span observations.
 - Remove orphaned `[tool.bandit]` section from `pyproject.toml` — bandit was never installed or invoked; security scanning is already covered by Ruff S rules, trufflehog, detect-secrets, and CodeQL in CI.
