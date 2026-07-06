@@ -54,4 +54,4 @@ class LangfuseTrace(BaseModel):
     )
     cost: float | None = None
 
-    model_config = {"populate_by_name": True}
+    model_config = {"populate_by_name": True, "extra": "allow"}

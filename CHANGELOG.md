@@ -10,7 +10,13 @@
 - Add `Dockerfile.dev` that pre-installs the `dev`, `lint`, and `docs` dependency groups at image-build time so the test sandbox can run `make test` / `uv run pytest` without a PyPI round-trip (the sandbox has no outbound internet).
 - Split `[dependency-groups] dev` into `dev` (test-only: pytest*, respx) and `lint` (ruff, mypy, vulture) so that `make test` no longer requires downloading lint tools — avoids transient DNS failures blocking CI.
 - Trace-level analyst prompt now instructs the agent to identify the current repo from `session.id` metadata before attempting to access paths, avoiding wasted calls chasing paths from other workspaces.
+- Moved `vulture` from the `dev` dependency group to a new `lint` group so that
+  `uv sync --group dev` (used by the test sandbox) does not require network-only
+  packages. Follow-up actions: run `uv sync --group lint` before using vulture.
+- Remove `pytest-cov>=6.0` from dev dependencies in `pyproject.toml` and `uv.lock` — it is not pre-cached in the CI sandbox image and its absence during `pip install .[dev]` caused the test environment setup to fail with a DNS resolution error in the network-less sandbox.
+- Pin `mypy<2` in dev dependencies to avoid the `ast-serialize` transitive dependency introduced in mypy 2.1.0, which is not pre-cached in the CI sandbox image.
 - Added Configuration Reference and CLI Reference pages to the MkDocs documentation site.
+- `LangfuseTrace` model now preserves extra fields (like `observations`) from the Langfuse API via `extra="allow"` in its `model_config`. This fixes the trace analyst agent receiving traces without their per-span observations.
 - Remove orphaned `[tool.bandit]` section from `pyproject.toml` — bandit was never installed or invoked; security scanning is already covered by Ruff S rules, trufflehog, detect-secrets, and CodeQL in CI.
 - Refactor `_ORCHESTRATOR_SYSTEM` to reference shared `_PROPOSAL_JSON` constant instead of duplicating the JSON-output instruction inline.
 - Enable ruff pydocstyle (D) rules — all public API items now require docstrings; tests are excluded.
