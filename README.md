@@ -45,9 +45,28 @@ uv run robotsix-cost-monitor reconcile [--project SLUG]
 
 ## API
 
-`GET /api/summary`, `/api/by-agent`, `/api/trend`, `/api/highlights`,
-`/api/reconcile`, `/api/analyst/digest`, `/api/analyst/proposals`,
-`POST /api/analyst/run` — all accept `?project=<slug>|all&hours=<N>`.
+| Method | Path | Query Parameters | Response |
+|--------|------|------------------|----------|
+| GET | `/health` | — | `{"status":"ok","projects":["…"]}` |
+| GET | `/` | — | Dashboard HTML page |
+| GET | `/analyst` | — | Analyst dashboard HTML page |
+| GET | `/api/projects` | — | List of configured projects (`name`, `slug`) |
+| GET | `/api/summary` | `?project=<slug\|all>&hours=<N>` | Total cost and per-project totals |
+| GET | `/api/by-agent` | `?project=<slug\|all>&hours=<N>&backend=<all\|backend>` | Cost breakdown by agent name |
+| GET | `/api/by-agent-segmented` | `?project=<slug\|all>&hours=<N>` | Agent costs segmented by model and backend |
+| GET | `/api/by-model` | `?project=<slug\|all>&hours=<N>` | Cost breakdown by model |
+| GET | `/api/backend-trend` | `?project=<slug\|all>&hours=<N>&backend=<all\|backend>` | Cost trend per backend |
+| GET | `/api/trend` | `?project=<slug\|all>&hours=<N>&buckets=<1-200>` | Bucketed cost-over-time trend series |
+| GET | `/api/highlights` | `?project=<slug\|all>&hours=<N>` | Cost summaries (total, change, top agents) |
+| GET | `/api/reconcile` | `?project=<slug\|all>` | OpenRouter↔Langfuse reconciliation result |
+| GET | `/api/reconcile/last` | — | Most recent full reconciliation snapshot |
+| GET | `/api/analyst/digest` | `?hours=<N>` | Cost-analysis digest from recent trace data |
+| GET | `/api/analyst/proposals` | — | Saved cost-reduction proposals |
+| POST | `/api/analyst/run` | — | Trigger a full cost-analyst analysis run |
+| GET | `/api/analyst/ticket` | — | Saved ticket-level targeted analysis |
+| POST | `/api/analyst/ticket-run` | — | Trigger a ticket-level targeted analysis run |
+| GET | `/api/analyst/stage` | — | Saved stage-level targeted analysis |
+| POST | `/api/analyst/stage-run` | — | Trigger a stage-level targeted analysis run |
 
 ## Architecture
 
