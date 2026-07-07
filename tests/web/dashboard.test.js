@@ -10,8 +10,8 @@ import {
   renderByModel,
   renderHighlights,
   renderReconBanner,
-  renderReconcile,
   renderReconWhen,
+  renderReconcile,
   renderSummary,
   renderTrend,
   runReconcile,
@@ -651,7 +651,9 @@ describe('populateBackends', () => {
   });
 
   it('preserves current selection', () => {
-    fixture('<select id="backend"><option value="all">all backends</option><option value="anthropic">anthropic</option></select>');
+    fixture(
+      '<select id="backend"><option value="all">all backends</option><option value="anthropic">anthropic</option></select>',
+    );
     const sel = /** @type {HTMLSelectElement} */ (document.getElementById('backend'));
     sel.value = 'anthropic';
 
@@ -666,9 +668,7 @@ describe('populateBackends', () => {
 
   it('handles rows without backend field', () => {
     fixture('<select id="backend"><option value="all">all backends</option></select>');
-    const modelRows = [
-      { model: 'unknown-model', cost: 10, total_tokens: 100, observations: 2 },
-    ];
+    const modelRows = [{ model: 'unknown-model', cost: 10, total_tokens: 100, observations: 2 }];
     populateBackends(modelRows);
 
     const sel = /** @type {HTMLSelectElement} */ (document.getElementById('backend'));
@@ -721,9 +721,7 @@ describe('renderReconBanner', () => {
     const last = {
       status: 'warning',
       generated_at: '2025-06-15T12:00:00Z',
-      results: [
-        { project: 'badproj', error: 'timeout' },
-      ],
+      results: [{ project: 'badproj', error: 'timeout' }],
     };
     renderReconBanner(last);
     const el = document.getElementById('recon-banner');
@@ -927,7 +925,12 @@ describe('refresh', () => {
       if (url.includes('/api/by-agent-segmented')) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ rows: [], subscription_cap: 0, subscription_cap_pct: null, subscription_count_total: 0 }),
+          json: async () => ({
+            rows: [],
+            subscription_cap: 0,
+            subscription_cap_pct: null,
+            subscription_count_total: 0,
+          }),
         });
       }
       if (url.includes('/api/by-model')) {
@@ -942,7 +945,7 @@ describe('refresh', () => {
           json: async () => ({}),
         });
       }
-      return Promise.resolve({ ok: true, json: async () => ({}), });
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
   });
 
@@ -1027,7 +1030,8 @@ describe('runReconcile', () => {
       },
     ];
     const origFetch = globalThis.fetch;
-    globalThis.fetch = vi.fn()
+    globalThis.fetch = vi
+      .fn()
       .mockResolvedValueOnce({
         ok: true,
         json: async () => rows,

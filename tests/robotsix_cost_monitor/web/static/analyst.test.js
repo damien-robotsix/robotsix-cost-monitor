@@ -404,7 +404,9 @@ describe('run', () => {
     // We verify the button starts enabled and is disabled during run
     // using a deferred promise to inspect mid-flight state
     let resolve;
-    const deferred = new Promise((r) => { resolve = r; });
+    const deferred = new Promise((r) => {
+      resolve = r;
+    });
     const origFetch = globalThis.fetch;
     globalThis.fetch = vi.fn().mockReturnValue(
       deferred.then(() => ({
@@ -453,7 +455,10 @@ describe('ticketHeader', () => {
       total_cost: 50,
       trace_count: 7,
       history_available: true,
-      by_stage: [{ name: 'plan', cost: 30 }, { name: 'refine', cost: 20 }],
+      by_stage: [
+        { name: 'plan', cost: 30 },
+        { name: 'refine', cost: 20 },
+      ],
     });
     expect(html).toContain('T-123');
     expect(html).toContain('board-1');

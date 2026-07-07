@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { $, esc, fmt, getJSON, setStatus } from '../../../../src/robotsix_cost_monitor/web/static/shared.js';
+import {
+  $,
+  esc,
+  fmt,
+  getJSON,
+  setStatus,
+} from '../../../../src/robotsix_cost_monitor/web/static/shared.js';
 
 describe('fmt', () => {
   it('formats zero', () => {
