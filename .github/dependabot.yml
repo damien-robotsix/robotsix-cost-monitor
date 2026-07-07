@@ -1,6 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: "uv"
+  - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "weekly"
