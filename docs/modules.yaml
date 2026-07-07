@@ -43,6 +43,11 @@ modules:
       - tests/robotsix_cost_monitor/test_exceptions.py
     role: Typed exception hierarchy (retriable vs terminal errors)
 
+  - id: robotsix_cost_monitor.metrics
+    paths:
+      - src/robotsix_cost_monitor/metrics.py
+    role: Prometheus counter, histogram, and gauge definitions for background tasks
+
   - id: robotsix_cost_monitor.clients._http
     paths:
       - src/robotsix_cost_monitor/clients/_http.py

@@ -82,6 +82,8 @@ class Settings(BaseModel):
     # Per-day subscription call cap for volume-vs-cap monitoring; 0 = disabled/unknown.
     subscription_call_cap: int = 0
     analyst: AnalystConfig = Field(default_factory=AnalystConfig)
+    # Port for the Prometheus /metrics HTTP server. 0 disables metrics.
+    metrics_port: int = 9090
 
 
 class Config(BaseModel):

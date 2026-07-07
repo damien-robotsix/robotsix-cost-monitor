@@ -25,6 +25,7 @@ services:
 
     ports:
       - "${MONITOR_PORT:-8099}:8080"
+      - "9090:9090"
 
     volumes:
       # Config bind-mount — projects.yaml available without an image rebuild.
