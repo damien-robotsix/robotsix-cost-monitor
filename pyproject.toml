@@ -14,6 +14,7 @@ dependencies = [
     "robotsix-yaml-config @ git+https://github.com/damien-robotsix/robotsix-yaml-config.git@0b62ebafb01fe3f5aca8ca03c9cf281d49d2c637",
     "robotsix-llmio @ git+https://github.com/damien-robotsix/robotsix-llmio.git@2fd2be4dcf7f0a44e91012fd1167517e5e09180e",
     "prometheus-fastapi-instrumentator>=8.0.2,<9.0",
+    "prometheus-client>=0.21",
 ]
 
 [project.optional-dependencies]
