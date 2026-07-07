@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import { $, esc, fmt, getJSON } from '../../../../src/robotsix_cost_monitor/web/static/shared.js';
+import {
+  $,
+  esc,
+  fmt,
+  getJSON,
+  setStatus,
+} from '../../../../src/robotsix_cost_monitor/web/static/shared.js';
 
 describe('fmt', () => {
   it('formats zero', () => {
@@ -100,5 +106,19 @@ describe('getJSON', () => {
     } finally {
       globalThis.fetch = origFetch;
     }
+  });
+});
+
+describe('setStatus', () => {
+  it('updates the status element text content', () => {
+    document.body.innerHTML = '<div id="status">old</div>';
+    setStatus('new message');
+    expect($('status').textContent).toBe('new message');
+  });
+
+  it('overwrites existing status text', () => {
+    document.body.innerHTML = '<div id="status">loading…</div>';
+    setStatus('done');
+    expect($('status').textContent).toBe('done');
   });
 });
