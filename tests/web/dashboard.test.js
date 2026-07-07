@@ -1,12 +1,20 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  loadLastReconcile,
+  loadProjects,
+  populateBackends,
+  refresh,
+  refreshReconMeta,
   renderByAgent,
   renderByAgentSegmented,
   renderByModel,
   renderHighlights,
+  renderReconBanner,
   renderReconcile,
+  renderReconWhen,
   renderSummary,
   renderTrend,
+  runReconcile,
 } from '../../src/robotsix_cost_monitor/web/static/dashboard.js';
 
 function fixture(html) {
@@ -582,5 +590,490 @@ describe('renderHighlights', () => {
     renderHighlights({});
     const el = document.getElementById('highlights');
     expect(el.innerHTML).toContain('no data');
+  });
+});
+
+describe('loadProjects', () => {
+  it('fetches projects and populates the dropdown', async () => {
+    fixture('<select id="project"></select>');
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { slug: 'proj-a', name: 'Project A' },
+        { slug: 'proj-b', name: 'Project B' },
+      ],
+    });
+
+    try {
+      await loadProjects();
+      const sel = /** @type {HTMLSelectElement} */ (document.getElementById('project'));
+      expect(sel.children.length).toBe(2);
+      expect(sel.children[0].value).toBe('proj-a');
+      expect(sel.children[0].textContent).toBe('Project A');
+      expect(sel.children[1].value).toBe('proj-b');
+      expect(sel.children[1].textContent).toBe('Project B');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+});
+
+describe('populateBackends', () => {
+  it('populates backend dropdown from model rows', () => {
+    fixture('<select id="backend"><option value="all">all backends</option></select>');
+    const modelRows = [
+      { model: 'gpt-4', backend: 'openai', cost: 10, total_tokens: 100, observations: 2 },
+      { model: 'claude', backend: 'anthropic', cost: 5, total_tokens: 50, observations: 1 },
+    ];
+    populateBackends(modelRows);
+
+    const sel = /** @type {HTMLSelectElement} */ (document.getElementById('backend'));
+    const options = [...sel.children].map((o) => o.value);
+    expect(options).toContain('all');
+    expect(options).toContain('anthropic');
+    expect(options).toContain('openai');
+  });
+
+  it('deduplicates backends', () => {
+    fixture('<select id="backend"><option value="all">all backends</option></select>');
+    const modelRows = [
+      { model: 'gpt-4', backend: 'openai', cost: 10, total_tokens: 100, observations: 2 },
+      { model: 'gpt-3.5', backend: 'openai', cost: 5, total_tokens: 50, observations: 1 },
+      { model: 'claude', backend: 'anthropic', cost: 3, total_tokens: 30, observations: 1 },
+    ];
+    populateBackends(modelRows);
+
+    const sel = /** @type {HTMLSelectElement} */ (document.getElementById('backend'));
+    const options = [...sel.children].map((o) => o.value);
+    expect(options.filter((v) => v === 'openai').length).toBe(1);
+    expect(options.filter((v) => v === 'anthropic').length).toBe(1);
+  });
+
+  it('preserves current selection', () => {
+    fixture('<select id="backend"><option value="all">all backends</option><option value="anthropic">anthropic</option></select>');
+    const sel = /** @type {HTMLSelectElement} */ (document.getElementById('backend'));
+    sel.value = 'anthropic';
+
+    const modelRows = [
+      { model: 'gpt-4', backend: 'openai', cost: 10, total_tokens: 100, observations: 2 },
+      { model: 'claude', backend: 'anthropic', cost: 5, total_tokens: 50, observations: 1 },
+    ];
+    populateBackends(modelRows);
+
+    expect(sel.value).toBe('anthropic');
+  });
+
+  it('handles rows without backend field', () => {
+    fixture('<select id="backend"><option value="all">all backends</option></select>');
+    const modelRows = [
+      { model: 'unknown-model', cost: 10, total_tokens: 100, observations: 2 },
+    ];
+    populateBackends(modelRows);
+
+    const sel = /** @type {HTMLSelectElement} */ (document.getElementById('backend'));
+    const options = [...sel.children].map((o) => o.value);
+    // Only 'all' since rows without backend are filtered out
+    expect(options).toEqual(['all']);
+  });
+});
+
+describe('renderReconBanner', () => {
+  it('hides banner when last is null', () => {
+    fixture('<div id="recon-banner"></div>');
+    renderReconBanner(null);
+    const el = document.getElementById('recon-banner');
+    expect(el.hidden).toBe(true);
+  });
+
+  it('hides banner when status is not warning', () => {
+    fixture('<div id="recon-banner"></div>');
+    renderReconBanner({ status: 'ok', results: [], generated_at: '2025-01-01T00:00:00Z' });
+    const el = document.getElementById('recon-banner');
+    expect(el.hidden).toBe(true);
+  });
+
+  it('shows banner with drift details when status is warning', () => {
+    fixture('<div id="recon-banner"></div>');
+    const last = {
+      status: 'warning',
+      generated_at: '2025-06-15T12:00:00Z',
+      results: [
+        {
+          project: 'myproj',
+          provider_delta_usd: 12,
+          langfuse_cost_usd: 10,
+          drift_usd: 2,
+          within_tolerance: false,
+        },
+      ],
+    };
+    renderReconBanner(last);
+    const el = document.getElementById('recon-banner');
+    expect(el.hidden).toBe(false);
+    expect(el.innerHTML).toContain('cost reconciliation drift');
+    expect(el.innerHTML).toContain('myproj');
+    expect(el.innerHTML).toContain('$2.00');
+  });
+
+  it('shows banner with error details', () => {
+    fixture('<div id="recon-banner"></div>');
+    const last = {
+      status: 'warning',
+      generated_at: '2025-06-15T12:00:00Z',
+      results: [
+        { project: 'badproj', error: 'timeout' },
+      ],
+    };
+    renderReconBanner(last);
+    const el = document.getElementById('recon-banner');
+    expect(el.hidden).toBe(false);
+    expect(el.innerHTML).toContain('badproj');
+    expect(el.innerHTML).toContain('timeout');
+  });
+
+  it('does nothing when recon-banner element is missing', () => {
+    fixture('');
+    expect(() => renderReconBanner(null)).not.toThrow();
+  });
+});
+
+describe('renderReconWhen', () => {
+  it('renders last checked timestamp', () => {
+    fixture('<div id="recon-when"></div>');
+    renderReconWhen({ generated_at: '2025-06-15T12:00:00Z' });
+    const el = document.getElementById('recon-when');
+    expect(el.textContent).toContain('last checked');
+  });
+
+  it('renders empty string for null last', () => {
+    fixture('<div id="recon-when">old</div>');
+    renderReconWhen(null);
+    const el = document.getElementById('recon-when');
+    expect(el.textContent).toBe('');
+  });
+
+  it('renders empty string when generated_at is missing', () => {
+    fixture('<div id="recon-when">old</div>');
+    renderReconWhen({});
+    const el = document.getElementById('recon-when');
+    expect(el.textContent).toBe('');
+  });
+
+  it('does nothing when recon-when element is missing', () => {
+    fixture('');
+    expect(() => renderReconWhen(null)).not.toThrow();
+  });
+});
+
+describe('refreshReconMeta', () => {
+  it('fetches last reconcile and updates banner and when', async () => {
+    const last = {
+      status: 'warning',
+      generated_at: '2025-06-15T12:00:00Z',
+      results: [
+        {
+          project: 'myproj',
+          provider_delta_usd: 12,
+          langfuse_cost_usd: 10,
+          drift_usd: 2,
+          within_tolerance: false,
+        },
+      ],
+    };
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => last,
+    });
+
+    fixture('<div id="recon-banner"></div><div id="recon-when">old</div>');
+
+    try {
+      await refreshReconMeta();
+      const banner = document.getElementById('recon-banner');
+      const when = document.getElementById('recon-when');
+      expect(banner.hidden).toBe(false);
+      expect(banner.innerHTML).toContain('cost reconciliation drift');
+      expect(when.textContent).toContain('last checked');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('handles fetch errors gracefully', async () => {
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network'));
+
+    fixture('<div id="recon-banner"></div><div id="recon-when">old</div>');
+
+    try {
+      await refreshReconMeta();
+      // Should not throw; banner remains as-is
+      const banner = document.getElementById('recon-banner');
+      expect(banner).not.toBeNull();
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+});
+
+describe('loadLastReconcile', () => {
+  it('renders last reconcile banner, when, and results table', async () => {
+    const last = {
+      status: 'ok',
+      generated_at: '2025-06-15T12:00:00Z',
+      results: [
+        {
+          project: 'cleanproj',
+          configured: true,
+          provider_delta_usd: 10,
+          langfuse_cost_usd: 10,
+          drift_usd: 0,
+          within_tolerance: true,
+        },
+      ],
+    };
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => last,
+    });
+
+    fixture(`
+      <div id="recon-banner"></div>
+      <div id="recon-when">old</div>
+      <div id="reconcile"></div>
+    `);
+
+    try {
+      await loadLastReconcile();
+      const when = document.getElementById('recon-when');
+      const reconcile = document.getElementById('reconcile');
+      expect(when.textContent).toContain('last checked');
+      expect(reconcile.innerHTML).toContain('cleanproj');
+      expect(reconcile.innerHTML).toContain('clean');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('handles empty results gracefully', async () => {
+    const last = {
+      status: 'ok',
+      generated_at: '2025-06-15T12:00:00Z',
+      results: [],
+    };
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => last,
+    });
+
+    fixture(`
+      <div id="recon-banner"></div>
+      <div id="recon-when">old</div>
+      <div id="reconcile">old-table</div>
+    `);
+
+    try {
+      await loadLastReconcile();
+      // Results table should NOT be overwritten since results.length === 0
+      const reconcile = document.getElementById('reconcile');
+      expect(reconcile.innerHTML).toBe('old-table');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('handles fetch errors gracefully', async () => {
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network'));
+
+    fixture(`
+      <div id="recon-banner"></div>
+      <div id="recon-when">old</div>
+      <div id="reconcile"></div>
+    `);
+
+    try {
+      await loadLastReconcile();
+      // Should not throw
+      expect(true).toBe(true);
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+});
+
+describe('refresh', () => {
+  let origFetch;
+
+  beforeEach(() => {
+    origFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn((url) => {
+      if (url.includes('/api/summary')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ total_cost: 100, window_hours: 24, projects: [] }),
+        });
+      }
+      if (url.includes('/api/trend')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [{ cost: 1 }, { cost: 2 }],
+        });
+      }
+      if (url.includes('/api/by-agent-segmented')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ rows: [], subscription_cap: 0, subscription_cap_pct: null, subscription_count_total: 0 }),
+        });
+      }
+      if (url.includes('/api/by-model')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => [],
+        });
+      }
+      if (url.includes('/api/highlights')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({}),
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}), });
+    });
+  });
+
+  afterAll(() => {
+    globalThis.fetch = origFetch;
+  });
+
+  it('refreshes all panels and sets status', async () => {
+    fixture(`
+      <select id="project"><option value="all">all</option></select>
+      <select id="backend"><option value="all">all backends</option></select>
+      <select id="window"><option value="24">24h</option></select>
+      <div id="status">idle</div>
+      <section id="summary-cards"></section>
+      <canvas id="trend" height="120"></canvas>
+      <div id="by-agent-segmented"></div>
+      <div id="by-model"></div>
+      <div id="highlights"></div>
+    `);
+
+    // Stub canvas getContext
+    const mockCtx = {
+      clearRect: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      closePath: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+    };
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(mockCtx);
+    // jsdom doesn't compute clientWidth
+    const canvas = document.getElementById('trend');
+    Object.defineProperty(canvas, 'clientWidth', { value: 800, writable: true });
+
+    try {
+      await refresh();
+      const status = document.getElementById('status');
+      expect(status.textContent).toContain('updated');
+      // Summary cards should be rendered
+      const summary = document.getElementById('summary-cards');
+      expect(summary.innerHTML).toContain('total cost');
+      // by-model should render (empty → no data)
+      const byModel = document.getElementById('by-model');
+      expect(byModel.innerHTML).toContain('no data');
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
+  it('handles fetch error and sets error status', async () => {
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('fetch failed'));
+
+    fixture(`
+      <select id="project"><option value="all">all</option></select>
+      <select id="backend"><option value="all">all backends</option></select>
+      <select id="window"><option value="24">24h</option></select>
+      <div id="status">idle</div>
+    `);
+
+    try {
+      await refresh();
+      const status = document.getElementById('status');
+      expect(status.textContent).toContain('error');
+      expect(status.textContent).toContain('fetch failed');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+});
+
+describe('runReconcile', () => {
+  it('triggers reconciliation and renders results', async () => {
+    const rows = [
+      {
+        project: 'cleanproj',
+        configured: true,
+        provider_delta_usd: 10,
+        langfuse_cost_usd: 10,
+        drift_usd: 0,
+        within_tolerance: true,
+      },
+    ];
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => rows,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ status: 'ok', generated_at: '2025-06-15T12:00:00Z', results: [] }),
+      });
+
+    fixture(`
+      <select id="project"><option value="cleanproj">cleanproj</option></select>
+      <div id="status">idle</div>
+      <div id="reconcile"></div>
+      <div id="recon-banner"></div>
+      <div id="recon-when">old</div>
+    `);
+
+    try {
+      await runReconcile();
+      const reconcile = document.getElementById('reconcile');
+      expect(reconcile.innerHTML).toContain('cleanproj');
+      expect(reconcile.innerHTML).toContain('clean');
+      const status = document.getElementById('status');
+      expect(status.textContent).toContain('reconciled');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('handles error and sets error status', async () => {
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('reconcile failed'));
+
+    fixture(`
+      <select id="project"><option value="proj">proj</option></select>
+      <div id="status">idle</div>
+      <div id="reconcile"></div>
+    `);
+
+    try {
+      await runReconcile();
+      const status = document.getElementById('status');
+      expect(status.textContent).toContain('reconcile error');
+      expect(status.textContent).toContain('reconcile failed');
+    } finally {
+      globalThis.fetch = origFetch;
+    }
   });
 });
