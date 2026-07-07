@@ -154,7 +154,6 @@
       },
       "required": [
         "name",
-        "base_url",
         "public_key",
         "secret_key"
       ],
