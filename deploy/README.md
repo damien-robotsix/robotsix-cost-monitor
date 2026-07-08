@@ -64,7 +64,7 @@ docker run --rm \
 docker volume create cost_monitor_data
 ```
 
-Set ownership so the container (UID 1001, `appuser`) can read config and write
+Set ownership so the container (UID 1001, `app`) can read config and write
 runtime data:
 
 ```sh
