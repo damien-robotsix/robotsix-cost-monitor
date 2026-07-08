@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Add `step-security/harden-runner@v2.19.4` as the first step in every directly-defined CI job for runtime network egress control and supply-chain attack detection. Starts with `egress-policy: audit` mode across ci.yml (8 jobs) and release.yml (1 job).
 - Upgrade `actions/upload-artifact` from v4 (Node.js 20, EOL) to v7.0.1 in CI and release workflows.
 - Fix incorrect username in deploy README: `appuser` → `app` to match the Dockerfile
 - Fix: remove `base_url` from the JSON Schema `required` list for `ProjectConfig`, matching the Pydantic model default (`https://cloud.langfuse.com`).  Configs that omit `base_url` will no longer be rejected by schema validation.
