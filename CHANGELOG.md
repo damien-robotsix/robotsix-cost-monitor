@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Upgrade `actions/upload-artifact` from v4 (Node.js 20, EOL) to v7.0.1 in CI and release workflows.
 - Fix: remove `base_url` from the JSON Schema `required` list for `ProjectConfig`, matching the Pydantic model default (`https://cloud.langfuse.com`).  Configs that omit `base_url` will no longer be rejected by schema validation.
 - `_require_project` in routes now raises `ProjectNotFoundError` (instead of bare `HTTPException`) so API consumers receive the typed `error_code: "PROJECT_NOT_FOUND"` in the JSON error envelope.
 - Fix deploy `docker-compose.yml` volume mount paths to match the Dockerfile: config volume now mounts to `/home/app/config` (not `/home/appuser/config`) and data volume to `/data` (not `/home/appuser/.data`), matching the `app` user's home directory and the `COST_MONITOR_DATA` env var.
