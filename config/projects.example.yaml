@@ -32,6 +32,8 @@ settings:
   # Per-day subscription call cap for volume-vs-cap monitoring.
   # 0 = disabled/unknown.
   subscription_call_cap: 0
+  # Prometheus metrics endpoint port. 0 disables.
+  metrics_port: 9090
   # LLM cost-analyst (optional). Disabled until openrouter_key is set.
   # Runs a level-2 (robotsix-llmio tier-2) agent over the cost digest with a
   # level-3 sub-agent that drills into the most expensive traces and stores

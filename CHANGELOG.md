@@ -1,5 +1,11 @@
 ## 0.0.0 (unreleased)
 
+- Add Prometheus /metrics endpoint on a separate port (default 9090) via
+  `prometheus-fastapi-instrumentator` and a `prometheus_client` daemon thread.
+  `Settings.metrics_port` (0 disables) controls the port. Background scheduler
+  loops (`_reconcile_loop`, `_analyst_loop`) now emit `cost_monitor_reconcile_*`
+  and `cost_monitor_analyst_*` counters and histograms for success/failure
+  tracking.
 - Upgrade `actions/upload-artifact` from v4 (Node.js 20, EOL) to v7.0.1 in CI and release workflows.
 - Fix: remove `base_url` from the JSON Schema `required` list for `ProjectConfig`, matching the Pydantic model default (`https://cloud.langfuse.com`).  Configs that omit `base_url` will no longer be rejected by schema validation.
 - `_require_project` in routes now raises `ProjectNotFoundError` (instead of bare `HTTPException`) so API consumers receive the typed `error_code: "PROJECT_NOT_FOUND"` in the JSON error envelope.

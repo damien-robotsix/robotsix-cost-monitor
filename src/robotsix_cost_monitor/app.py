@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+import time
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from pathlib import Path
@@ -13,6 +14,7 @@ from typing import Any
 import structlog
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from .analyst import (
     load_proposals,
@@ -23,6 +25,12 @@ from .analyst import (
 )
 from .config import Config, load_config
 from .exceptions import CostMonitorError
+from .metrics import (
+    ANALYST_DURATION,
+    ANALYST_RUN_TOTAL,
+    RECONCILE_DURATION,
+    RECONCILE_TOTAL,
+)
 from .reconcile import reconcile_all
 from .routes import register_exception_handlers, router
 from .service import CostService
@@ -132,12 +140,19 @@ async def _analyst_loop(cfg: Config, service: CostService, hours: float) -> None
     while True:
         await asyncio.sleep(delay)
         for label, fn in analyses:
+            start = time.monotonic()
             try:
                 await fn(cfg, service)
+                ANALYST_RUN_TOTAL.labels(analysis_type=label, status="success").inc()
             except CostMonitorError:
+                ANALYST_RUN_TOTAL.labels(analysis_type=label, status="error").inc()
                 logger.exception("scheduled %s analysis failed", label)
             except Exception:
+                ANALYST_RUN_TOTAL.labels(analysis_type=label, status="error").inc()
                 logger.exception("scheduled %s analysis failed", label)
+            ANALYST_DURATION.labels(analysis_type=label).observe(
+                time.monotonic() - start
+            )
         delay = interval
 
 
@@ -149,12 +164,17 @@ async def _reconcile_loop(cfg: Config, hours: float) -> None:
     """
     interval = max(1.0, hours) * 3600
     while True:
+        start = time.monotonic()
         try:
             await reconcile_all(cfg)
+            RECONCILE_TOTAL.labels(project="all", status="success").inc()
         except CostMonitorError:
+            RECONCILE_TOTAL.labels(project="all", status="error").inc()
             logger.exception("scheduled reconcile failed")
         except Exception:
+            RECONCILE_TOTAL.labels(project="all", status="error").inc()
             logger.exception("scheduled reconcile failed")
+        RECONCILE_DURATION.labels(project="all").observe(time.monotonic() - start)
         await asyncio.sleep(interval)
 
 
@@ -214,5 +234,18 @@ def create_app(config: Config | None = None) -> FastAPI:
 
     if (_WEB / "static").is_dir():
         app.mount("/static", StaticFiles(directory=_WEB / "static"), name="static")
+
+    metrics_port = cfg.settings.metrics_port
+    if metrics_port > 0:
+        import threading
+
+        from prometheus_client import start_http_server
+
+        Instrumentator().instrument(app).expose(app, include_in_schema=False)
+        threading.Thread(
+            target=lambda: start_http_server(metrics_port),
+            daemon=True,
+        ).start()
+        logger.info("prometheus metrics on :%d", metrics_port)
 
     return app
