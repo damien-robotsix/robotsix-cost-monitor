@@ -30,6 +30,7 @@ robotsix-cost-monitor = "robotsix_cost_monitor.cli:main"
 dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=0.24",
+    "pytest-cov>=6.1",
     "respx>=0.22",
     "ruff>=0.15.20",
     "mypy>=1.13,<2",

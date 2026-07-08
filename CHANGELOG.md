@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Activate `[tool.coverage]` configuration: add `pytest-cov` dev dependency and pass `--cov=robotsix_cost_monitor --cov-report=term-missing` in both `make test` and CI.
 - Add `step-security/harden-runner@v2.19.4` as the first step in every directly-defined CI job for runtime network egress control and supply-chain attack detection. Starts with `egress-policy: audit` mode across ci.yml (8 jobs) and release.yml (1 job).
 - Upgrade `actions/upload-artifact` from v4 (Node.js 20, EOL) to v7.0.1 in CI and release workflows.
 - Fix incorrect username in deploy README: `appuser` → `app` to match the Dockerfile
