@@ -14,7 +14,7 @@ install-lint:
 # .robotsix-mill/config.yaml, which uses `--no-sync` against a
 # pre-built venv (see Dockerfile.dev).
 test: install-test
-	uv run --no-sync pytest
+	uv run --no-sync pytest --cov=robotsix_cost_monitor --cov-report=term-missing
 
 lint: install-lint
 	uv run pre-commit run --all-files
