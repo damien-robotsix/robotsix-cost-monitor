@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Collapse redundant `except CostMonitorError` / `except Exception` pairs in `_analyst_loop` and `_reconcile_loop` into single `except Exception` blocks.
 - Register `.robotsix-mill/periodic/repo_description_sync.yaml` in module taxonomy and remove stale entries for deleted periodic configs.
 - Activate `[tool.coverage]` configuration: add `pytest-cov` dev dependency and pass `--cov=robotsix_cost_monitor --cov-report=term-missing` in both `make test` and CI.
 - Add `step-security/harden-runner@v2.19.4` as the first step in every directly-defined CI job for runtime network egress control and supply-chain attack detection. Starts with `egress-policy: audit` mode across ci.yml (8 jobs) and release.yml (1 job).

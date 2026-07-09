@@ -22,7 +22,6 @@ from .analyst import (
     run_ticket_analyst,
 )
 from .config import Config, load_config
-from .exceptions import CostMonitorError
 from .reconcile import reconcile_all
 from .routes import register_exception_handlers, router
 from .service import CostService
@@ -134,8 +133,6 @@ async def _analyst_loop(cfg: Config, service: CostService, hours: float) -> None
         for label, fn in analyses:
             try:
                 await fn(cfg, service)
-            except CostMonitorError:
-                logger.exception("scheduled %s analysis failed", label)
             except Exception:
                 logger.exception("scheduled %s analysis failed", label)
         delay = interval
@@ -151,8 +148,6 @@ async def _reconcile_loop(cfg: Config, hours: float) -> None:
     while True:
         try:
             await reconcile_all(cfg)
-        except CostMonitorError:
-            logger.exception("scheduled reconcile failed")
         except Exception:
             logger.exception("scheduled reconcile failed")
         await asyncio.sleep(interval)
