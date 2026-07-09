@@ -1,21 +1,24 @@
 # Module taxonomy for robotsix-cost-monitor
-# Each entry lists the dotted Python module name, its file paths, and a one-line
-# description of its role.
+# Each entry lists the kebab-case module id, its file paths, and a one-line
+# description of its purpose.
+
+package: robotsix_cost_monitor
 
 modules:
-  - id: robotsix_cost_monitor
+  - id: robotsix-cost-monitor
+    description: Package root (version + re-exports + PEP 561 type marker)
     paths:
       - src/robotsix_cost_monitor/__init__.py
       - src/robotsix_cost_monitor/py.typed
-    role: Package root (version + re-exports + PEP 561 type marker)
 
-  - id: robotsix_cost_monitor.aggregations
+  - id: aggregations
+    description: Pure cost-aggregation and transformation functions over trace dicts (no I/O)
     paths:
       - src/robotsix_cost_monitor/aggregations.py
       - tests/robotsix_cost_monitor/test_aggregations.py
-    role: Pure cost-aggregation and transformation functions over trace dicts (no I/O)
 
-  - id: robotsix_cost_monitor.app
+  - id: app
+    description: FastAPI app factory, server-rendered UI, static files
     paths:
       - src/robotsix_cost_monitor/app.py
       - src/robotsix_cost_monitor/web/index.html
@@ -23,90 +26,170 @@ modules:
       - src/robotsix_cost_monitor/web/static/dashboard.css
       - tests/robotsix_cost_monitor/test_app.py
       - tests/web/dashboard.test.js
-    role: FastAPI app factory, server-rendered UI, static files
 
-  - id: robotsix_cost_monitor.cli
+  - id: cli
+    description: CLI entrypoint (serve, summary, reconcile)
     paths:
       - src/robotsix_cost_monitor/cli.py
       - tests/robotsix_cost_monitor/test_cli.py
-    role: CLI entrypoint (serve, summary, reconcile)
 
-  - id: robotsix_cost_monitor.config
+  - id: config
+    description: YAML config models + loader (config/projects.yaml)
     paths:
       - src/robotsix_cost_monitor/config.py
       - tests/robotsix_cost_monitor/test_config.py
-    role: YAML config models + loader (config/projects.yaml)
 
-  - id: robotsix_cost_monitor.exceptions
+  - id: exceptions
+    description: Typed exception hierarchy (retriable vs terminal errors)
     paths:
       - src/robotsix_cost_monitor/exceptions.py
       - tests/robotsix_cost_monitor/test_exceptions.py
-    role: Typed exception hierarchy (retriable vs terminal errors)
 
-  - id: robotsix_cost_monitor.clients._http
+  - id: clients-http
+    description: Typed httpx.AsyncClient wrapper with retry/backoff
     paths:
       - src/robotsix_cost_monitor/clients/_http.py
       - tests/robotsix_cost_monitor/clients/test_http.py
-    role: Typed httpx.AsyncClient wrapper with retry/backoff
 
-  - id: robotsix_cost_monitor.service
+  - id: service
+    description: Cross-project cost aggregation with TTL cache
     paths:
       - src/robotsix_cost_monitor/service.py
       - tests/robotsix_cost_monitor/test_service.py
-    role: Cross-project cost aggregation with TTL cache
 
-  - id: robotsix_cost_monitor.reconcile
+  - id: reconcile
+    description: OpenRouter ↔ Langfuse cost reconciliation via snapshots
     paths:
       - src/robotsix_cost_monitor/reconcile.py
       - tests/robotsix_cost_monitor/test_reconcile.py
-    role: OpenRouter ↔ Langfuse cost reconciliation via snapshots
 
-  - id: robotsix_cost_monitor.analyst
+  - id: analyst
+    description: Deterministic cost digest + optional LLM proposal pass and analyst UI
     paths:
       - src/robotsix_cost_monitor/analyst.py
       - src/robotsix_cost_monitor/web/analyst.html
       - src/robotsix_cost_monitor/web/static/analyst.js
       - tests/robotsix_cost_monitor/test_analyst.py
       - tests/robotsix_cost_monitor/web/static/analyst.test.js
-    role: Deterministic cost digest + optional LLM proposal pass and analyst UI
 
-  - id: robotsix_cost_monitor.routes
+  - id: routes
+    description: HTTP route handlers (APIRouter) and exception handlers
     paths:
       - src/robotsix_cost_monitor/routes.py
       - tests/robotsix_cost_monitor/test_routes.py
-    role: HTTP route handlers (APIRouter) and exception handlers
 
-  - id: robotsix_cost_monitor.clients
+  - id: clients
+    description: Package init for the external API clients sub-package (Langfuse, OpenRouter)
     paths:
       - src/robotsix_cost_monitor/clients/__init__.py
       - src/robotsix_cost_monitor/clients/models.py
       - src/robotsix_cost_monitor/clients/langfuse.py
       - tests/robotsix_cost_monitor/clients/test_langfuse.py
       - tests/robotsix_cost_monitor/clients/test_models.py
-    role: Package init for the external API clients sub-package (Langfuse, OpenRouter)
 
-  - id: robotsix_cost_monitor.web.static.shared
+  - id: web-shared
+    description: Shared JS helpers for cost-monitor UI pages (getJSON, fmt, esc, $)
     paths:
       - src/robotsix_cost_monitor/web/static/shared.js
       - tests/robotsix_cost_monitor/web/static/shared.test.js
-    role: Shared JS helpers for cost-monitor UI pages (getJSON, fmt, esc, $)
 
-
-
-  - id: tests.conftest
+  - id: tests-conftest
+    description: Shared pytest fixtures and factory helpers (event_loop, _proj, _config, _mock_client)
     paths:
       - tests/conftest.py
-    role: Shared pytest fixtures and factory helpers (event_loop, _proj, _config, _mock_client)
 
-  - id: tests.helpers
+  - id: tests-helpers
+    description: Pure data-builder helper for test trace dicts (trace())
     paths:
       - tests/helpers.py
-    role: Pure data-builder helper for test trace dicts (trace())
 
-  - id: docs.site
+  - id: docs-site
+    description: MkDocs documentation site source files (landing page + API reference)
     paths:
       - docs/index.md
       - docs/api.md
       - docs/reference/configuration.md
       - docs/reference/cli.md
-    role: MkDocs documentation site source files (landing page + API reference))
+
+  - id: project-root
+    description: Repository root metadata and configuration files
+    paths:
+      - .dockerignore
+      - .env.example
+      - .gitignore
+      - .node-version
+      - .npmrc
+      - .nvmrc
+      - .pre-commit-config.yaml
+      - .release-please-manifest.json
+      - .secrets.baseline
+      - AGENT.md
+      - ARCHITECTURE.md
+      - CHANGELOG.md
+      - CONTRIBUTING.md
+      - Dockerfile
+      - Dockerfile.dev
+      - LICENSE
+      - Makefile
+      - README.md
+      - SECURITY.md
+      - biome.json
+      - docker-compose.yml
+      - jsconfig.json
+      - mkdocs.yml
+      - package-lock.json
+      - package.json
+      - pyproject.toml
+      - uv.lock
+      - vitest.config.js
+      - vulture_whitelist.py
+      - docs/modules.yaml
+
+  - id: github-config
+    description: GitHub templates, Dependabot config, and CI/CD workflows
+    paths:
+      - .github/ISSUE_TEMPLATE/bug_report.yml
+      - .github/ISSUE_TEMPLATE/config.yml
+      - .github/ISSUE_TEMPLATE/feature_request.yml
+      - .github/PULL_REQUEST_TEMPLATE.md
+      - .github/dependabot.yml
+      - .github/workflows/ci.yml
+      - .github/workflows/codeql.yml
+      - .github/workflows/dependabot-auto-merge.yml
+      - .github/workflows/docs.yml
+      - .github/workflows/lint-workflows.yml
+      - .github/workflows/release.yml
+      - .github/workflows/scan-container.yml
+
+  - id: robotsix-mill
+    description: robotsix-mill periodic task definitions and mill configuration
+    paths:
+      - .robotsix-mill/config.yaml
+      - .robotsix-mill/periodic/agent_check.yaml
+      - .robotsix-mill/periodic/audit.yaml
+      - .robotsix-mill/periodic/bc_check.yaml
+      - .robotsix-mill/periodic/changelog_autofill.yaml
+      - .robotsix-mill/periodic/completeness_check.yaml
+      - .robotsix-mill/periodic/copy_paste.yaml
+      - .robotsix-mill/periodic/data_dir_gc.yaml
+      - .robotsix-mill/periodic/env_doc_sync.yaml
+      - .robotsix-mill/periodic/health.yaml
+      - .robotsix-mill/periodic/module_curator.yaml
+      - .robotsix-mill/periodic/security_posture.yaml
+      - .robotsix-mill/periodic/survey.yaml
+      - .robotsix-mill/periodic/test_gap.yaml
+      - .robotsix-mill/periodic/trace_review.yaml
+      - .robotsix-mill/periodic/triage_boilerplate.yaml
+
+  - id: deploy
+    description: Deployment configuration (Docker Compose, environment examples, documentation)
+    paths:
+      - deploy/.env.example
+      - deploy/README.md
+      - deploy/docker-compose.yml
+
+  - id: config-files
+    description: User-facing project configuration files (example config, JSON schema)
+    paths:
+      - config/projects.example.yaml
+      - config/projects.schema.json
