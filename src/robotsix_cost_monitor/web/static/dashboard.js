@@ -1,4 +1,4 @@
-import { $, API, esc, fmt, getJSON, QS, setStatus } from './shared.js';
+import { $, API, QS, esc, fmt, getJSON, setStatus } from './shared.js';
 
 /**
  * @typedef {object} ProjectInfo
