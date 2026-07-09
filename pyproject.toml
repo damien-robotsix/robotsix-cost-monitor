@@ -107,6 +107,9 @@ source = ["src"]
 fail_under = 80
 show_missing = true
 
+[tool.deptry]
+extend_exclude = ["scripts/validate_modules.py"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
