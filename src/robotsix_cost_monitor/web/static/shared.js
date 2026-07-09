@@ -47,3 +47,26 @@ export async function getJSON(path) {
 export const setStatus = (msg) => {
   $('status').textContent = msg;
 };
+
+/** API endpoint path constants. */
+export const API = {
+  PROJECTS: '/api/projects',
+  SUMMARY: '/api/summary',
+  TREND: '/api/trend',
+  BACKEND_TREND: '/api/backend-trend',
+  BY_AGENT_SEG: '/api/by-agent-segmented',
+  BY_MODEL: '/api/by-model',
+  HIGHLIGHTS: '/api/highlights',
+  RECONCILE: '/api/reconcile',
+  RECONCILE_LAST: '/api/reconcile/last',
+  ANALYST_PROPOSALS: '/api/analyst/proposals',
+  ANALYST_RUN: '/api/analyst/run',
+  ANALYST_KIND: '/api/analyst',
+};
+
+/** Query-string parameter name constants. */
+export const QS = {
+  PROJECT: 'project',
+  HOURS: 'hours',
+  BACKEND: 'backend',
+};
