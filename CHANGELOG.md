@@ -1,5 +1,8 @@
 ## 0.0.0 (unreleased)
 
+- Extract hardcoded API endpoint paths and query-parameter names from
+  `dashboard.js` and `analyst.js` into shared `API` and `QS` constants
+  in `shared.js`. Route renames now only need a single point of change.
 - Collapse redundant `except CostMonitorError` / `except Exception` pairs in `_analyst_loop` and `_reconcile_loop` into single `except Exception` blocks.
 - Register `.robotsix-mill/periodic/repo_description_sync.yaml` in module taxonomy and remove stale entries for deleted periodic configs.
 - Activate `[tool.coverage]` configuration: add `pytest-cov` dev dependency and pass `--cov=robotsix_cost_monitor --cov-report=term-missing` in both `make test` and CI.

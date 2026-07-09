@@ -1,4 +1,4 @@
-import { $, esc, fmt, getJSON, setStatus } from './shared.js';
+import { $, API, esc, fmt, getJSON, setStatus } from './shared.js';
 
 /**
  * @typedef {object} AnalystRun
@@ -112,7 +112,7 @@ export function render(run) {
  */
 export async function load() {
   try {
-    render(await getJSON('/api/analyst/proposals'));
+    render(await getJSON(API.ANALYST_PROPOSALS));
     setStatus('showing last run');
   } catch (e) {
     const err = /** @type {Error} */ (e);
@@ -129,7 +129,7 @@ export async function run() {
   btn.disabled = true;
   setStatus('running analysis… this can take a couple of minutes');
   try {
-    const r = await fetch('/api/analyst/run', { method: 'POST' });
+    const r = await fetch(API.ANALYST_RUN, { method: 'POST' });
     if (!r.ok) throw new Error(`run → ${r.status}`);
     render(await r.json());
     setStatus('run complete');
@@ -225,7 +225,7 @@ export function stageHeader(run) {
 export function makeTargeted(kind, btnId, containerId, headerFn) {
   const loadFn = async () => {
     try {
-      renderTargeted(containerId, await getJSON(`/api/analyst/${kind}`), headerFn);
+      renderTargeted(containerId, await getJSON(`${API.ANALYST_KIND}/${kind}`), headerFn);
     } catch (e) {
       const err = /** @type {Error} */ (e);
       setStatus(`${kind} load failed: ${err.message}`);
@@ -236,7 +236,7 @@ export function makeTargeted(kind, btnId, containerId, headerFn) {
     btn.disabled = true;
     setStatus(`analyzing most costly ${kind}… this can take a couple of minutes`);
     try {
-      const r = await fetch(`/api/analyst/${kind}-run`, { method: 'POST' });
+      const r = await fetch(`${API.ANALYST_KIND}/${kind}-run`, { method: 'POST' });
       if (!r.ok) throw new Error(`${kind}-run → ${r.status}`);
       renderTargeted(containerId, await r.json(), headerFn);
       setStatus(`${kind} analysis complete`);

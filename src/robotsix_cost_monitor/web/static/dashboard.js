@@ -1,4 +1,4 @@
-import { $, esc, fmt, getJSON, setStatus } from './shared.js';
+import { $, API, esc, fmt, getJSON, QS, setStatus } from './shared.js';
 
 /**
  * @typedef {object} ProjectInfo
@@ -74,14 +74,14 @@ import { $, esc, fmt, getJSON, setStatus } from './shared.js';
  */
 
 const qs = () =>
-  `?project=${/** @type {HTMLSelectElement} */ ($('project')).value}&hours=${/** @type {HTMLInputElement | HTMLSelectElement} */ ($('window')).value}`;
+  `?${QS.PROJECT}=${/** @type {HTMLSelectElement} */ ($('project')).value}&${QS.HOURS}=${/** @type {HTMLInputElement | HTMLSelectElement} */ ($('window')).value}`;
 
 /**
  * Load the project list and populate the dropdown.
  * @returns {Promise<void>}
  */
 export async function loadProjects() {
-  const projects = await getJSON('/api/projects');
+  const projects = await getJSON(API.PROJECTS);
   const sel = $('project');
   for (const p of projects) {
     const opt = document.createElement('option');
@@ -352,7 +352,7 @@ export function renderReconWhen(last) {
  */
 export async function refreshReconMeta() {
   try {
-    const last = await getJSON('/api/reconcile/last');
+    const last = await getJSON(API.RECONCILE_LAST);
     renderReconBanner(last);
     renderReconWhen(last);
   } catch (_e) {
@@ -369,7 +369,7 @@ export async function refreshReconMeta() {
  */
 export async function loadLastReconcile() {
   try {
-    const last = await getJSON('/api/reconcile/last');
+    const last = await getJSON(API.RECONCILE_LAST);
     renderReconBanner(last);
     renderReconWhen(last);
     if (last && Array.isArray(last.results) && last.results.length) {
@@ -392,14 +392,14 @@ export async function refresh() {
     // backend is selected, use the day-granular per-backend trend instead.
     const trendPath =
       backend === 'all'
-        ? `/api/trend${qs()}`
-        : `/api/backend-trend${qs()}&backend=${encodeURIComponent(backend)}`;
+        ? `${API.TREND}${qs()}`
+        : `${API.BACKEND_TREND}${qs()}&${QS.BACKEND}=${encodeURIComponent(backend)}`;
     const [s, trend, agents, models, hi] = await Promise.all([
-      getJSON(`/api/summary${qs()}`),
+      getJSON(`${API.SUMMARY}${qs()}`),
       getJSON(trendPath),
-      getJSON(`/api/by-agent-segmented${qs()}`),
-      getJSON(`/api/by-model${qs()}`),
-      getJSON(`/api/highlights${qs()}`),
+      getJSON(`${API.BY_AGENT_SEG}${qs()}`),
+      getJSON(`${API.BY_MODEL}${qs()}`),
+      getJSON(`${API.HIGHLIGHTS}${qs()}`),
     ]);
     populateBackends(models);
     const modelRows =
@@ -426,7 +426,7 @@ export async function runReconcile() {
   setStatus('reconciling…');
   try {
     const rows = await getJSON(
-      `/api/reconcile?project=${/** @type {HTMLSelectElement} */ ($('project')).value}`,
+      `${API.RECONCILE}?${QS.PROJECT}=${/** @type {HTMLSelectElement} */ ($('project')).value}`,
     );
     renderReconcile(rows);
     await refreshReconMeta();
