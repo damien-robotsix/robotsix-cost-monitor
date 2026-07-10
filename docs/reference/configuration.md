@@ -74,3 +74,4 @@ to a non-null value.
 |---|---|---|
 | `COST_MONITOR_CONFIG` | `config/projects.yaml` | Path to the YAML configuration file (relative to repository root). |
 | `COST_MONITOR_DATA` | `.data/` | Directory for persistent runtime state (reconciliation snapshots, analyst proposals). |
+| `LOG_FORMAT` | `json` (when `CI` is set) else `console` | Structured log output format. `json` for production ingestion; `console` for coloured human-readable output during local development. |
