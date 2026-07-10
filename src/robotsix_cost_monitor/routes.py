@@ -292,8 +292,6 @@ async def analyst_ticket_run(
     return await run_ticket_analyst(cfg, service)
 
 
-
-
 @router.post("/api/analyst/stage-run")
 async def analyst_stage_run(
     cfg: Config = Depends(get_config),
