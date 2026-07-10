@@ -13,7 +13,7 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
-from conftest import _config
+from helpers import _config
 
 from robotsix_cost_monitor import analyst as analyst_mod
 from robotsix_cost_monitor.analyst import (

@@ -1,15 +1,26 @@
 """Test helper utilities — imported explicitly, NOT auto-discovered.
 
-These are data-builder / factory functions that test files import directly
-(rather than fixtures auto-discovered by pytest).  Keeping them in a dedicated
-module avoids duplication and signature drift.
+Fixtures (auto-discovered by pytest when placed in ``conftest.py``, but also
+accessible via direct import):
+  - ``event_loop`` — session-scoped loop for pytest-asyncio + xdist compat
+
+Data-builder / factory functions that test files import directly (rather than
+fixtures auto-discovered by pytest):
+  - ``trace`` — build a LangfuseTrace for tests
+  - ``_proj(name, *, openrouter_key)`` — a ProjectConfig with dummy credentials
+  - ``_config(*projects, ttl, **analyst_kwargs)`` — a Config from projects + settings
+  - ``_mock_client(**overrides)`` — a Mock whose async LangfuseClient fetch
+    methods return empty results
 """
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from unittest.mock import AsyncMock, Mock
+
+import pytest
 
 from robotsix_cost_monitor.clients.models import LangfuseTrace
 from robotsix_cost_monitor.config import AnalystConfig, Config, ProjectConfig, Settings
@@ -119,3 +130,16 @@ def _mock_client(**overrides: object) -> Mock:
     for k, v in overrides.items():
         setattr(client, k, v)
     return client
+
+
+# ---------------------------------------------------------------------------
+# Session-scoped event loop fixture (pytest-asyncio + xdist compat)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def event_loop() -> Any:
+    """Session-scoped event loop for pytest-asyncio + xdist compatibility."""
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()

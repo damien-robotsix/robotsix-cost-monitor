@@ -113,4 +113,5 @@ extend_exclude = ["scripts/validate_modules.py"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+pythonpath = ["tests"]
 
