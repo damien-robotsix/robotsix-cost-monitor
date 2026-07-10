@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Document `LOG_FORMAT` env var in both `docs/reference/configuration.md` and `docs/reference/cli.md` env-var tables.
 - Consolidated `clients-http` module into `clients` in `docs/modules.yaml` taxonomy; `_http.py` is an internal detail of the clients sub-package.
 - Consolidated `tests-conftest` module into `tests-helpers`: moved the `event_loop` fixture from `tests/conftest.py` into `tests/helpers.py`, updated three test files to import from `helpers` instead of `conftest`, and deleted `tests/conftest.py`.
 - Extract repeated exception-handling boilerplate in `CostService` into a private `_safe_project_fetch` helper, eliminating ~23 lines of duplication across `_gather`, `_gather_list_results`, `summary`, and `backend_trend`.
