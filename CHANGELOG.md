@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Consolidated `clients-http` module into `clients` in `docs/modules.yaml` taxonomy; `_http.py` is an internal detail of the clients sub-package.
 - Extract repeated exception-handling boilerplate in `CostService` into a private `_safe_project_fetch` helper, eliminating ~23 lines of duplication across `_gather`, `_gather_list_results`, `summary`, and `backend_trend`.
 - Move `tests/web/dashboard.test.js` to `tests/robotsix_cost_monitor/web/static/dashboard.test.js` and update its import path to match sibling JS tests, unifying the test layout under one glob (`tests/robotsix_cost_monitor/web/static/*.test.js`).
 - Collapse duplicated `analyst_stage()` and `analyst_ticket()` GET handlers into a single `@router.get("/api/analyst/{kind}")` parameterized route in `routes.py`.
