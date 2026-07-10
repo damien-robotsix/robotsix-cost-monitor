@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Extract repeated exception-handling boilerplate in `CostService` into a private `_safe_project_fetch` helper, eliminating ~23 lines of duplication across `_gather`, `_gather_list_results`, `summary`, and `backend_trend`.
 - Move `tests/web/dashboard.test.js` to `tests/robotsix_cost_monitor/web/static/dashboard.test.js` and update its import path to match sibling JS tests, unifying the test layout under one glob (`tests/robotsix_cost_monitor/web/static/*.test.js`).
 - Updated `docs/index.md` with links to the Configuration Reference and CLI
   Reference pages.

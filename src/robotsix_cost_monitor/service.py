@@ -100,6 +100,25 @@ class CostService:
             return [p] if p else []
         return list(self.config.projects)
 
+    async def _safe_project_fetch[T](
+        self,
+        project: ProjectConfig,
+        fetch_fn: Callable[[], Awaitable[T]],
+        label: str,
+        default: T,
+    ) -> T:
+        try:
+            return await fetch_fn()
+        except (ExternalServiceError, ExternalRateLimitError, CacheError):
+            logger.warning("project %s %s failed transiently", project.slug, label)
+            return default
+        except ProjectConfigError:
+            logger.warning("project %s misconfigured — skipping", project.slug)
+            return default
+        except Exception:
+            logger.exception("project %s %s failed unexpectedly", project.slug, label)
+            return default
+
     async def _cached_fetch(
         self,
         project: ProjectConfig,
@@ -136,21 +155,13 @@ class CostService:
     ) -> list[tuple[ProjectConfig, list[LangfuseTrace]]]:
         out: list[tuple[ProjectConfig, list[LangfuseTrace]]] = []
         for p in self._projects(slug):
-            try:
-                out.append((p, await self._traces(p, hours)))
-            except (ExternalServiceError, ExternalRateLimitError, CacheError):
-                logger.warning(
-                    "project %s failed transiently — returning empty data", p.slug
-                )
-                out.append((p, []))
-            except ProjectConfigError:
-                logger.warning("project %s misconfigured — skipping", p.slug)
-                out.append((p, []))
-            except Exception:
-                logger.exception(
-                    "project %s failed unexpectedly — returning empty data", p.slug
-                )
-                out.append((p, []))
+            traces: list[LangfuseTrace] = await self._safe_project_fetch(
+                p,
+                lambda: self._traces(p, hours),  # noqa: B023
+                "fetch traces",
+                [],
+            )
+            out.append((p, traces))
         return out
 
     async def _gather_list_results(
@@ -161,21 +172,13 @@ class CostService:
     ) -> list[dict[str, Any]]:
         parts: list[list[dict[str, Any]]] = []
         for p in self._projects(slug):
-            try:
-                parts.append(await fetch(p, hours))
-            except (ExternalServiceError, ExternalRateLimitError, CacheError):
-                logger.warning(
-                    "project %s failed transiently — returning empty data", p.slug
-                )
-                parts.append([])
-            except ProjectConfigError:
-                logger.warning("project %s misconfigured — skipping", p.slug)
-                parts.append([])
-            except Exception:
-                logger.exception(
-                    "project %s failed unexpectedly — returning empty data", p.slug
-                )
-                parts.append([])
+            result: list[dict[str, Any]] = await self._safe_project_fetch(
+                p,
+                lambda: fetch(p, hours),  # noqa: B023
+                "fetch list results",
+                [],
+            )
+            parts.append(result)
         return [r for part in parts for r in part]
 
     async def _build_trace_rows(
@@ -327,36 +330,18 @@ class CostService:
         per_project: list[dict[str, Any]] = []
         total = 0.0
         for p in self._projects(slug):
-            try:
-                models = await self._model_usage(p, hours)
-            except (ExternalServiceError, ExternalRateLimitError, CacheError):
-                logger.warning(
-                    "project %s model-usage fetch failed transiently", p.slug
-                )
-                models = []
-            except ProjectConfigError:
-                logger.warning("project %s misconfigured — skipping", p.slug)
-                models = []
-            except Exception:
-                logger.exception(
-                    "project %s model-usage fetch failed unexpectedly", p.slug
-                )
-                models = []
-            try:
-                trace_count = await self._trace_count(p, hours)
-            except (ExternalServiceError, ExternalRateLimitError, CacheError):
-                logger.warning(
-                    "project %s trace-count fetch failed transiently", p.slug
-                )
-                trace_count = 0
-            except ProjectConfigError:
-                logger.warning("project %s misconfigured — skipping", p.slug)
-                trace_count = 0
-            except Exception:
-                logger.exception(
-                    "project %s trace-count fetch failed unexpectedly", p.slug
-                )
-                trace_count = 0
+            models: list[dict[str, Any]] = await self._safe_project_fetch(
+                p,
+                lambda: self._model_usage(p, hours),  # noqa: B023
+                "model-usage",
+                [],
+            )
+            trace_count: int = await self._safe_project_fetch(
+                p,
+                lambda: self._trace_count(p, hours),  # noqa: B023
+                "trace-count",
+                0,
+            )
             cost = round(sum(m["cost"] for m in models), 6)
             total += cost
             per_project.append(
@@ -477,21 +462,13 @@ class CostService:
         """
         parts: list[dict[str, dict[str, float]]] = []
         for p in self._projects(slug):
-            try:
-                parts.append(await self._backend_cost(p, hours))
-            except (ExternalServiceError, ExternalRateLimitError, CacheError):
-                logger.warning(
-                    "project %s backend-cost fetch failed transiently", p.slug
-                )
-                parts.append({})
-            except ProjectConfigError:
-                logger.warning("project %s misconfigured — skipping", p.slug)
-                parts.append({})
-            except Exception:
-                logger.exception(
-                    "project %s backend-cost fetch failed unexpectedly", p.slug
-                )
-                parts.append({})
+            cost: dict[str, dict[str, float]] = await self._safe_project_fetch(
+                p,
+                lambda: self._backend_cost(p, hours),  # noqa: B023
+                "backend-cost",
+                {},
+            )
+            parts.append(cost)
         return backend_cost_series(parts, backend)
 
     async def trend(
