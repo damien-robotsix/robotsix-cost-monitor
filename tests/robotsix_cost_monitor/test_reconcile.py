@@ -19,7 +19,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-from conftest import _proj
+from helpers import _proj
 
 from robotsix_cost_monitor.config import Settings
 from robotsix_cost_monitor.reconcile import (
