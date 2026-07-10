@@ -283,12 +283,6 @@ async def analyst_run(
     return await run_analyst(cfg, service)
 
 
-@router.get("/api/analyst/ticket")
-def analyst_ticket() -> dict[str, Any]:
-    """GET /api/analyst/ticket — load the saved ticket-level targeted analysis."""
-    return load_targeted_analysis("ticket")
-
-
 @router.post("/api/analyst/ticket-run")
 async def analyst_ticket_run(
     cfg: Config = Depends(get_config),
@@ -298,12 +292,6 @@ async def analyst_ticket_run(
     return await run_ticket_analyst(cfg, service)
 
 
-@router.get("/api/analyst/stage")
-def analyst_stage() -> dict[str, Any]:
-    """GET /api/analyst/stage — load the saved stage-level targeted analysis."""
-    return load_targeted_analysis("stage")
-
-
 @router.post("/api/analyst/stage-run")
 async def analyst_stage_run(
     cfg: Config = Depends(get_config),
@@ -311,6 +299,12 @@ async def analyst_stage_run(
 ) -> dict[str, Any]:
     """POST /api/analyst/stage-run — trigger a stage-level targeted analysis."""
     return await run_stage_analyst(cfg, service)
+
+
+@router.get("/api/analyst/{kind}")
+def analyst_targeted(kind: str) -> dict[str, Any]:
+    """GET /api/analyst/{kind} — load a saved targeted analysis (ticket or stage)."""
+    return load_targeted_analysis(kind)
 
 
 @router.get("/", response_class=HTMLResponse)
