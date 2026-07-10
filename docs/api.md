@@ -21,3 +21,8 @@
 ::: robotsix_cost_monitor.clients.langfuse
 
 ::: robotsix_cost_monitor.clients
+::: robotsix_cost_monitor.exceptions
+
+::: robotsix_cost_monitor.clients._http
+
+::: robotsix_cost_monitor.clients.models

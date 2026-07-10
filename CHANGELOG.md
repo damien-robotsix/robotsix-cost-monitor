@@ -1,5 +1,7 @@
 ## 0.0.0 (unreleased)
 
+- Updated `docs/index.md` with links to the Configuration Reference and CLI
+  Reference pages.
 - Extract hardcoded API endpoint paths and query-parameter names from
   `dashboard.js` and `analyst.js` into shared `API` and `QS` constants
   in `shared.js`. Route renames now only need a single point of change.
