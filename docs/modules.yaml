@@ -45,12 +45,6 @@ modules:
       - src/robotsix_cost_monitor/exceptions.py
       - tests/robotsix_cost_monitor/test_exceptions.py
 
-  - id: clients-http
-    description: Typed httpx.AsyncClient wrapper with retry/backoff
-    paths:
-      - src/robotsix_cost_monitor/clients/_http.py
-      - tests/robotsix_cost_monitor/clients/test_http.py
-
   - id: service
     description: Cross-project cost aggregation with TTL cache
     paths:
@@ -79,11 +73,13 @@ modules:
       - tests/robotsix_cost_monitor/test_routes.py
 
   - id: clients
-    description: Package init for the external API clients sub-package (Langfuse, OpenRouter)
+    description: External API client sub-package (Langfuse, OpenRouter) including typed httpx retry client
     paths:
       - src/robotsix_cost_monitor/clients/__init__.py
+      - src/robotsix_cost_monitor/clients/_http.py
       - src/robotsix_cost_monitor/clients/models.py
       - src/robotsix_cost_monitor/clients/langfuse.py
+      - tests/robotsix_cost_monitor/clients/test_http.py
       - tests/robotsix_cost_monitor/clients/test_langfuse.py
       - tests/robotsix_cost_monitor/clients/test_models.py
 
