@@ -282,6 +282,10 @@ async def analyst_run(
     """POST /api/analyst/run — trigger a full cost-analyst analysis run."""
     return await run_analyst(cfg, service)
 
+@router.get("/api/analyst/stage")
+def analyst_stage() -> dict[str, Any]:
+    """GET /api/analyst/stage — load the saved stage-level targeted analysis."""
+    return load_targeted_analysis("stage")
 
 @router.get("/api/analyst/ticket")
 def analyst_ticket() -> dict[str, Any]:
