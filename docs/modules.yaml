@@ -25,7 +25,7 @@ modules:
       - src/robotsix_cost_monitor/web/static/dashboard.js
       - src/robotsix_cost_monitor/web/static/dashboard.css
       - tests/robotsix_cost_monitor/test_app.py
-      - tests/web/dashboard.test.js
+      - tests/robotsix_cost_monitor/web/static/dashboard.test.js
 
   - id: cli
     description: CLI entrypoint (serve, summary, reconcile)

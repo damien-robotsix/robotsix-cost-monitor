@@ -5,7 +5,6 @@ export default defineConfig({
     environment: 'jsdom',
     include: [
       'tests/robotsix_cost_monitor/web/static/*.test.js',
-      'tests/web/**/*.test.js',
     ],
   },
 });

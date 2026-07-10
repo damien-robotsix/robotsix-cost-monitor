@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Move `tests/web/dashboard.test.js` to `tests/robotsix_cost_monitor/web/static/dashboard.test.js` and update its import path to match sibling JS tests, unifying the test layout under one glob (`tests/robotsix_cost_monitor/web/static/*.test.js`).
 - Updated `docs/index.md` with links to the Configuration Reference and CLI
   Reference pages.
 - Extract hardcoded API endpoint paths and query-parameter names from
