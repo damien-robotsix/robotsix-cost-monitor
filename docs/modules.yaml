@@ -185,7 +185,8 @@ modules:
       - deploy/docker-compose.yml
 
   - id: config-files
-    description: User-facing project configuration files (example config, JSON schema)
+    description: User-facing project configuration files (example config, JSON schema) and schema generation script
     paths:
       - config/projects.example.yaml
       - config/projects.schema.json
+      - scripts/generate_config_schema.py
