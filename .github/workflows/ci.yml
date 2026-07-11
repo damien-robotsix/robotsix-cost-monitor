@@ -105,20 +105,6 @@ jobs:
     env:
       UV_CACHE_DIR: .cache/uv
     steps:
-      - uses: step-security/harden-runner@...
-        with:
-          egress-policy: audit
-      - uses: actions/checkout@...
-        with:
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@...
-        with:
-          enable-cache: true
-          cache-python: true
-      - run: uv sync --locked
-      - run: uv run python scripts/generate_config_schema.py
-      - name: Check schema is up to date
-        run: git diff --exit-code config/projects.schema.json
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
           egress-policy: audit
