@@ -157,7 +157,7 @@ def test_reconcile_unconfigured_project() -> None:
         Config(
             projects=[
                 ProjectConfig(
-                    name="demo", public_key="pk", secret_key="sk", base_url="http://x"
+                    name="demo", public_key="pk-lf-demo", secret_key="sk-lf-demo", base_url="http://x"
                 )
             ]
         )
@@ -168,7 +168,7 @@ def test_reconcile_unconfigured_project() -> None:
 
 
 def test_project_slug() -> None:
-    p = ProjectConfig(name="Robotsix Mill", public_key="pk", secret_key="sk")
+    p = ProjectConfig(name="Robotsix Mill", public_key="pk-lf-rm", secret_key="sk-lf-rm")
     assert p.slug == "robotsix-mill"
 
 
@@ -181,7 +181,7 @@ def test_load_config_roundtrip(tmp_path: Path) -> None:
     cfg = tmp_path / "projects.yaml"
     cfg.write_text(
         "projects:\n"
-        "  - name: A\n    public_key: pk\n    secret_key: sk\n"
+        "  - name: A\n    public_key: pk-lf-a\n    secret_key: sk-lf-a\n"
         "    base_url: http://lf\n"
         "settings:\n  default_window_hours: 48\n"
     )

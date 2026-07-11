@@ -74,8 +74,8 @@ def _proj(
     """A ProjectConfig with dummy credentials (``base_url`` never called)."""
     return ProjectConfig(
         name=name,
-        public_key=f"pk-{name}",
-        secret_key=f"sk-{name}",
+        public_key=f"pk-lf-{name}",
+        secret_key=f"sk-lf-{name}",
         base_url="http://localhost",
         openrouter_key=openrouter_key,
     )

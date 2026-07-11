@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Add `scripts/generate_config_schema.py` to auto-regenerate `config/projects.schema.json` from the Pydantic config models, plus `make schema` / `make verify-schema` targets, a CI freshness gate (`config-schema` job), and a pre-commit hook to prevent silent schema drift.
 - Document `LOG_FORMAT` env var in both `docs/reference/configuration.md` and `docs/reference/cli.md` env-var tables.
 - Consolidated `clients-http` module into `clients` in `docs/modules.yaml` taxonomy; `_http.py` is an internal detail of the clients sub-package.
 - Consolidated `tests-conftest` module into `tests-helpers`: moved the `event_loop` fixture from `tests/conftest.py` into `tests/helpers.py`, updated three test files to import from `helpers` instead of `conftest`, and deleted `tests/conftest.py`.

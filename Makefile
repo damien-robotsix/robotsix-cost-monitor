@@ -1,4 +1,4 @@
-.PHONY: test install install-test install-lint lint typecheck format serve docs clean
+.PHONY: test install install-test install-lint lint typecheck format serve docs clean schema verify-schema
 
 install:
 	uv sync --locked --all-extras --all-groups
@@ -30,6 +30,15 @@ serve:
 
 docs:
 	uv run mkdocs serve
+
+schema:
+	uv run python scripts/generate_config_schema.py
+
+verify-schema: schema
+	@if ! git diff --exit-code config/projects.schema.json; then \
+		echo "ERROR: config/projects.schema.json is stale — run 'make schema' and commit the result."; \
+		exit 1; \
+	fi
 
 clean:
 	rm -rf .coverage .mypy_cache .ruff_cache .pytest_cache htmlcov/

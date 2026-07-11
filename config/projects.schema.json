@@ -1,7 +1,7 @@
 {
   "$defs": {
     "AnalystConfig": {
-      "description": "LLM cost-analyst settings (optional \u2014 disabled without an OpenRouter key).\n\nThe analyst runs a level-2 (llmio tier-2) agent over the deterministic cost\ndigest, with a level-3 sub-agent that drills into the most expensive traces,\nproducing and storing cost-reduction proposals.",
+      "description": "LLM cost-analyst settings (optional \u2014 disabled without an OpenRouter key).\n\nThe analyst runs a level-2 (llmio tier-2) agent over the deterministic cost\ndigest, with a level-3 sub-agent that drills into the most expensive traces,\nproducing and storing cost-reduction proposals under ``.data/analyst/``.",
       "properties": {
         "openrouter_key": {
           "anyOf": [
@@ -135,7 +135,6 @@
         },
         "base_url": {
           "default": "https://cloud.langfuse.com",
-          "format": "uri",
           "title": "Base Url",
           "type": "string"
         },
@@ -196,13 +195,12 @@
       "type": "object"
     }
   },
-  "description": "JSON Schema for robotsix-cost-monitor config/projects.yaml. Generated from Pydantic models.",
+  "description": "Top-level config: the projects to monitor + global settings.",
   "properties": {
     "projects": {
       "items": {
         "$ref": "#/$defs/ProjectConfig"
       },
-      "minItems": 1,
       "title": "Projects",
       "type": "array"
     },
@@ -210,10 +208,7 @@
       "$ref": "#/$defs/Settings"
     }
   },
-  "required": [
-    "projects"
-  ],
-  "title": "robotsix-cost-monitor configuration schema",
+  "title": "Config",
   "type": "object",
   "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

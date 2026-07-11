@@ -18,8 +18,8 @@ class ProjectConfig(BaseModel):
     """One Langfuse project to monitor."""
 
     name: str
-    public_key: str
-    secret_key: str
+    public_key: str = Field(pattern=r"^pk-lf-")
+    secret_key: str = Field(pattern=r"^sk-lf-")
     base_url: str = "https://cloud.langfuse.com"
     # Optional OpenRouter API/management key for reconciliation of this project.
     openrouter_key: str | None = None
