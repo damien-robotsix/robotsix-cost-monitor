@@ -157,7 +157,10 @@ def test_reconcile_unconfigured_project() -> None:
         Config(
             projects=[
                 ProjectConfig(
-                    name="demo", public_key="pk-lf-demo", secret_key="sk-lf-demo", base_url="http://x"
+                    name="demo",
+                    public_key="pk-lf-demo",
+                    secret_key="sk-lf-demo",
+                    base_url="http://x",
                 )
             ]
         )
@@ -168,7 +171,9 @@ def test_reconcile_unconfigured_project() -> None:
 
 
 def test_project_slug() -> None:
-    p = ProjectConfig(name="Robotsix Mill", public_key="pk-lf-rm", secret_key="sk-lf-rm")
+    p = ProjectConfig(
+        name="Robotsix Mill", public_key="pk-lf-rm", secret_key="sk-lf-rm"
+    )
     assert p.slug == "robotsix-mill"
 
 
