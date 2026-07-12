@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Remove stale `tests/web/` references from `package.json` Biome scripts and `biome.json` include array (directory was emptied in a prior ticket).
 - Remove stale `analyst_stage` and `analyst_ticket` entries from `vulture_whitelist.py` (these route handlers were collapsed into `analyst_targeted(kind)`).
 - Add `scripts/generate_config_schema.py` to auto-regenerate `config/projects.schema.json` from the Pydantic config models, plus `make schema` / `make verify-schema` targets, a CI freshness gate (`config-schema` job), and a pre-commit hook to prevent silent schema drift.
 - Document `LOG_FORMAT` env var in both `docs/reference/configuration.md` and `docs/reference/cli.md` env-var tables.
