@@ -3,9 +3,9 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "lint": "npx @biomejs/biome check src/robotsix_cost_monitor/web/static/ tests/web/ tests/robotsix_cost_monitor/web/static/",
-    "format": "npx @biomejs/biome check --write src/robotsix_cost_monitor/web/static/ tests/web/ tests/robotsix_cost_monitor/web/static/",
-    "lint:ci": "npx @biomejs/biome ci src/robotsix_cost_monitor/web/static/ tests/web/ tests/robotsix_cost_monitor/web/static/",
+    "lint": "npx @biomejs/biome check src/robotsix_cost_monitor/web/static/ tests/robotsix_cost_monitor/web/static/",
+    "format": "npx @biomejs/biome check --write src/robotsix_cost_monitor/web/static/ tests/robotsix_cost_monitor/web/static/",
+    "lint:ci": "npx @biomejs/biome ci src/robotsix_cost_monitor/web/static/ tests/robotsix_cost_monitor/web/static/",
     "typecheck": "tsc --noEmit -p jsconfig.json"
   },
   "devDependencies": {
