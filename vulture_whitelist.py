@@ -14,9 +14,7 @@ reconcile_last
 analyst_digest
 analyst_proposals
 analyst_run
-analyst_ticket
 analyst_ticket_run
-analyst_stage
 analyst_stage_run
 index
 analyst_page
