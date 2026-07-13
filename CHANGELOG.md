@@ -1,6 +1,3 @@
-## 0.0.0 (unreleased)
-
-- Activate release-please for automated version management: add `release-please-config.json` and `.github/workflows/release-please.yml` to auto-create Release PRs, restructure `CHANGELOG.md` to Keep a Changelog format, fix version drift in `app.py` (hardcoded `"0.1.0"` → `__version__`), update PR template and contributing guide, and remove stale `.release-please-manifest.json`.
 # Changelog
 
 All notable changes to this project are documented here.
