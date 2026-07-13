@@ -8,14 +8,16 @@ concurrency:
   group: release-please-${{ github.ref }}
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   release-please:
+    name: Release Please
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write       # required to create releases and tags
+      pull-requests: write  # required to manage release PRs
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:

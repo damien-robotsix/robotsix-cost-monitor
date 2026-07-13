@@ -109,6 +109,7 @@ show_missing = true
 
 [tool.deptry]
 extend_exclude = ["scripts/validate_modules.py", "scripts/generate_config_schema.py"]
+known_first_party = ["robotsix_cost_monitor"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
