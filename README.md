@@ -64,9 +64,10 @@ uv run robotsix-cost-monitor reconcile [--project SLUG]
 | GET | `/api/analyst/proposals` | — | Saved cost-reduction proposals |
 | POST | `/api/analyst/run` | — | Trigger a full cost-analyst analysis run |
 | GET | `/api/analyst/ticket` | — | Saved ticket-level targeted analysis |
-| POST | `/api/analyst/ticket-run` | — | Trigger a ticket-level targeted analysis run |
+| POST | `/api/analyst/run/ticket` | — | Trigger a ticket-level targeted analysis run |
 | GET | `/api/analyst/stage` | — | Saved stage-level targeted analysis |
-| POST | `/api/analyst/stage-run` | — | Trigger a stage-level targeted analysis run |
+| POST | `/api/analyst/run/stage` | — | Trigger a stage-level targeted analysis run |
+| POST | `/api/analyst/run/{kind}` | — | Run a targeted analyst analysis (ticket or stage) |
 
 ## Architecture
 

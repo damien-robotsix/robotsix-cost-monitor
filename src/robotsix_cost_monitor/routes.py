@@ -283,22 +283,18 @@ async def analyst_run(
     return await run_analyst(cfg, service)
 
 
-@router.post("/api/analyst/ticket-run")
-async def analyst_ticket_run(
+@router.post("/api/analyst/run/{kind}")
+async def analyst_run_targeted(
+    kind: str,
     cfg: Config = Depends(get_config),
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
-    """POST /api/analyst/ticket-run — trigger a ticket-level targeted analysis."""
-    return await run_ticket_analyst(cfg, service)
-
-
-@router.post("/api/analyst/stage-run")
-async def analyst_stage_run(
-    cfg: Config = Depends(get_config),
-    service: CostService = Depends(get_service),
-) -> dict[str, Any]:
-    """POST /api/analyst/stage-run — trigger a stage-level targeted analysis."""
-    return await run_stage_analyst(cfg, service)
+    """POST /api/analyst/run/{kind} — run a targeted analysis (ticket or stage)."""
+    if kind == "ticket":
+        return await run_ticket_analyst(cfg, service)
+    if kind == "stage":
+        return await run_stage_analyst(cfg, service)
+    raise HTTPException(status_code=404, detail=f"Unknown analyst kind: {kind}")
 
 
 @router.get("/api/analyst/{kind}")
