@@ -236,7 +236,7 @@ export function makeTargeted(kind, btnId, containerId, headerFn) {
     btn.disabled = true;
     setStatus(`analyzing most costly ${kind}… this can take a couple of minutes`);
     try {
-      const r = await fetch(`${API.ANALYST_KIND}/${kind}-run`, { method: 'POST' });
+      const r = await fetch(`${API.ANALYST_KIND}/run/${kind}`, { method: 'POST' });
       if (!r.ok) throw new Error(`${kind}-run → ${r.status}`);
       renderTargeted(containerId, await r.json(), headerFn);
       setStatus(`${kind} analysis complete`);

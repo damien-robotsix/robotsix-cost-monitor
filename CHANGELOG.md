@@ -1,3 +1,6 @@
+## 0.0.0 (unreleased)
+
+- Collapse duplicated `analyst_ticket_run` and `analyst_stage_run` POST handlers into a single `/api/analyst/run/{kind}` route with a 404 guard for unknown kinds.
 # Changelog
 
 All notable changes to this project are documented here.

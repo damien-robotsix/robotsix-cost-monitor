@@ -606,7 +606,7 @@ describe('makeTargeted', () => {
       const el = document.getElementById('ticket-analysis');
       expect(el.innerHTML).toContain('T-2');
       expect(el.innerHTML).toContain('$200');
-      expect(globalThis.fetch).toHaveBeenCalledWith('/api/analyst/ticket-run', { method: 'POST' });
+      expect(globalThis.fetch).toHaveBeenCalledWith('/api/analyst/run/ticket', { method: 'POST' });
     } finally {
       globalThis.fetch = origFetch;
     }

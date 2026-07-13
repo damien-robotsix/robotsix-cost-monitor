@@ -558,7 +558,7 @@ def test_analyst_ticket_run() -> None:
         new_callable=AsyncMock,
         return_value={"status": "ok"},
     ) as mock_run:
-        r = _client().post("/api/analyst/ticket-run")
+        r = _client().post("/api/analyst/run/ticket")
         assert r.status_code == 200
         assert r.json() == {"status": "ok"}
         mock_run.assert_called_once()
@@ -570,7 +570,7 @@ def test_analyst_stage_run() -> None:
         new_callable=AsyncMock,
         return_value={"status": "ok"},
     ) as mock_run:
-        r = _client().post("/api/analyst/stage-run")
+        r = _client().post("/api/analyst/run/stage")
         assert r.status_code == 200
         assert r.json() == {"status": "ok"}
         mock_run.assert_called_once()
