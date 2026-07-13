@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "simple",
+  "include-v-in-tag": true,
+  "pull-request-title-pattern": "chore: release ${version}",
+  "extra-files": [
+    "src/robotsix_cost_monitor/__init__.py"
+  ],
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "extra-files": [
+        "src/robotsix_cost_monitor/__init__.py"
+      ]
+    }
+  }
+}

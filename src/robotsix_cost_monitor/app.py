@@ -14,6 +14,8 @@ import structlog
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from robotsix_cost_monitor import __version__
+
 from .analyst import (
     load_proposals,
     load_targeted_analysis,
@@ -196,7 +198,7 @@ def create_app(config: Config | None = None) -> FastAPI:
                 with contextlib.suppress(asyncio.CancelledError):
                     await t
 
-    app = FastAPI(title="robotsix-cost-monitor", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="robotsix-cost-monitor", version=__version__, lifespan=lifespan)
     app.state.config = cfg
     app.state.service = service
 

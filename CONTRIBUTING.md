@@ -75,7 +75,7 @@ hook.
    ```
 4. Push and open a PR. CI will run the full matrix.
 5. If you touched files outside `tests/`, `.github/`, or `CHANGELOG.md`,
-   add a changelog entry under `## 0.0.0 (unreleased)` in `CHANGELOG.md`.
+   add a changelog entry under `## [Unreleased]` with the appropriate category header (`### Added`, `### Changed`, `### Fixed`, etc.) in `CHANGELOG.md`. Release-please will later categorize and move entries into versioned sections.
 
 ## Git-dependency upgrade process
 
