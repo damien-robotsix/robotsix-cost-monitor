@@ -112,7 +112,6 @@ modules:
       - .npmrc
       - .nvmrc
       - .pre-commit-config.yaml
-      - .release-please-manifest.json
       - .secrets.baseline
       - AGENT.md
       - ARCHITECTURE.md
@@ -131,6 +130,7 @@ modules:
       - package-lock.json
       - package.json
       - pyproject.toml
+      - release-please-config.json
       - uv.lock
       - vitest.config.js
       - vulture_whitelist.py
@@ -149,6 +149,7 @@ modules:
       - .github/workflows/dependabot-auto-merge.yml
       - .github/workflows/docs.yml
       - .github/workflows/lint-workflows.yml
+      - .github/workflows/release-please.yml
       - .github/workflows/release.yml
       - .github/workflows/scan-container.yml
 
