@@ -130,6 +130,7 @@ modules:
       - package-lock.json
       - package.json
       - pyproject.toml
+      - .release-please-manifest.json
       - release-please-config.json
       - uv.lock
       - vitest.config.js
