@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import random
-from typing import Any
+from typing import Any, NoReturn
 
 import httpx
 import structlog
@@ -68,69 +68,89 @@ class RetryClient:
         jitter = random.uniform(0.8, 1.0)  # noqa: S311 — jitter, not crypto
         return float(delay * jitter)
 
-    async def get(self, url: str, **kwargs: Any) -> httpx.Response:
-        """GET with retry/backoff. Raises typed exceptions on terminal errors."""
-        last_resp: httpx.Response | None = None
-        for attempt in range(MAX_RETRIES + 1):
-            try:
-                async with httpx.AsyncClient(timeout=self._timeout) as client:
-                    resp = await client.get(url, **kwargs)
-                    if resp.is_success:
-                        return resp
-                    if await self._should_retry(resp, None):
-                        last_resp = resp
-                        if attempt == MAX_RETRIES:
-                            break
-                        delay = await self._get_retry_delay(attempt, resp)
-                        logger.debug(
-                            "retry attempt %d/%d for %s after %.1fs",
-                            attempt + 1,
-                            MAX_RETRIES,
-                            url,
-                            delay,
-                        )
-                        await asyncio.sleep(delay)
-                        continue
-                    # Terminal HTTP error — classify
-                    if resp.status_code in (401, 403):
-                        raise ExternalAuthError(
-                            f"{resp.status_code} on {url}: {resp.text[:200]}"
-                        )
-                    if resp.status_code == 429:
-                        raise ExternalRateLimitError(f"429 on {url}: {resp.text[:200]}")
-                    raise ExternalServiceError(
-                        f"{resp.status_code} on {url}: {resp.text[:200]}",
-                        status_code=502,
-                    )
-            except (
-                httpx.ConnectError,
-                httpx.TimeoutException,
-                httpx.RemoteProtocolError,
-                httpx.ReadError,
-            ) as exc:
-                if attempt < MAX_RETRIES:
-                    delay = (
-                        BASE_DELAY * (2**attempt) * random.uniform(0.8, 1.0)  # noqa: S311 — jitter
-                    )
-                    logger.debug(
-                        "retry attempt %d/%d for %s after %.1fs (%s)",
-                        attempt + 1,
-                        MAX_RETRIES,
-                        url,
-                        delay,
-                        type(exc).__name__,
-                    )
-                    await asyncio.sleep(delay)
-                    continue
-                raise ExternalServiceError(
-                    f"{type(exc).__name__} after {MAX_RETRIES} retries: {exc}"
-                ) from exc
+    async def _attempt_get(
+        self, url: str, kwargs: dict[str, Any], attempt: int
+    ) -> tuple[httpx.Response | None, Exception | None]:
+        """Make a single GET attempt.
 
-        # Exhausted retries
-        if last_resp is not None:
+        Returns ``(resp, None)`` on retryable outcomes (success or retryable
+        HTTP error) and ``(None, exc)`` on retryable network errors.
+
+        Raises immediately on terminal HTTP errors (auth, rate-limit,
+        non-retryable status).
+        """
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as client:
+                resp = await client.get(url, **kwargs)
+                if resp.is_success:
+                    return (resp, None)
+                if await self._should_retry(resp, None):
+                    return (resp, None)
+                # Terminal HTTP error — classify
+                if resp.status_code in (401, 403):
+                    raise ExternalAuthError(
+                        f"{resp.status_code} on {url}: {resp.text[:200]}"
+                    )
+                if resp.status_code == 429:
+                    raise ExternalRateLimitError(f"429 on {url}: {resp.text[:200]}")
+                raise ExternalServiceError(
+                    f"{resp.status_code} on {url}: {resp.text[:200]}",
+                    status_code=502,
+                )
+        except (
+            httpx.ConnectError,
+            httpx.TimeoutException,
+            httpx.RemoteProtocolError,
+            httpx.ReadError,
+        ) as exc:
+            return (None, exc)
+
+    def _raise_on_exhaustion(
+        self,
+        last_resp_or_exc: httpx.Response | Exception | None,
+        url: str,
+    ) -> NoReturn:
+        """Raise the appropriate error after all retries are exhausted."""
+        if isinstance(last_resp_or_exc, httpx.Response):
             raise ExternalServiceError(
-                f"{last_resp.status_code} on {url} after {MAX_RETRIES} retries: "
-                f"{last_resp.text[:200]}",
+                f"{last_resp_or_exc.status_code} on {url} after {MAX_RETRIES} retries: "
+                f"{last_resp_or_exc.text[:200]}",
                 status_code=502,
             )
+        if isinstance(last_resp_or_exc, Exception):
+            raise ExternalServiceError(
+                f"{type(last_resp_or_exc).__name__} after {MAX_RETRIES} retries: "
+                f"{last_resp_or_exc}"
+            ) from last_resp_or_exc
         raise ExternalServiceError(f"GET {url} failed after {MAX_RETRIES} retries")
+
+    async def get(self, url: str, **kwargs: Any) -> httpx.Response:
+        """GET with retry/backoff. Raises typed exceptions on terminal errors."""
+        last_resp_or_exc: httpx.Response | Exception | None = None
+        for attempt in range(MAX_RETRIES + 1):
+            resp, exc = await self._attempt_get(url, kwargs, attempt)
+            if resp is not None and resp.is_success:
+                return resp
+            last_resp_or_exc = resp if resp is not None else exc
+            if attempt == MAX_RETRIES:
+                break
+            delay = await self._get_retry_delay(attempt, resp)
+            if exc is not None:
+                logger.debug(
+                    "retry attempt %d/%d for %s after %.1fs (%s)",
+                    attempt + 1,
+                    MAX_RETRIES,
+                    url,
+                    delay,
+                    type(exc).__name__,
+                )
+            else:
+                logger.debug(
+                    "retry attempt %d/%d for %s after %.1fs",
+                    attempt + 1,
+                    MAX_RETRIES,
+                    url,
+                    delay,
+                )
+            await asyncio.sleep(delay)
+        self._raise_on_exhaustion(last_resp_or_exc, url)

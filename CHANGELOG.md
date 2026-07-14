@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Refactor `RetryClient.get()` to reduce nesting: extract `_attempt_get` and `_raise_on_exhaustion` helpers, and reuse `_get_retry_delay` in the network-error path instead of an inline jitter formula.
 - Collapse duplicated `analyst_ticket_run` and `analyst_stage_run` POST handlers into a single `/api/analyst/run/{kind}` route with a 404 guard for unknown kinds.
 # Changelog
 
