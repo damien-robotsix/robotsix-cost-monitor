@@ -20,7 +20,7 @@ lint: install-lint
 	uv run pre-commit run --all-files
 
 typecheck: install-lint
-	uv run mypy src/
+	uv run mypy src/ tests/
 
 format:
 	uv run ruff format src/

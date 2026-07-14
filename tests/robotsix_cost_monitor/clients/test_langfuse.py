@@ -75,7 +75,7 @@ async def test_fetch_traces_window_delegates_to_async_client() -> None:
     c = _client()
     raw_traces = [{"id": "t1"}, {"id": "t2"}]
 
-    async def _mock_fetch(hours: float):  # type: ignore[no-untyped-def]
+    async def _mock_fetch(hours: float):
         for t in raw_traces:
             yield t
 
@@ -91,7 +91,7 @@ async def test_fetch_traces_window_empty() -> None:
     """Returns empty list when the async iterator yields nothing."""
     c = _client()
 
-    async def _mock_fetch(hours: float):  # type: ignore[no-untyped-def]
+    async def _mock_fetch(hours: float):
         if False:
             yield  # never yields
 
@@ -105,7 +105,7 @@ async def test_fetch_traces_window_passes_hours() -> None:
     c = _client()
     mock = Mock()
 
-    async def _mock_fetch(hours: float):  # type: ignore[no-untyped-def]
+    async def _mock_fetch(hours: float):
         mock(hours)
         if False:
             yield
