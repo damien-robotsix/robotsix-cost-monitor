@@ -70,7 +70,7 @@ constraint-dependencies = ["pydantic-settings>=2.14.2"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py312"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "S", "D"]
@@ -83,7 +83,7 @@ ignore = ["S101"]  # assert in tests
 "src/robotsix_cost_monitor/routes.py" = ["B008"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.14"
 strict = true
 warn_unused_ignores = true
 

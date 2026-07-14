@@ -46,7 +46,7 @@ class KeyUsage:
 # IS installed we must not clobber it.
 # ---------------------------------------------------------------------------
 @pytest.fixture(autouse=True)
-def _mock_robotsix_llmio_modules() -> Generator[None, None, None]:
+def _mock_robotsix_llmio_modules() -> Generator[None]:
     had_llmio = "robotsix_llmio" in sys.modules
     had_openrouter = "robotsix_llmio.openrouter" in sys.modules
 
