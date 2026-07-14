@@ -23,7 +23,7 @@ def test_config_path_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_config_path_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("COST_MONITOR_CONFIG", raising=False)
     result = _config_path()
-    assert result.name == "projects.yaml"
+    assert result.name == "projects.json"
     assert result.parent.name == "config"
 
 
@@ -61,18 +61,17 @@ def test_analyst_empty_strings_are_falsy() -> None:
     assert cfg.enabled is False
 
 
-def test_example_yaml_max_trace_analyses_matches_code_default() -> None:
+def test_example_config_max_trace_analyses_matches_code_default() -> None:
     """The example config must ship with the same max_trace_analyses as the
     Pydantic default, so users who copy it verbatim get the intended cap.
     """
     from pathlib import Path
 
-    from robotsix_yaml_config import read_yaml_file
+    from robotsix_config import load_config
 
     from robotsix_cost_monitor.config import Config
 
-    raw = read_yaml_file(Path("config/projects.example.yaml"))
-    config = Config.model_validate(raw)
+    config = load_config(Config, path=Path("config/projects.example.json"))
     assert config.settings.analyst is not None
     assert config.settings.analyst.max_trace_analyses == 12
     assert config.settings.analyst.traces_per_agent == 1

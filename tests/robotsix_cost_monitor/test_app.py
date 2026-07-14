@@ -179,16 +179,25 @@ def test_project_slug() -> None:
 
 def test_load_config_missing(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
-        load_config(tmp_path / "nope.yaml")
+        load_config(tmp_path / "nope.json")
 
 
 def test_load_config_roundtrip(tmp_path: Path) -> None:
-    cfg = tmp_path / "projects.yaml"
+    cfg = tmp_path / "projects.json"
     cfg.write_text(
-        "projects:\n"
-        "  - name: A\n    public_key: pk-lf-a\n    secret_key: sk-lf-a\n"
-        "    base_url: http://lf\n"
-        "settings:\n  default_window_hours: 48\n"
+        json.dumps(
+            {
+                "projects": [
+                    {
+                        "name": "A",
+                        "public_key": "pk-lf-a",
+                        "secret_key": "sk-lf-a",
+                        "base_url": "http://lf",
+                    }
+                ],
+                "settings": {"default_window_hours": 48},
+            }
+        )
     )
     loaded = load_config(cfg)
     assert loaded.projects[0].name == "A"

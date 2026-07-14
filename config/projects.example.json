@@ -1,0 +1,32 @@
+{
+  "projects": [
+    {
+      "name": "robotsix-mill",
+      "public_key": "pk-lf-xxxxxxxx",
+      "secret_key": "sk-lf-xxxxxxxx",
+      "base_url": "https://langfuse.robotsix.net",
+      "openrouter_key": null
+    }
+  ],
+  "settings": {
+    "default_window_hours": 168,
+    "cache_ttl_seconds": 60,
+    "reconcile_tolerance_usd": 1.0,
+    "reconcile_schedule_hours": 24.0,
+    "subscription_call_cap": 0,
+    "analyst": {
+      "openrouter_key": null,
+      "global_model": null,
+      "trace_model": null,
+      "window_hours": 24,
+      "top_stages": 8,
+      "traces_per_agent": 1,
+      "max_trace_analyses": 12,
+      "schedule_hours": 0,
+      "langfuse_public_key": null,
+      "langfuse_secret_key": null,
+      "langfuse_base_url": null,
+      "langfuse_project_id": null
+    }
+  }
+}
