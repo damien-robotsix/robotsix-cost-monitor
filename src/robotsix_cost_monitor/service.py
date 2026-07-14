@@ -109,7 +109,7 @@ class CostService:
     ) -> T:
         try:
             return await fetch_fn()
-        except (ExternalServiceError, ExternalRateLimitError, CacheError):
+        except ExternalServiceError, ExternalRateLimitError, CacheError:
             logger.warning("project %s %s failed transiently", project.slug, label)
             return default
         except ProjectConfigError:

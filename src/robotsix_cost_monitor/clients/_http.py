@@ -62,7 +62,7 @@ class RetryClient:
             if retry_after is not None:
                 try:
                     return max(0.0, float(str(retry_after)))
-                except (ValueError, TypeError):
+                except ValueError, TypeError:
                     pass
         delay = BASE_DELAY * (2**attempt)
         jitter = random.uniform(0.8, 1.0)  # noqa: S311 — jitter, not crypto
