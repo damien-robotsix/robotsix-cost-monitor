@@ -212,7 +212,7 @@ async def test_validation_handler_returns_422() -> None:
     exc = _validation_error()
     resp = await validation_handler(req, exc)
     assert resp.status_code == 422
-    body = json.loads(resp.body)
+    body = json.loads(resp.body)  # type: ignore[arg-type]
     assert body["error"]["code"] == "VALIDATION_ERROR"
 
 
@@ -220,7 +220,7 @@ async def test_validation_handler_includes_field_details() -> None:
     req = _make_request(FastAPI())
     exc = _validation_error()
     resp = await validation_handler(req, exc)
-    body = json.loads(resp.body)
+    body = json.loads(resp.body)  # type: ignore[arg-type]
     details = body["error"]["details"]
     assert len(details) == 1
     assert details[0]["field"] == "hours"
@@ -235,7 +235,7 @@ async def test_validation_handler_strips_body_from_field_path() -> None:
         errors=[{"loc": ("body", "project", "slug"), "msg": "X", "type": "T"}]
     )
     resp = await validation_handler(req, exc)
-    body = json.loads(resp.body)
+    body = json.loads(resp.body)  # type: ignore[arg-type]
     assert body["error"]["details"][0]["field"] == "project → slug"
 
 
@@ -246,7 +246,7 @@ async def test_validation_handler_missing_type_defaults_to_validation_error() ->
     req = _make_request(FastAPI())
     exc = RequestValidationError(errors=[{"loc": ("body",), "msg": "bad"}])
     resp = await validation_handler(req, exc)
-    body = json.loads(resp.body)
+    body = json.loads(resp.body)  # type: ignore[arg-type]
     assert body["error"]["details"][0]["code"] == "validation_error"
 
 
@@ -268,7 +268,7 @@ async def test_http_exception_handler(status_code: int, detail: str) -> None:
     exc = HTTPException(status_code=status_code, detail=detail)
     resp = await http_exception_handler(req, exc)
     assert resp.status_code == status_code
-    body = json.loads(resp.body)
+    body = json.loads(resp.body)  # type: ignore[arg-type]
     assert body["error"]["code"] == "HTTP_ERROR"
     assert body["error"]["detail"] == detail
 
@@ -283,7 +283,7 @@ async def test_unhandled_handler_returns_500_sanitized() -> None:
     exc = ValueError("secret key leaked")
     resp = await unhandled_handler(req, exc)
     assert resp.status_code == 500
-    body = json.loads(resp.body)
+    body = json.loads(resp.body)  # type: ignore[arg-type]
     assert body["error"]["code"] == "INTERNAL_ERROR"
     assert body["error"]["detail"] == "Internal Server Error"
 
@@ -386,21 +386,21 @@ def test_summary_window_defaults_to_config_default(client: TestClient) -> None:
     assert r.status_code == 200
     # The mock service returns whatever we stubbed, but the route's _window
     # logic runs before the service call — confirming it passed 168.
-    svc = client.app.state.service
+    svc = client.app.state.service  # type: ignore[attr-defined]
     svc.summary.assert_called_once_with("all", 168)
 
 
 def test_summary_passes_explicit_hours(client: TestClient) -> None:
     r = client.get("/api/summary?project=all&hours=48")
     assert r.status_code == 200
-    svc = client.app.state.service
+    svc = client.app.state.service  # type: ignore[attr-defined]
     svc.summary.assert_called_once_with("all", 48)
 
 
 def test_by_agent_default_backend(client: TestClient) -> None:
     r = client.get("/api/by-agent?hours=24")
     assert r.status_code == 200
-    client.app.state.service.by_agent.assert_called_once_with("all", 24, "all")
+    client.app.state.service.by_agent.assert_called_once_with("all", 24, "all")  # type: ignore[attr-defined]
 
 
 def test_by_agent_segmented_empty(client: TestClient) -> None:
@@ -420,13 +420,13 @@ def test_by_agent_segmented_empty(client: TestClient) -> None:
 def test_by_model_defaults(client: TestClient) -> None:
     r = client.get("/api/by-model?hours=24")
     assert r.status_code == 200
-    client.app.state.service.by_model.assert_called_once_with("all", 24)
+    client.app.state.service.by_model.assert_called_once_with("all", 24)  # type: ignore[attr-defined]
 
 
 def test_backend_trend_defaults(client: TestClient) -> None:
     r = client.get("/api/backend-trend?hours=24&backend=openrouter")
     assert r.status_code == 200
-    client.app.state.service.backend_trend.assert_called_once_with(
+    client.app.state.service.backend_trend.assert_called_once_with(  # type: ignore[attr-defined]
         "all", 24, "openrouter"
     )
 
@@ -434,13 +434,13 @@ def test_backend_trend_defaults(client: TestClient) -> None:
 def test_trend_defaults(client: TestClient) -> None:
     r = client.get("/api/trend?hours=24")
     assert r.status_code == 200
-    client.app.state.service.trend.assert_called_once_with("all", 24, 48)
+    client.app.state.service.trend.assert_called_once_with("all", 24, 48)  # type: ignore[attr-defined]
 
 
 def test_highlights_defaults(client: TestClient) -> None:
     r = client.get("/api/highlights?hours=24")
     assert r.status_code == 200
-    client.app.state.service.highlights.assert_called_once_with("all", 24)
+    client.app.state.service.highlights.assert_called_once_with("all", 24)  # type: ignore[attr-defined]
 
 
 def test_reconcile_project_not_found_404(client: TestClient) -> None:

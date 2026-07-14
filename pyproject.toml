@@ -90,7 +90,12 @@ module = "vulture_whitelist"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
-module = "test_*"
+module = [
+    "robotsix_cost_monitor.test_analyst",
+    "robotsix_cost_monitor.test_reconcile",
+    "robotsix_cost_monitor.test_routes",
+    "robotsix_cost_monitor.clients.test_langfuse",
+]
 disable_error_code = ["no-untyped-def"]
 check_untyped_defs = true
 
