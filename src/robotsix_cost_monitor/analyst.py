@@ -20,8 +20,8 @@ from typing import Any
 import structlog
 from pydantic import BaseModel
 
+from ._utils import safe_load_json
 from .config import AnalystConfig, Config, data_dir
-from .reconcile import _safe_load_json
 from .service import CostService
 
 logger = structlog.get_logger(__name__)
@@ -160,7 +160,7 @@ async def build_digest(
 
 def load_proposals() -> dict[str, Any]:
     """Load previously stored cost-reduction proposals from disk."""
-    return _safe_load_json(_store_path(), {"generated_at": None, "proposals": []})
+    return safe_load_json(_store_path(), {"generated_at": None, "proposals": []})
 
 
 def _run_agents(
@@ -375,7 +375,7 @@ def _no_top_early_return(kind: str, detail: str) -> dict[str, Any]:
 
 def load_targeted_analysis(kind: str) -> dict[str, Any]:
     """Last stored ticket/stage analysis (for the page); empty when none yet."""
-    return _safe_load_json(_targeted_store_path(kind), {"generated_at": None})
+    return safe_load_json(_targeted_store_path(kind), {"generated_at": None})
 
 
 def _split_session(session_id: str) -> tuple[str, str]:

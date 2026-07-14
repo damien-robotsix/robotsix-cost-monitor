@@ -13,10 +13,11 @@ import contextlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import structlog
 
+from ._utils import safe_load_json
 from .clients._http import RetryClient
 from .clients.langfuse import LangfuseClient
 from .config import Config, ProjectConfig, Settings, data_dir
@@ -35,17 +36,9 @@ def _snapshot_path(slug: str) -> Path:
     return _state_dir() / f"{slug}.json"
 
 
-def _safe_load_json[T](path: Path, default: T) -> T:
-    if not path.exists():
-        return default
-    try:
-        return cast(T, json.loads(path.read_text()))
-    except json.JSONDecodeError, OSError:
-        return default
-
 
 def _load_snapshot(slug: str) -> dict[str, Any] | None:
-    return _safe_load_json(_snapshot_path(slug), None)
+    return safe_load_json(_snapshot_path(slug), None)
 
 
 def _save_snapshot(slug: str, cumulative: float, at: datetime) -> None:
@@ -205,7 +198,7 @@ async def reconcile_all(config: Config) -> dict[str, Any]:
 
 def load_last_reconcile() -> dict[str, Any]:
     """Return the last stored reconcile result (for the banner); empty when none yet."""
-    return _safe_load_json(
+    return safe_load_json(
         _last_path(),
         {"generated_at": None, "status": "unknown", "results": []},
     )
