@@ -1,8 +1,8 @@
 # CLI Reference
 
 `robotsix-cost-monitor` provides three subcommands: **serve**, **summary**, and
-**reconcile**. All subcommands load the YAML configuration from the path set by
-`COST_MONITOR_CONFIG` (or `config/projects.yaml` by default).
+**reconcile**. All subcommands load the JSON configuration from the path set by
+`COST_MONITOR_CONFIG` (or `config/projects.json` by default).
 
 ---
 
@@ -81,6 +81,6 @@ Reconciliation snapshots are saved under `$COST_MONITOR_DATA/reconcile/<slug>.js
 
 | Variable | Default | Description |
 |---|---|---|
-| `COST_MONITOR_CONFIG` | `config/projects.yaml` | Path to the YAML configuration file. |
+| `COST_MONITOR_CONFIG` | `config/projects.json` | Path to the JSON configuration file. |
 | `COST_MONITOR_DATA` | `.data/` | Directory for runtime state (reconciliation snapshots, analyst proposals). |
 | `LOG_FORMAT` | `json` (when `CI` is set) else `console` | Structured log output format. `json` for production ingestion; `console` for coloured human-readable output during local development. |

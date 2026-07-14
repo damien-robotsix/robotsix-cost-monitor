@@ -4,14 +4,14 @@
 
 ```
 .
-├── config/                     # Operational YAML config (gitignored, template committed)
-│   └── projects.example.yaml   #   Template listing Langfuse projects + OpenRouter keys
+├── config/                     # Operational JSON config (gitignored, template committed)
+│   └── projects.example.json   #   Template listing Langfuse projects + OpenRouter keys
 ├── deploy/                     # Production deployment stack (docker-compose + env)
 ├── docs/                       # MkDocs documentation source
 ├── src/robotsix_cost_monitor/  # Python package (the application)
 │   ├── app.py                  #   FastAPI app factory, routes, lifespan (background loops)
 │   ├── cli.py                  #   CLI entrypoint (serve / summary / reconcile)
-│   ├── config.py               #   Pydantic settings models + YAML loader
+│   ├── config.py               #   Pydantic settings models + JSON config loader (robotsix-config)
 │   ├── service.py              #   Cross-project cost aggregation layer + TTL cache
 │   ├── reconcile.py            #   OpenRouter ↔ Langfuse reconciliation engine
 │   ├── analyst.py              #   Optional LLM cost-analyst (robotsix-llmio)

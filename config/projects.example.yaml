@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=./projects.schema.json
 # robotsix-cost-monitor configuration.
 #
-# Copy to config/projects.yaml (gitignored) and fill in real keys.
+# Copy to config/projects.json (gitignored) and fill in real keys.
 # Each entry is one Langfuse project to monitor. Costs are read from each
 # project's public API and shown per-project + aggregated in the dashboard.
 

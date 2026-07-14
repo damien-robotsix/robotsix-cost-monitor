@@ -12,7 +12,7 @@ build/
 coverage.json
 htmlcov/
 # Local secrets — never commit real Langfuse / OpenRouter keys.
-config/projects.yaml
+config/projects.json
 config/secrets.yaml
 *.local.yaml
 # Runtime state (cost-analyst memory, reconciliation snapshots).

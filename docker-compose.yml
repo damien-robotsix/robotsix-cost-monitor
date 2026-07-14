@@ -9,8 +9,8 @@
 #     docker compose run --rm cost-monitor summary --hours 24
 #     docker compose run --rm cost-monitor reconcile
 #
-# Configuration is delivered via a YAML file bind-mounted from ./config; real
-# Langfuse / OpenRouter keys live only in config/projects.yaml (gitignored).
+# Configuration is delivered via a JSON file bind-mounted from ./config; real
+# Langfuse / OpenRouter keys live only in config/projects.json (gitignored).
 # -------------------------------------------------------------------------
 
 services:

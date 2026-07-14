@@ -49,7 +49,7 @@ body:
       label: Config setup
       description: How is the project configured?
       options:
-        - "config/projects.yaml (full config)"
+        - "config/projects.json (full config)"
         - "env vars only"
         - "unsure / other"
 

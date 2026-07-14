@@ -24,17 +24,17 @@ This repo follows the [robotsix stack standards](https://github.com/damien-robot
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `COST_MONITOR_CONFIG` | Path to the YAML project config (relative to repo root) | `config/projects.yaml` |
+| `COST_MONITOR_CONFIG` | Path to the JSON project config (relative to repo root) | `config/projects.json` |
 | `COST_MONITOR_DATA` | Writable runtime-state directory (reconciliation snapshots, analyst proposals) | `.data` |
 
 Both are documented in `.env.example`. Never rename or remove these env vars
 without updating every call-site (`_config_path()`, `data_dir()` in
 `src/robotsix_cost_monitor/config.py`) and `.env.example`.
 
-### YAML config shape
+### JSON config shape
 
-The real config lives at `config/projects.yaml` (gitignored). The committed
-template is `config/projects.example.yaml`. Top-level keys:
+The real config lives at `config/projects.json` (gitignored). The committed
+template is `config/projects.example.json`. Top-level keys:
 
 - **`projects`** — list of Langfuse projects to monitor. Each entry: `name`,
   `public_key`, `secret_key`, `base_url`, optional `openrouter_key`.
@@ -77,14 +77,14 @@ setup_logging(loggers=["robotsix_cost_monitor"], fmt="json")
 Called once in `src/robotsix_cost_monitor/app.py`. Agents MUST NOT add a
 second logging framework or replace this call.
 
-### YAML loading
+### Config loading
 
 ```python
-from robotsix_yaml_config import read_yaml_file
-raw = read_yaml_file(path)
+from robotsix_config import load_config
+config = load_config(Config, path=path)
 ```
 
-Called in `config.py:load_config()`. Never add a second YAML parser.
+Called in `config.py:load_config()`. Never add a second config loader.
 
 ### Langfuse
 

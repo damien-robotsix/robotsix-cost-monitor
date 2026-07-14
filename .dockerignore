@@ -21,7 +21,7 @@ build/
 *.egg-info/
 
 # Local config / secrets (never enter the image)
-config/projects.yaml
+config/projects.json
 config/secrets.yaml
 *.local.yaml
 .env

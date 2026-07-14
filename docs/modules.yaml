@@ -34,7 +34,7 @@ modules:
       - tests/robotsix_cost_monitor/test_cli.py
 
   - id: config
-    description: YAML config models + loader (config/projects.yaml)
+    description: JSON config models + loader (config/projects.json)
     paths:
       - src/robotsix_cost_monitor/config.py
       - tests/robotsix_cost_monitor/test_config.py
@@ -194,6 +194,7 @@ modules:
   - id: config-files
     description: User-facing project configuration files (example config, JSON schema) and schema generation script
     paths:
+      - config/projects.example.json
       - config/projects.example.yaml
       - config/projects.schema.json
       - scripts/generate_config_schema.py
