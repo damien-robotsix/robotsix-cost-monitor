@@ -167,7 +167,7 @@ jobs:
       - run: uv sync --locked --extra analyst --group dev
       - run: uv run ruff check .
       - run: uv run ruff format --check .
-      - run: uv run mypy src/
+      - run: uv run mypy src/ tests/
       - run: uv run pytest --cov=robotsix_cost_monitor --cov-report=term-missing
 
   security:

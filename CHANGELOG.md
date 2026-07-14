@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Add mypy type checking for the test suite (`uv run mypy src/ tests/`) in CI and Makefile. Add a per-module override to relax `disallow_untyped_defs` for test modules and remove now-unnecessary `# type: ignore[no-untyped-def]` comments from `test_langfuse.py`.
 - Fix: Replace YAML `...` placeholder with actual `step-security/harden-runner` step in the `module-validation` job of `.github/workflows/ci.yml`. The harden-runner step now appears as the first step (same pinned SHA `9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4`) with `egress-policy: audit`, matching every other job in the workflow file.
 - Bump `[tool.ruff] target-version` to `"py314"` and `[tool.mypy] python_version` to `"3.14"` to match `requires-python = ">=3.14"`.
 - Promoted `_safe_load_json` to `safe_load_json` in a new `_utils.py` shared module; updated all imports in `reconcile.py`, `analyst.py`, and `test_reconcile.py`.

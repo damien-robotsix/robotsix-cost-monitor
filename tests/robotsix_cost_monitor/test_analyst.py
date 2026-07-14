@@ -420,11 +420,11 @@ class TestMaybeSetupTracing:
         import types
 
         fake_tracing = types.ModuleType("robotsix_llmio.core.tracing")
-        fake_tracing.setup_langfuse_tracing = fake_setup
+        fake_tracing.setup_langfuse_tracing = fake_setup  # type: ignore[attr-defined]
         fake_core = types.ModuleType("robotsix_llmio.core")
-        fake_core.tracing = fake_tracing
+        fake_core.tracing = fake_tracing  # type: ignore[attr-defined]
         fake_llmio = types.ModuleType("robotsix_llmio")
-        fake_llmio.core = fake_core
+        fake_llmio.core = fake_core  # type: ignore[attr-defined]
         monkeypatch.setitem(sys.modules, "robotsix_llmio", fake_llmio)
         monkeypatch.setitem(sys.modules, "robotsix_llmio.core", fake_core)
         monkeypatch.setitem(sys.modules, "robotsix_llmio.core.tracing", fake_tracing)

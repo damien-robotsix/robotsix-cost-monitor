@@ -422,7 +422,7 @@ def test_safe_load_json_valid(tmp_path: Path) -> None:
     """safe_load_json returns parsed JSON for a valid file."""
     path = tmp_path / "data.json"
     path.write_text('{"key": [1, 2, 3]}')
-    result = safe_load_json(path, default={})
+    result: dict[str, Any] = safe_load_json(path, default={})
     assert result == {"key": [1, 2, 3]}
 
 
