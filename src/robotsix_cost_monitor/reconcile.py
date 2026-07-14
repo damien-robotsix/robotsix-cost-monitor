@@ -36,7 +36,6 @@ def _snapshot_path(slug: str) -> Path:
     return _state_dir() / f"{slug}.json"
 
 
-
 def _load_snapshot(slug: str) -> dict[str, Any] | None:
     return safe_load_json(_snapshot_path(slug), None)
 
