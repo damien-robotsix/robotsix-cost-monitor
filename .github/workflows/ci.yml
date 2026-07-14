@@ -139,11 +139,6 @@ jobs:
           cache-python: false
       - run: uv sync --locked
       - run: uv audit --frozen
-      - run: |
-          uv export --format requirements.txt -o /tmp/reqs.txt
-          # pip-audit --require-hashes cannot handle editable or VCS dependencies
-          grep -v -e '^-e \.' -e '@ git+https://' /tmp/reqs.txt > /tmp/reqs-filtered.txt
-          uvx pip-audit -r /tmp/reqs-filtered.txt --require-hashes
 
   ci:
     name: CI (Python tests)
