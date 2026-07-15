@@ -23,6 +23,9 @@ analyst_page
 rationale
 estimated_saving
 
+# tests/test_reconcile.py — _FrozenNow.now(tz) mimics datetime.now interface
+tz
+
 # Pydantic model_config / field false-positives (clients/models.py)
 model_config
 total_cost
