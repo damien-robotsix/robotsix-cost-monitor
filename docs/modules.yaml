@@ -195,6 +195,5 @@ modules:
     description: User-facing project configuration files (example config, JSON schema) and schema generation script
     paths:
       - config/projects.example.json
-      - config/projects.example.yaml
       - config/projects.schema.json
       - scripts/generate_config_schema.py

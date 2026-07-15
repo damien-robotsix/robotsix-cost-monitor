@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Delete `config/projects.example.yaml` — superseded by `config/projects.example.json`.
 - Enable Biome CSS linting and formatting for `dashboard.css` by adding `*.css` to `files.include` in `biome.json`
 - Update `vulture_whitelist.py`: replace stale `analyst_ticket_run` and `analyst_stage_run` entries with `analyst_run_targeted` and `analyst_targeted`, matching the current route handler names.
 - Add mypy type checking for the test suite (`uv run mypy src/ tests/`) in CI and Makefile. Add a per-module override to relax `disallow_untyped_defs` for test modules and remove now-unnecessary `# type: ignore[no-untyped-def]` comments from `test_langfuse.py`.
