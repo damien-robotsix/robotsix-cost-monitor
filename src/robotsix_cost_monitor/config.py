@@ -1,8 +1,8 @@
 """Configuration models + loader for robotsix-cost-monitor.
 
-A single YAML file (``config/projects.yaml``) lists the Langfuse projects to
+A single JSON file (``config/projects.json``) lists the Langfuse projects to
 monitor plus optional global settings. Real keys live only in that file (it is
-gitignored); ``config/projects.example.yaml`` is the committed template.
+gitignored); ``config/projects.example.json`` is the committed template.
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 
 from pydantic import BaseModel, Field
-from robotsix_yaml_config import read_yaml_file
+from robotsix_config import load_config as _load_config
 
 
 class ProjectConfig(BaseModel):
@@ -101,13 +101,13 @@ class Config(BaseModel):
 def _config_path() -> Path:
     """Resolve the config path.
 
-    Honors ``COST_MONITOR_CONFIG``; otherwise ``config/projects.yaml`` relative
+    Honors ``COST_MONITOR_CONFIG``; otherwise ``config/projects.json`` relative
     to the repo root (two parents up from this file's package).
     """
     env = os.environ.get("COST_MONITOR_CONFIG")
     if env:
         return Path(env)
-    return Path(__file__).resolve().parents[2] / "config" / "projects.yaml"
+    return Path(__file__).resolve().parents[2] / "config" / "projects.json"
 
 
 def data_dir() -> Path:
@@ -132,9 +132,8 @@ def load_config(path: Path | None = None) -> Config:
     p = path or _config_path()
     if not p.exists():
         raise FileNotFoundError(
-            f"config not found at {p} — copy config/projects.example.yaml to "
-            f"config/projects.yaml and fill in your Langfuse keys "
+            f"config not found at {p} — copy config/projects.example.json to "
+            f"config/projects.json and fill in your Langfuse keys "
             f"(or set COST_MONITOR_CONFIG)."
         )
-    raw = read_yaml_file(p)
-    return Config.model_validate(raw)
+    return _load_config(Config, path=p)

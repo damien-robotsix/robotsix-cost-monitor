@@ -11,7 +11,7 @@ dependencies = [
     "httpx>=0.28",
     "pydantic>=2.10",
     "structlog>=24.1",
-    "robotsix-yaml-config @ git+https://github.com/damien-robotsix/robotsix-yaml-config.git@0b62ebafb01fe3f5aca8ca03c9cf281d49d2c637",
+    "robotsix-config @ git+https://github.com/damien-robotsix/robotsix-config.git@358da8b9c66f1dd52b85854ceabfffdc35229e63",
     "robotsix-llmio @ git+https://github.com/damien-robotsix/robotsix-llmio.git@2fd2be4dcf7f0a44e91012fd1167517e5e09180e",
 ]
 

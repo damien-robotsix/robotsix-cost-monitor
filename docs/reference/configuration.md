@@ -1,11 +1,11 @@
 # Configuration Reference
 
-The project is configured through a single YAML file (default: `config/projects.yaml`,
+The project is configured through a single JSON file (default: `config/projects.json`,
 overridable via `COST_MONITOR_CONFIG`). The schema is defined by four Pydantic models
 in `robotsix_cost_monitor.config`: `Config`, `ProjectConfig`, `Settings`, and
 `AnalystConfig`.
 
-A complete example is available at [`config/projects.example.yaml`](https://github.com/damien-robotsix/robotsix-cost-monitor/blob/main/config/projects.example.yaml).
+A complete example is available at [`config/projects.example.json`](https://github.com/damien-robotsix/robotsix-cost-monitor/blob/main/config/projects.example.json).
 
 ---
 
@@ -72,6 +72,6 @@ to a non-null value.
 
 | Variable | Default | Description |
 |---|---|---|
-| `COST_MONITOR_CONFIG` | `config/projects.yaml` | Path to the YAML configuration file (relative to repository root). |
+| `COST_MONITOR_CONFIG` | `config/projects.json` | Path to the JSON configuration file (relative to repository root). |
 | `COST_MONITOR_DATA` | `.data/` | Directory for persistent runtime state (reconciliation snapshots, analyst proposals). |
 | `LOG_FORMAT` | `json` (when `CI` is set) else `console` | Structured log output format. `json` for production ingestion; `console` for coloured human-readable output during local development. |

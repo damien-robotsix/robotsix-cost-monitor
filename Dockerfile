@@ -83,7 +83,7 @@ USER app
 
 # Config + runtime-state locations resolved via env vars (see config.py).
 # COST_MONITOR_DATA points at the persistent /data mount.
-ENV COST_MONITOR_CONFIG=/home/app/config/projects.yaml \
+ENV COST_MONITOR_CONFIG=/home/app/config/projects.json \
     COST_MONITOR_DATA=/data
 
 # Serve on all interfaces inside the container on 8080 (the stack convention;

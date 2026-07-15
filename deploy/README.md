@@ -57,8 +57,8 @@ managed by the central-deploy system. Provide a config file on first deploy:
 docker volume create cost_monitor_config
 docker run --rm \
   -v cost_monitor_config:/data \
-  -v /tmp/rcm/config/projects.example.yaml:/src/projects.example.yaml:ro \
-  alpine cp /src/projects.example.yaml /data/projects.yaml
+  -v /tmp/rcm/config/projects.example.json:/src/projects.example.json:ro \
+  alpine cp /src/projects.example.json /data/projects.json
 
 # Create the data volume for runtime state.
 docker volume create cost_monitor_data
@@ -75,11 +75,11 @@ docker run --rm -v cost_monitor_data:/data alpine chown -R 1001:1001 /data
 Then edit the config:
 
 ```sh
-docker run --rm -it -v cost_monitor_config:/data alpine vi /data/projects.yaml
+docker run --rm -it -v cost_monitor_config:/data alpine vi /data/projects.json
 ```
 
 To enable the optional LLM cost-analyst, fill in the `settings.analyst` block
-in `projects.yaml`. The image already includes the `analyst` extra.
+in `projects.json`. The image already includes the `analyst` extra.
 
 ### 4. GHCR pull access (only if the package is private)
 

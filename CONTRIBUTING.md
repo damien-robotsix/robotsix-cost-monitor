@@ -9,8 +9,8 @@ cd robotsix-cost-monitor
 uv sync --locked
 
 # Create a local config (gitignored — never commit real keys)
-cp config/projects.example.yaml config/projects.yaml
-# Edit config/projects.yaml and fill in your Langfuse keys
+cp config/projects.example.json config/projects.json
+# Edit config/projects.json and fill in your Langfuse keys
 ```
 
 The project targets **Python ≥ 3.14**. Dependency management uses
@@ -105,8 +105,8 @@ present and commit the final lockfile before the change lands on `main`.
 
 - **Logging** goes through `robotsix_llmio.logging.setup_logging` (called in
   `app.py`). Do not add a second logging framework.
-- **YAML loading** uses `robotsix_yaml_config.read_yaml_file`. Do not add a
-  second YAML parser.
+- **Config loading** uses `robotsix_config.load_config(Config, path=...)` with
+  Pydantic validation. Do not add a second config loader.
 - **Langfuse transport** goes through `robotsix_cost_monitor.clients.langfuse.LangfuseClient`.
   Do not instantiate a second Langfuse client or call the REST API directly.
 - **Public API symbols** (functions, classes, parameters) should not be
