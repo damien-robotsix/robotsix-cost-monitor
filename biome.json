@@ -7,6 +7,7 @@
   },
   "files": {
     "include": [
+      "src/robotsix_cost_monitor/web/static/*.css",
       "src/robotsix_cost_monitor/web/static/*.js",
       "tests/robotsix_cost_monitor/web/static/*.js",
       "vitest.config.js"
