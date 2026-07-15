@@ -92,7 +92,7 @@ async def test_fetch_traces_window_empty() -> None:
     c = _client()
 
     async def _mock_fetch(hours: float):  # type: ignore[no-untyped-def]
-        if False:
+        if False:  # noqa
             yield  # never yields
 
     with patch.object(c._lf, "fetch_traces_window", side_effect=_mock_fetch):
@@ -107,7 +107,7 @@ async def test_fetch_traces_window_passes_hours() -> None:
 
     async def _mock_fetch(hours: float):  # type: ignore[no-untyped-def]
         mock(hours)
-        if False:
+        if False:  # noqa
             yield
 
     with patch.object(c._lf, "fetch_traces_window", side_effect=_mock_fetch):

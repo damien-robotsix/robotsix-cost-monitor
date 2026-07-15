@@ -96,7 +96,7 @@ class _FrozenNow:
     def __init__(self, now: datetime) -> None:
         self._now = now
 
-    def now(self, tz: Any = None) -> datetime:
+    def now(self, tz: Any = None) -> datetime:  # noqa: ARG001
         return self._now
 
     @staticmethod
