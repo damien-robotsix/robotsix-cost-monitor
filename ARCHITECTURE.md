@@ -9,7 +9,8 @@
 ├── deploy/                     # Production deployment stack (docker-compose + env)
 ├── docs/                       # MkDocs documentation source
 ├── src/robotsix_cost_monitor/  # Python package (the application)
-│   ├── app.py                  #   FastAPI app factory, routes, lifespan (background loops)
+│   ├── app.py                  #   FastAPI app factory + lifespan (background loops)
+│   ├── routes.py               #   Route handlers, exception handlers, dependency providers
 │   ├── cli.py                  #   CLI entrypoint (serve / summary / reconcile)
 │   ├── config.py               #   Pydantic settings models + JSON config loader (robotsix-config)
 │   ├── service.py              #   Cross-project cost aggregation layer + TTL cache
