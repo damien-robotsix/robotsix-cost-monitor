@@ -52,6 +52,18 @@ repos:
     hooks:
       - id: hadolint
 
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+      - id: codespell
+        args: [--ignore-words-file, .codespell-ignore]
+        types_or: [markdown, python, yaml, toml]
+
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.23.0
+    hooks:
+      - id: markdownlint-cli2
+
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: 91ab4bf57e58b32adf1a122681f6ebe164d081c8  # v4.4.0
     hooks:
