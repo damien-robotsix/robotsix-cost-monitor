@@ -43,8 +43,6 @@ sys.modules["robotsix_llmio.openrouter"] = _llmio_openrouter
 sys.modules["robotsix_llmio.core"] = _llmio_core
 sys.modules["robotsix_llmio.core.langfuse_async_client"] = _llmio_core_langfuse
 
-from helpers import _config, _proj  # noqa: E402
-
 from robotsix_cost_monitor.config import Config  # noqa: E402
 from robotsix_cost_monitor.exceptions import ProjectNotFoundError  # noqa: E402
 from robotsix_cost_monitor.routes import (  # noqa: E402
@@ -58,6 +56,7 @@ from robotsix_cost_monitor.routes import (  # noqa: E402
     unhandled_handler,
     validation_handler,
 )
+from tests.robotsix_cost_monitor.helpers import _config, _proj  # noqa: E402
 
 # Restore the original sys.modules entries so the mock does not leak.
 if _orig_llmio is not None:

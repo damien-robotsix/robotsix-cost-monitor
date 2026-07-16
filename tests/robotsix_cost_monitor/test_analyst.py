@@ -13,7 +13,6 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
-from helpers import _config
 
 from robotsix_cost_monitor import analyst as analyst_mod
 from robotsix_cost_monitor.analyst import (
@@ -22,6 +21,7 @@ from robotsix_cost_monitor.analyst import (
     _parse_analysis,
     run_analyst,
 )
+from tests.robotsix_cost_monitor.helpers import _config
 
 
 def test_parse_analysis_plain_json() -> None:

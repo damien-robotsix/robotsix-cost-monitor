@@ -19,7 +19,6 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-from helpers import _proj
 
 from robotsix_cost_monitor._utils import safe_load_json
 from robotsix_cost_monitor.config import Settings
@@ -29,6 +28,7 @@ from robotsix_cost_monitor.reconcile import (
     reconcile_project,
     reconcile_status,
 )
+from tests.robotsix_cost_monitor.helpers import _proj
 
 
 @dataclass

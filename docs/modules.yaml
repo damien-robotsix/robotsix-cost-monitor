@@ -97,7 +97,8 @@ modules:
   - id: tests-helpers
     description: Shared pytest fixtures (event_loop), data-builders (trace, _proj, _config, _mock_client)
     paths:
-      - tests/helpers.py
+      - tests/__init__.py
+      - tests/robotsix_cost_monitor/helpers.py
 
   - id: docs-site
     description: MkDocs documentation site source files (landing page + API reference)

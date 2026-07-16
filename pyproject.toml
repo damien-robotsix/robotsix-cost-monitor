@@ -114,4 +114,4 @@ known_first_party = ["robotsix_cost_monitor"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-pythonpath = ["tests"]
+pythonpath = ["."]
