@@ -110,8 +110,10 @@ modules:
   - id: project-root
     description: Repository root metadata and configuration files
     paths:
+      - .codespell-ignore
       - .dockerignore
       - .env.example
+      - .markdownlint.jsonc
       - .gitignore
       - .node-version
       - .npmrc

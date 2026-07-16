@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Add `codespell` and `markdownlint-cli2` pre-commit hooks plus config files (`.markdownlint.jsonc`, `.codespell-ignore`).
 - Update `ARCHITECTURE.md` directory listing: `app.py` description no longer claims route handlers (extracted to `routes.py`), and add a `routes.py` entry.
 - Delete `config/projects.example.yaml` — superseded by `config/projects.example.json`.
 - Enable Biome CSS linting and formatting for `dashboard.css` by adding `*.css` to `files.include` in `biome.json`
