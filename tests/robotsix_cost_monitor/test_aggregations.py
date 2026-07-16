@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from helpers import trace
 
 from robotsix_cost_monitor.aggregations import (
     aggregate_by_name,
@@ -20,6 +19,7 @@ from robotsix_cost_monitor.aggregations import (
     most_expensive_trace,
 )
 from robotsix_cost_monitor.clients.models import LangfuseTrace
+from tests.robotsix_cost_monitor.helpers import trace
 
 
 def test_aggregate_by_name_sorted_desc() -> None:
