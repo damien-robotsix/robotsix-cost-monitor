@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Update `ARCHITECTURE.md` directory listing: `app.py` description no longer claims route handlers (extracted to `routes.py`), and add a `routes.py` entry.
 - Delete `config/projects.example.yaml` — superseded by `config/projects.example.json`.
 - Enable Biome CSS linting and formatting for `dashboard.css` by adding `*.css` to `files.include` in `biome.json`
 - Update `vulture_whitelist.py`: replace stale `analyst_ticket_run` and `analyst_stage_run` entries with `analyst_run_targeted` and `analyst_targeted`, matching the current route handler names.
