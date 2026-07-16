@@ -26,5 +26,8 @@ jobs:
         # GITHUB_TOKEN cannot create PRs when the repo setting
         # "Allow GitHub Actions to create and approve pull requests"
         # is disabled. Use a classic PAT with `repo` scope instead.
+        # Falls back to github.token when RELEASE_PLEASE_TOKEN is not
+        # configured (the action will then fail with a permissions error
+        # instead of "token not supplied").
         with:
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
