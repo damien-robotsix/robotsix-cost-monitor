@@ -60,6 +60,7 @@ jobs:
     timeout-minutes: 5
     env:
       UV_CACHE_DIR: .cache/uv
+      UV_MALWARE_CHECK: "1"
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -79,6 +80,8 @@ jobs:
     name: Module taxonomy validation
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      UV_MALWARE_CHECK: "1"
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -107,6 +110,7 @@ jobs:
     timeout-minutes: 5
     env:
       UV_CACHE_DIR: .cache/uv
+      UV_MALWARE_CHECK: "1"
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -129,6 +133,7 @@ jobs:
     timeout-minutes: 5
     env:
       UV_CACHE_DIR: .cache/uv
+      UV_MALWARE_CHECK: "1"
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -152,6 +157,7 @@ jobs:
       security-events: write  # for SARIF upload (reserved; not used in air-gapped CI)
     env:
       UV_CACHE_DIR: .cache/uv
+      UV_MALWARE_CHECK: "1"
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -176,6 +182,7 @@ jobs:
     timeout-minutes: 5
     env:
       UV_CACHE_DIR: .cache/uv
+      UV_MALWARE_CHECK: "1"
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -236,6 +243,7 @@ jobs:
     timeout-minutes: 5
     env:
       UV_CACHE_DIR: .cache/uv
+      UV_MALWARE_CHECK: "1"
     # actions: read needed to download artifacts from prior jobs
     permissions:
       contents: read
