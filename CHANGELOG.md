@@ -3,6 +3,7 @@
 - Add `workflow_dispatch` trigger to the Release Please workflow
   (`.github/workflows/release-please.yml`), enabling manual release creation
   from the GitHub Actions UI in addition to the existing push-to-main trigger.
+- Centralize analyst analysis kind strings (`"ticket"`, `"stage"`, `"fleet"`) as a `Literal` type alias `AnalystKind` in `analyst.py`, replacing bare `str` annotations in route handlers and analysis functions.
 - Reorganize `tests/helpers.py` → `tests/robotsix_cost_monitor/helpers.py` to align with per-module test layout convention. Update import paths in 5 test files and add `tests/__init__.py` for package resolution.
 - Add `codespell` and `markdownlint-cli2` pre-commit hooks plus config files (`.markdownlint.jsonc`, `.codespell-ignore`).
 - Update `ARCHITECTURE.md` directory listing: `app.py` description no longer claims route handlers (extracted to `routes.py`), and add a `routes.py` entry.
