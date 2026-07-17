@@ -1,5 +1,11 @@
 ## 0.0.0 (unreleased)
 
+- Adopt the canonical structlog-to-stdlib bridge: ``ProcessorFormatter``
+  with ``foreign_pre_chain`` unifies structlog, Uvicorn, and third-party
+  logs into a single JSON/console format. A new ``add_correlation_id``
+  processor injects ``request_id`` from ``asgi-correlation-id`` into every
+  log event. Added ``LOG_LEVEL`` env var (default ``INFO``) and passed
+  ``log_config=None`` to ``uvicorn.run`` so the bridge isn't overridden.
 - Add `ignore-scripts=true` to `.npmrc` to disable lifecycle scripts during `npm install`/`npm ci` as defense-in-depth against install-time supply-chain attacks.
 - Add `biome` (JS/TS lint) pre-commit hook via `npx @biomejs/biome check` matching CI paths.
 - Add `workflow_dispatch` trigger to the Release Please workflow

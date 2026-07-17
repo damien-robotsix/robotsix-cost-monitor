@@ -43,6 +43,7 @@ def test_serve_default_host_port() -> None:
         host="127.0.0.1",
         port=8099,
         factory=True,
+        log_config=None,
     )
 
 
@@ -57,6 +58,7 @@ def test_serve_custom_host_port() -> None:
         host="0.0.0.0",
         port=3000,
         factory=True,
+        log_config=None,
     )
 
 
@@ -76,6 +78,7 @@ def test_no_args_defaults_to_serve() -> None:
         host="127.0.0.1",
         port=8099,
         factory=True,
+        log_config=None,
     )
 
 
