@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import logging
+import logging.config
 import os
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
@@ -11,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import structlog
+from asgi_correlation_id import correlation_id
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
@@ -31,26 +34,91 @@ from .service import CostService
 _WEB = Path(__file__).resolve().parent / "web"
 
 
+def add_correlation_id(
+    _logger: logging.Logger, _method_name: str, event_dict: dict[str, object]
+) -> dict[str, object]:
+    """Inject the asgi-correlation-id correlation ID into structlog events."""
+    if request_id := correlation_id.get(None):
+        event_dict["request_id"] = request_id
+    return event_dict
+
+
 def _configure_logging() -> None:
-    """Configure structlog: JSON/console output with request-ID enrichment."""
+    """Configure structlog with ProcessorFormatter bridge + request-ID enrichment.
+
+    Shared processors are used by structlog's own chain AND by the
+    ``ProcessorFormatter`` foreign_pre_chain so that third-party / Uvicorn
+    logs also receive correlation IDs, timestamps, and log levels.
+    """
     fmt = os.environ.get("LOG_FORMAT", "json" if os.environ.get("CI") else "console")
+    log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+
+    shared_processors = [
+        add_correlation_id,
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+    ]
+
     structlog.configure(
         processors=[
-            structlog.contextvars.merge_contextvars,
-            structlog.stdlib.add_log_level,
-            structlog.stdlib.PositionalArgumentsFormatter(),
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.dict_tracebacks
-            if fmt == "json"
-            else structlog.processors.format_exc_info,
-            structlog.processors.JSONRenderer()
-            if fmt == "json"
-            else structlog.dev.ConsoleRenderer(),
+            structlog.stdlib.filter_by_level,
+            *shared_processors,  # type: ignore[list-item]
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
         wrapper_class=structlog.stdlib.BoundLogger,
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
+    )
+
+    json_renderer = structlog.processors.JSONRenderer()
+    console_renderer = structlog.dev.ConsoleRenderer()
+
+    logging.config.dictConfig(
+        {
+            "version": 1,
+            "disable_existing_loggers": False,
+            "formatters": {
+                "structlog": {
+                    "()": structlog.stdlib.ProcessorFormatter,
+                    "processors": [
+                        structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                        json_renderer if fmt == "json" else console_renderer,
+                    ],
+                    "foreign_pre_chain": shared_processors,
+                },
+            },
+            "handlers": {
+                "default": {
+                    "level": log_level,
+                    "class": "logging.StreamHandler",
+                    "formatter": "structlog",
+                    "stream": "ext://sys.stdout",
+                },
+            },
+            "loggers": {
+                "": {
+                    "handlers": ["default"],
+                    "level": log_level,
+                    "propagate": True,
+                },
+                "uvicorn": {
+                    "handlers": ["default"],
+                    "level": log_level,
+                    "propagate": False,
+                },
+                "uvicorn.error": {"level": log_level},
+                "uvicorn.access": {
+                    "handlers": ["default"],
+                    "level": "WARNING" if fmt == "console" else log_level,
+                    "propagate": False,
+                },
+            },
+        }
     )
 
 

@@ -36,7 +36,11 @@ def main(argv: list[str] | None = None) -> int:
         host = getattr(args, "host", "127.0.0.1")
         port = getattr(args, "port", 8099)
         uvicorn.run(
-            "robotsix_cost_monitor.app:create_app", host=host, port=port, factory=True
+            "robotsix_cost_monitor.app:create_app",
+            host=host,
+            port=port,
+            factory=True,
+            log_config=None,  # respect the dictConfig already applied by create_app
         )
         return 0
 

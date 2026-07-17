@@ -289,19 +289,25 @@ async def test_unhandled_handler_returns_500_sanitized() -> None:
 
 async def test_unhandled_handler_logs_exception() -> None:
     """The handler must log the full exception (without leaking details to the
-    HTTP response).
+    HTTP response).  After the structlog→stdlib bridge, ``logger.exception()``
+    propagates to stdlib — verify via a structlog capturing handler.
+
+    The routes module uses ``structlog.get_logger(__name__)`` which is a lazy
+    proxy — ``capture_logs`` reconfigures structlog temporarily and the proxy
+    picks it up on the next call.
     """
+    import structlog
+
     req = _make_request(FastAPI())
     exc = RuntimeError("test bug")
 
-    with patch("robotsix_cost_monitor.routes.logger") as mock_logger:
+    with structlog.testing.capture_logs() as cap_logs:
         await unhandled_handler(req, exc)
 
-    mock_logger.exception.assert_called_once()
-    args = mock_logger.exception.call_args[0]
-    assert "Unhandled exception" in args[0]
-    assert args[1] == "GET"
-    assert args[2] == "/"
+    assert len(cap_logs) >= 1
+    event = cap_logs[-1]
+    assert "Unhandled exception" in event["event"]
+    assert event.get("exc_info") is not None
 
 
 # ---------------------------------------------------------------------------

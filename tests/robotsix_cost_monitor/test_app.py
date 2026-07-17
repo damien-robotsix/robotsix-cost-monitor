@@ -5,14 +5,22 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+import structlog
+from asgi_correlation_id import correlation_id
 from fastapi.testclient import TestClient
 
-from robotsix_cost_monitor.app import _analyst_loop, _reconcile_loop, create_app
+from robotsix_cost_monitor.app import (
+    _analyst_loop,
+    _reconcile_loop,
+    add_correlation_id,
+    create_app,
+)
 from robotsix_cost_monitor.config import Config, ProjectConfig, load_config
 from robotsix_cost_monitor.service import CostService
 
@@ -536,3 +544,131 @@ async def test_reconcile_loop_cancellation() -> None:
         task.cancel()
         with pytest.raises(asyncio.CancelledError):
             await task
+
+
+# ---------------------------------------------------------------------------
+# Logging bridge — correlation ID injection
+# ---------------------------------------------------------------------------
+
+
+def test_add_correlation_id_injects_request_id() -> None:
+    """``add_correlation_id`` adds ``request_id`` when the asgi-correlation-id
+    context variable is set.
+    """
+    cid = "test-req-123"
+    correlation_id.set(cid)
+    try:
+        event = add_correlation_id(Mock(), "", {})
+        assert event["request_id"] == cid
+    finally:
+        correlation_id.set(None)
+
+
+def test_add_correlation_id_noop_when_not_set() -> None:
+    """``add_correlation_id`` leaves the event dict unchanged when no
+    correlation ID is active.
+    """
+    correlation_id.set(None)
+    event = add_correlation_id(Mock(), "", {"message": "hello"})
+    assert "request_id" not in event
+    assert event["message"] == "hello"
+
+
+def test_access_log_contains_request_id(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Verify the ``ProcessorFormatter`` bridge injects ``request_id`` into
+    formatted JSON output for stdlib log records (e.g. uvicorn access logs).
+
+    The test constructs a ``LogRecord`` manually and formats it through the
+    ``ProcessorFormatter`` configured by ``_configure_logging``, simulating
+    what happens when a third-party logger (like uvicorn) emits a record.
+    """
+    monkeypatch.setenv("LOG_FORMAT", "json")
+
+    cfg = Config(projects=[])
+    create_app(cfg)
+
+    # Steal the ProcessorFormatter from the root logger's configured handler.
+    root = logging.getLogger()
+    formatter = None
+    for h in root.handlers:
+        if hasattr(h, "formatter") and h.formatter is not None:
+            formatter = h.formatter
+            break
+    assert formatter is not None, "ProcessorFormatter not found on root handlers"
+
+    # Set a correlation ID so add_correlation_id can pick it up.
+    cid = "req-test-456"
+    correlation_id.set(cid)
+    try:
+        # Build a mock LogRecord as if uvicorn.access emitted it.
+        record = logging.LogRecord(
+            name="uvicorn.access",
+            level=logging.INFO,
+            pathname="",
+            lineno=0,
+            msg="127.0.0.1:0 - GET /health 200",
+            args=(),
+            exc_info=None,
+        )
+        formatted = formatter.format(record)
+        parsed = json.loads(formatted)
+        assert parsed.get("request_id") == cid, f"missing request_id in {parsed}"
+    finally:
+        correlation_id.set(None)
+
+
+def test_log_level_debug_shows_debug_events(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When ``LOG_LEVEL=DEBUG``, debug-level structlog events reach the
+    stdlib handler (``filter_by_level`` passes them through).
+    """
+    monkeypatch.setenv("LOG_LEVEL", "DEBUG")
+
+    cfg = Config(projects=[])
+    create_app(cfg)
+
+    # ``dictConfig`` replaces root handlers — add a fresh capture handler.
+    from _pytest.logging import LogCaptureHandler
+
+    capture = LogCaptureHandler()
+    capture.setLevel(logging.DEBUG)
+    logging.getLogger().addHandler(capture)
+    try:
+        test_logger = structlog.get_logger("test_app_debug")
+        test_logger.debug("debug-level diagnostic", extra_key="x")
+
+        assert any(r.name == "test_app_debug" for r in capture.records), (
+            "DEBUG event not found"
+        )
+    finally:
+        logging.getLogger().removeHandler(capture)
+
+
+def test_log_level_info_filters_debug_events(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Default ``LOG_LEVEL=INFO`` — ``filter_by_level`` drops debug events
+    before they reach stdlib, so no record appears.
+    """
+    monkeypatch.setenv("LOG_LEVEL", "INFO")
+
+    cfg = Config(projects=[])
+    create_app(cfg)
+
+    from _pytest.logging import LogCaptureHandler
+
+    capture = LogCaptureHandler()
+    capture.setLevel(logging.DEBUG)
+    logging.getLogger().addHandler(capture)
+    try:
+        test_logger = structlog.get_logger("test_app_info_filter")
+        test_logger.debug("this-should-not-appear")
+
+        assert not any(r.name == "test_app_info_filter" for r in capture.records), (
+            "DEBUG event leaked despite LOG_LEVEL=INFO"
+        )
+    finally:
+        logging.getLogger().removeHandler(capture)
