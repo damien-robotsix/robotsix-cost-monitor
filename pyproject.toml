@@ -40,7 +40,7 @@ lint = [
 ]
 docs = [
     "mkdocs-material>=9",
-    "mkdocstrings[python]>=1.0.4",
+    "mkdocstrings[python]>=1.0.6",
 ]
 
 [build-system]

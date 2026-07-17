@@ -1301,7 +1301,7 @@ dev = [
 ]
 docs = [
     { name = "mkdocs-material", specifier = ">=9" },
-    { name = "mkdocstrings", extras = ["python"], specifier = ">=1.0.4" },
+    { name = "mkdocstrings", extras = ["python"], specifier = ">=1.0.6" },
 ]
 lint = [
     { name = "mypy", specifier = ">=1.13" },
