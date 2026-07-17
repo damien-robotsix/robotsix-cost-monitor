@@ -1,13 +1,13 @@
 .PHONY: test install install-test install-lint lint typecheck format serve docs clean schema verify-schema
 
 install:
-	uv sync --locked --all-extras --all-groups
+	UV_MALWARE_CHECK=1 uv sync --locked --all-extras --all-groups
 
 install-test:
-	uv sync --locked --group dev
+	UV_MALWARE_CHECK=1 uv sync --locked --group dev
 
 install-lint:
-	uv sync --locked --group lint
+	UV_MALWARE_CHECK=1 uv sync --locked --group lint
 
 # `make test` installs dev deps (requires network) then runs pytest.
 # For offline/CI use, the mill runs its own `test_command` from
