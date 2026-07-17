@@ -88,3 +88,12 @@ repos:
         language: system
         always_run: true
         pass_filenames: false
+
+  - repo: local
+    hooks:
+      - id: biome
+        name: biome (JS/TS lint)
+        entry: npx @biomejs/biome check --no-errors-on-unmatched
+        language: system
+        files: '^(src/robotsix_cost_monitor/web/static/|tests/robotsix_cost_monitor/web/static/).*\.(js|ts)$'
+        pass_filenames: false

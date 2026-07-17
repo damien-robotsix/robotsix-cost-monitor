@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Add `biome` (JS/TS lint) pre-commit hook via `npx @biomejs/biome check` matching CI paths.
 - Add `workflow_dispatch` trigger to the Release Please workflow
   (`.github/workflows/release-please.yml`), enabling manual release creation
   from the GitHub Actions UI in addition to the existing push-to-main trigger.
