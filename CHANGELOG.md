@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Add `ignore-scripts=true` to `.npmrc` to disable lifecycle scripts during `npm install`/`npm ci` as defense-in-depth against install-time supply-chain attacks.
 - Add `biome` (JS/TS lint) pre-commit hook via `npx @biomejs/biome check` matching CI paths.
 - Add `workflow_dispatch` trigger to the Release Please workflow
   (`.github/workflows/release-please.yml`), enabling manual release creation
