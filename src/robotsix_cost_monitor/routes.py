@@ -16,6 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from .analyst import (
+    AnalystKind,
     build_digest,
     load_proposals,
     load_targeted_analysis,
@@ -285,7 +286,7 @@ async def analyst_run(
 
 @router.post("/api/analyst/run/{kind}")
 async def analyst_run_targeted(
-    kind: str,
+    kind: AnalystKind,
     cfg: Config = Depends(get_config),
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
@@ -298,7 +299,7 @@ async def analyst_run_targeted(
 
 
 @router.get("/api/analyst/{kind}")
-def analyst_targeted(kind: str) -> dict[str, Any]:
+def analyst_targeted(kind: AnalystKind) -> dict[str, Any]:
     """GET /api/analyst/{kind} — load a saved targeted analysis (ticket or stage)."""
     return load_targeted_analysis(kind)
 

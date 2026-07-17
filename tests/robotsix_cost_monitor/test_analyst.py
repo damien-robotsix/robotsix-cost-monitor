@@ -351,7 +351,7 @@ async def test_run_opus_analysis_and_file(
         system_prompt="test prompt",
         name="test",
         payload="{}",
-        out_prefix="test_kind",
+        out_prefix="ticket",
         extra_out={"extra": "data"},
     )
     assert out["enabled"] is True
@@ -382,7 +382,7 @@ async def test_run_opus_analysis_and_file_without_filing(
         system_prompt="test prompt",
         name="test",
         payload="{}",
-        out_prefix="test_kind",
+        out_prefix="fleet",
     )
     assert out["enabled"] is True
     assert out["proposals"][0]["title"] == "P1"

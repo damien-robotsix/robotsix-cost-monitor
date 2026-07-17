@@ -15,7 +15,7 @@ import contextlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import structlog
 from pydantic import BaseModel
@@ -25,6 +25,9 @@ from .config import AnalystConfig, Config, data_dir
 from .service import CostService
 
 logger = structlog.get_logger(__name__)
+
+#: Pseudo-enum for the three analysis scopes.
+AnalystKind = Literal["ticket", "stage", "fleet"]
 
 #: Cap a single trace's serialized detail handed to the trace agent.
 _TRACE_CHAR_CAP = 24_000
@@ -357,13 +360,13 @@ async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
 # --- targeted (ticket / stage) analyses -----------------------------------
 
 
-def _targeted_store_path(kind: str) -> Path:
+def _targeted_store_path(kind: AnalystKind) -> Path:
     d = data_dir() / "analyst"
     d.mkdir(parents=True, exist_ok=True)
     return d / f"{kind}.json"
 
 
-def _no_top_early_return(kind: str, detail: str) -> dict[str, Any]:
+def _no_top_early_return(kind: AnalystKind, detail: str) -> dict[str, Any]:
     out: dict[str, Any] = {
         "enabled": True,
         "generated_at": datetime.now(UTC).isoformat(),
@@ -373,7 +376,7 @@ def _no_top_early_return(kind: str, detail: str) -> dict[str, Any]:
     return out
 
 
-def load_targeted_analysis(kind: str) -> dict[str, Any]:
+def load_targeted_analysis(kind: AnalystKind) -> dict[str, Any]:
     """Last stored ticket/stage analysis (for the page); empty when none yet."""
     return safe_load_json(_targeted_store_path(kind), {"generated_at": None})
 
@@ -391,7 +394,7 @@ async def _run_opus_analysis_and_file(
     system_prompt: str,
     name: str,
     payload: str,
-    out_prefix: str,
+    out_prefix: AnalystKind,
     extra_out: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run Opus analysis and store the result."""
