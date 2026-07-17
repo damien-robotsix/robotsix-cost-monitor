@@ -66,6 +66,11 @@ hook.
 ## PR workflow
 
 1. Create a feature branch off `main`.
+
+> **Manual releases:** The Release Please workflow can also be triggered
+> manually from the GitHub Actions UI (`Actions` → `Release Please` →
+> `Run workflow`). This is useful for testing or forcing a release without
+> pushing to `main`.
 2. Make your changes. Add or update tests to cover new behaviour.
 3. Run the full check suite locally:
    ```bash
