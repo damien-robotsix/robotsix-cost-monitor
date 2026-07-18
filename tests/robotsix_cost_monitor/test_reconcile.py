@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import json
 import sys
-from collections.abc import Generator
+from collections.abc import AsyncIterator, Generator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -195,15 +196,39 @@ async def test_first_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     assert snap["cumulative"] == 12.5
 
 
-async def test_second_call_within_tolerance(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Prior snapshot exists → diffs against it, drift within tolerance."""
+# ---------------------------------------------------------------------------
+# Shared reconcile async context-manager — reduces boilerplate across the
+# three "second-call" variant tests.
+# ---------------------------------------------------------------------------
+
+
+@asynccontextmanager
+async def _reconcile_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    prior_hours_offset: float = -24,
+    cumulative: float = 10.0,
+    usage: float,
+    langfuse_backend: dict[str, float],
+    credits_return: dict[str, float],
+    tolerance: float = 1.0,
+    now: datetime | None = None,
+) -> AsyncIterator[dict[str, Any]]:
+    """Set up shared reconcile-test boilerplate, call ``reconcile_project``, yield result.
+
+    Creates a prior snapshot under ``.data/reconcile/demo.json``, applies the
+    four ``unittest.mock.patch`` decorators, configures the OpenRouter and
+    Langfuse mock return values from the keyword arguments, and yields the
+    reconciliation ``result`` dict for assertions.
+    """
+    if now is None:
+        now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
+
     monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
 
-    now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
-    prior = now - timedelta(hours=24)
-    snap = {"cumulative": 10.0, "at": prior.isoformat()}
+    prior = now + timedelta(hours=prior_hours_offset)
+    snap = {"cumulative": cumulative, "at": prior.isoformat()}
     data_dir = tmp_path / "reconcile"
     data_dir.mkdir(parents=True)
     (data_dir / "demo.json").write_text(json.dumps(snap))
@@ -216,22 +241,35 @@ async def test_second_call_within_tolerance(
         patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
         patch(
             "robotsix_cost_monitor.reconcile._fetch_credits",
-            AsyncMock(
-                return_value={
-                    "total_credits": 50.0,
-                    "total_usage": 20.0,
-                    "remaining": 30.0,
-                }
-            ),
+            AsyncMock(return_value=credits_return),
         ),
     ):
         mock_orc = orc_cls.return_value
-        mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=15.0))
+        mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=usage))
 
         mock_lf = lf_cls.return_value
-        mock_lf.fetch_cost_by_backend = AsyncMock(return_value={"openrouter": 5.0})
+        mock_lf.fetch_cost_by_backend = AsyncMock(return_value=langfuse_backend)
 
-        result = await reconcile_project(proj, _settings(tolerance=1.0))
+        result = await reconcile_project(proj, _settings(tolerance=tolerance))
+        yield result
+
+
+async def test_second_call_within_tolerance(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Prior snapshot exists → diffs against it, drift within tolerance."""
+    async with _reconcile_context(
+        tmp_path,
+        monkeypatch,
+        usage=15.0,
+        langfuse_backend={"openrouter": 5.0},
+        credits_return={
+            "total_credits": 50.0,
+            "total_usage": 20.0,
+            "remaining": 30.0,
+        },
+    ) as result:
+        pass
 
     assert result["interval_hours"] == 24.0
     assert result["provider_delta_usd"] == 5.0
@@ -244,39 +282,19 @@ async def test_drift_exceeds_tolerance(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Provider delta and Langfuse cost differ by more than tolerance."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-
-    now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
-    prior = now - timedelta(hours=24)
-    snap = {"cumulative": 10.0, "at": prior.isoformat()}
-    data_dir = tmp_path / "reconcile"
-    data_dir.mkdir(parents=True)
-    (data_dir / "demo.json").write_text(json.dumps(snap))
-
-    proj = _proj("demo")
-
-    with (
-        patch("robotsix_cost_monitor.reconcile.datetime", _FrozenNow(now)),
-        patch("robotsix_llmio.openrouter.OpenRouterKeyCostSource") as orc_cls,
-        patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
-        patch(
-            "robotsix_cost_monitor.reconcile._fetch_credits",
-            AsyncMock(
-                return_value={
-                    "total_credits": 100.0,
-                    "total_usage": 0.0,
-                    "remaining": 100.0,
-                }
-            ),
-        ),
-    ):
-        mock_orc = orc_cls.return_value
-        mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=20.0))
-
-        mock_lf = lf_cls.return_value
-        mock_lf.fetch_cost_by_backend = AsyncMock(return_value={"openrouter": 3.0})
-
-        result = await reconcile_project(proj, _settings(tolerance=0.5))
+    async with _reconcile_context(
+        tmp_path,
+        monkeypatch,
+        usage=20.0,
+        langfuse_backend={"openrouter": 3.0},
+        credits_return={
+            "total_credits": 100.0,
+            "total_usage": 0.0,
+            "remaining": 100.0,
+        },
+        tolerance=0.5,
+    ) as result:
+        pass
 
     assert result["provider_delta_usd"] == 10.0
     assert result["langfuse_cost_usd"] == 3.0
@@ -288,41 +306,19 @@ async def test_negative_interval_treated_as_zero(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """When now is before the prior snapshot, interval_h is 0.0 (negative cap)."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-
-    now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
-    # prior is IN THE FUTURE relative to now (impossible in practice but
-    # exercises the max(0, ...) guard in _hours_between)
-    prior = now + timedelta(hours=1)
-    snap = {"cumulative": 10.0, "at": prior.isoformat()}
-    data_dir = tmp_path / "reconcile"
-    data_dir.mkdir(parents=True)
-    (data_dir / "demo.json").write_text(json.dumps(snap))
-
-    proj = _proj("demo")
-
-    with (
-        patch("robotsix_cost_monitor.reconcile.datetime", _FrozenNow(now)),
-        patch("robotsix_llmio.openrouter.OpenRouterKeyCostSource") as orc_cls,
-        patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
-        patch(
-            "robotsix_cost_monitor.reconcile._fetch_credits",
-            AsyncMock(
-                return_value={
-                    "total_credits": 50.0,
-                    "total_usage": 10.0,
-                    "remaining": 40.0,
-                }
-            ),
-        ),
-    ):
-        mock_orc = orc_cls.return_value
-        mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=8.0))
-
-        mock_lf = lf_cls.return_value
-        mock_lf.fetch_cost_by_backend = AsyncMock(return_value={})
-
-        result = await reconcile_project(proj, _settings())
+    async with _reconcile_context(
+        tmp_path,
+        monkeypatch,
+        prior_hours_offset=+1,
+        usage=8.0,
+        langfuse_backend={},
+        credits_return={
+            "total_credits": 50.0,
+            "total_usage": 10.0,
+            "remaining": 40.0,
+        },
+    ) as result:
+        pass
 
     assert result["interval_hours"] == 0.0
     # Cumulative went down (clock problem) → negative provider delta
