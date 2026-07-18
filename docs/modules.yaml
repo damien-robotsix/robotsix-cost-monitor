@@ -172,6 +172,7 @@ modules:
       - .robotsix-mill/periodic/changelog_autofill.yaml
       - .robotsix-mill/periodic/completeness_check.yaml
       - .robotsix-mill/periodic/copy_paste.yaml
+      - .robotsix-mill/periodic/docstring_coverage.yaml
       - .robotsix-mill/periodic/health.yaml
       - .robotsix-mill/periodic/module_curator.yaml
       - .robotsix-mill/periodic/repo_description_sync.yaml
