@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import sys
-from collections.abc import Generator
+from collections.abc import AsyncIterator, Generator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -214,7 +214,7 @@ async def _reconcile_context(
     credits_return: dict[str, float],
     tolerance: float = 1.0,
     now: datetime | None = None,
-):
+) -> AsyncIterator[dict[str, Any]]:
     """Set up shared reconcile-test boilerplate, call ``reconcile_project``, yield result.
 
     Creates a prior snapshot under ``.data/reconcile/demo.json``, applies the
