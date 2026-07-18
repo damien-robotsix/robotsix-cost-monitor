@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
+import httpx
 import pytest
 
 from robotsix_cost_monitor.config import Settings
@@ -323,6 +324,55 @@ async def test_negative_interval_treated_as_zero(
     # Cumulative went down (clock problem) → negative provider delta
     assert result["provider_delta_usd"] == -2.0
     assert result["langfuse_cost_usd"] == 0.0
+
+
+async def test_langfuse_fetch_failure_produces_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Langfuse network error → error dict, snapshot preserved."""
+    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+
+    now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
+    prior = now + timedelta(hours=-24)
+    snap = {"cumulative": 10.0, "at": prior.isoformat()}
+    data_dir = tmp_path / "reconcile"
+    data_dir.mkdir(parents=True)
+    (data_dir / "demo.json").write_text(json.dumps(snap))
+
+    proj = _proj("demo")
+
+    with (
+        patch("robotsix_cost_monitor.reconcile.datetime", _FrozenNow(now)),
+        patch("robotsix_llmio.openrouter.OpenRouterKeyCostSource") as orc_cls,
+        patch("robotsix_cost_monitor.reconcile.LangfuseClient") as lf_cls,
+        patch(
+            "robotsix_cost_monitor.reconcile._fetch_credits",
+            AsyncMock(
+                return_value={
+                    "total_credits": 50.0,
+                    "total_usage": 20.0,
+                    "remaining": 30.0,
+                }
+            ),
+        ),
+    ):
+        mock_orc = orc_cls.return_value
+        mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=15.0))
+
+        mock_lf = lf_cls.return_value
+        mock_lf.fetch_cost_by_backend = AsyncMock(
+            side_effect=httpx.RequestError("connection refused")
+        )
+
+        result = await reconcile_project(proj, _settings())
+
+    assert "error" in result
+    assert "Langfuse fetch failed" in result["error"]
+    # Snapshot was already saved before the Langfuse fetch — preserved.
+    snap_path = tmp_path / "reconcile" / "demo.json"
+    assert snap_path.exists()
+    snap_data = json.loads(snap_path.read_text())
+    assert snap_data["cumulative"] == 15.0
 
 
 async def test_missing_snapshot_file_treated_as_first(

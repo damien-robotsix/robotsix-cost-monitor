@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import httpx
 import structlog
 
 from ._utils import safe_load_json
@@ -137,7 +138,17 @@ async def reconcile_project(
     # the *openrouter*-backend traced cost. Claude-SDK (level-3) traffic is
     # traced in Langfuse but billed by Anthropic, not OpenRouter — including it
     # made "traced" exceed "provider" by the Claude portion.
-    by_backend = await lf.fetch_cost_by_backend(interval_h)
+    try:
+        by_backend = await lf.fetch_cost_by_backend(interval_h)
+    except (ExternalServiceError, httpx.HTTPError, json.JSONDecodeError) as exc:
+        logger.warning("Langfuse fetch failed during reconcile: %s", exc)
+        result["error"] = f"Langfuse fetch failed: {exc}"
+        return result
+    except Exception as exc:
+        logger.exception("Langfuse fetch unexpected failure: %s", exc)
+        result["error"] = f"Langfuse fetch failed: {exc}"
+        return result
+
     logged = round(by_backend.get("openrouter", 0.0), 6)
     total_traced = round(sum(by_backend.values()), 6)
 
