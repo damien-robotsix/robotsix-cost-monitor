@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Add dedicated test file ``tests/robotsix_cost_monitor/test__utils.py`` for ``_utils.py``, with analyst call-site coverage (``load_proposals`` / ``load_targeted_analysis``)
 - Adopt the canonical structlog-to-stdlib bridge: ``ProcessorFormatter``
   with ``foreign_pre_chain`` unifies structlog, Uvicorn, and third-party
   logs into a single JSON/console format. A new ``add_correlation_id``

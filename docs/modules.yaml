@@ -43,6 +43,7 @@ modules:
     description: Shared internal helpers (safe_load_json)
     paths:
       - src/robotsix_cost_monitor/_utils.py
+      - tests/robotsix_cost_monitor/test__utils.py
 
   - id: exceptions
     description: Typed exception hierarchy (retriable vs terminal errors)
