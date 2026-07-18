@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Handle Langfuse fetch failures in `reconcile_project()` gracefully: network errors, bad JSON, and unexpected exceptions are now caught and reported as an error dict instead of crashing the reconcile.
 - Add dedicated test file ``tests/robotsix_cost_monitor/test__utils.py`` for ``_utils.py``, with analyst call-site coverage (``load_proposals`` / ``load_targeted_analysis``)
 - Adopt the canonical structlog-to-stdlib bridge: ``ProcessorFormatter``
   with ``foreign_pre_chain`` unifies structlog, Uvicorn, and third-party
