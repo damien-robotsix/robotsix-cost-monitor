@@ -62,7 +62,7 @@ ENV VIRTUAL_ENV=/opt/venv \
 # hadolint ignore=DL3008
 RUN apt-get update \
     && apt-get install -y --no-install-recommends nodejs npm \
-    && npm install -g @anthropic-ai/claude-code@2.1.158 \
+    && npm install -g --ignore-scripts @anthropic-ai/claude-code@2.1.158 \
     && claude --version \
     && rm -rf /var/lib/apt/lists/*
 
