@@ -2,14 +2,21 @@
 
 from __future__ import annotations
 
+import json
+import tempfile
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from robotsix_cost_monitor.config import (
     AnalystConfig,
+    Config,
+    ProjectConfig,
+    Settings,
     _config_path,
     data_dir,
+    load_config,
 )
 
 # -- _config_path -------------------------------------------------------
@@ -92,3 +99,143 @@ def test_analyst_field_defaults() -> None:
     assert cfg.langfuse_secret_key is None
     assert cfg.langfuse_base_url is None
     assert cfg.langfuse_project_id is None
+
+
+# -- ProjectConfig ------------------------------------------------------
+
+
+def test_project_config_slug() -> None:
+    cfg = ProjectConfig(
+        name="  My Awesome Project  ",
+        public_key="pk-lf-abc",
+        secret_key="sk-lf-xyz",
+    )
+    assert cfg.slug == "my-awesome-project"
+
+
+def test_project_config_slug_special_chars() -> None:
+    cfg = ProjectConfig(
+        name="Project/A/B",
+        public_key="pk-lf-abc",
+        secret_key="sk-lf-xyz",
+    )
+    assert cfg.slug == "project-a-b"
+
+
+def test_project_config_field_regex_patterns() -> None:
+    # Valid public_key and secret_key pass.
+    cfg = ProjectConfig(
+        name="test",
+        public_key="pk-lf-abc123",
+        secret_key="sk-lf-xyz789",
+    )
+    assert cfg.public_key == "pk-lf-abc123"
+    assert cfg.secret_key == "sk-lf-xyz789"
+
+    # Invalid public_key (missing pk-lf- prefix) raises.
+    with pytest.raises(ValidationError):
+        ProjectConfig(
+            name="test",
+            public_key="pk-xyz-abc",
+            secret_key="sk-lf-xyz",
+        )
+
+    # Invalid secret_key (missing sk-lf- prefix) raises.
+    with pytest.raises(ValidationError):
+        ProjectConfig(
+            name="test",
+            public_key="pk-lf-abc",
+            secret_key="sk-xyz-abc",
+        )
+
+
+# -- Config.project -----------------------------------------------------
+
+
+def test_config_project_lookup() -> None:
+    config = Config(
+        projects=[
+            ProjectConfig(
+                name="Alpha Project",
+                public_key="pk-lf-aaa",
+                secret_key="sk-lf-aaa",
+            ),
+            ProjectConfig(
+                name="Beta Project",
+                public_key="pk-lf-bbb",
+                secret_key="sk-lf-bbb",
+            ),
+        ]
+    )
+    found = config.project("alpha-project")
+    assert found is not None
+    assert found.name == "Alpha Project"
+
+    not_found = config.project("gamma-project")
+    assert not_found is None
+
+
+def test_config_project_empty() -> None:
+    config = Config(projects=[])
+    assert config.project("anything") is None
+
+
+# -- Settings -----------------------------------------------------------
+
+
+def test_settings_defaults() -> None:
+    s = Settings()
+    assert s.default_window_hours == 168
+    assert s.cache_ttl_seconds == 60
+    assert s.reconcile_tolerance_usd == 1.0
+    assert s.reconcile_schedule_hours == 24.0
+    assert s.subscription_call_cap == 0
+    assert isinstance(s.analyst, AnalystConfig)
+
+
+def test_settings_subscription_call_cap() -> None:
+    s = Settings(subscription_call_cap=5000)
+    assert s.subscription_call_cap == 5000
+
+
+# -- load_config --------------------------------------------------------
+
+
+def test_load_config_found() -> None:
+    """Write a minimal valid config to a temp file and load it."""
+    data = {
+        "projects": [
+            {
+                "name": "Temp Project",
+                "public_key": "pk-lf-temp",
+                "secret_key": "sk-lf-temp",
+            }
+        ],
+        "settings": {},
+    }
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+        json.dump(data, f)
+        tmp_path = Path(f.name)
+
+    try:
+        config = load_config(tmp_path)
+        assert isinstance(config, Config)
+        assert len(config.projects) == 1
+        assert config.projects[0].name == "Temp Project"
+    finally:
+        tmp_path.unlink()
+
+
+def test_load_config_not_found() -> None:
+    nonexistent = Path("/nonexistent/path/config.json")
+    with pytest.raises(FileNotFoundError, match="config not found"):
+        load_config(nonexistent)
+
+
+# -- data_dir extra -----------------------------------------------------
+
+
+def test_data_dir_default_is_dot_data(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("COST_MONITOR_DATA", raising=False)
+    result = data_dir()
+    assert result.name == ".data"
