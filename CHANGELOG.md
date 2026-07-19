@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Add Vitest coverage configuration (`@vitest/coverage-v8`) with 75% thresholds for JS tests, matching Python-side coverage parity
 - Add `--ignore-scripts` to the global `npm install` of `@anthropic-ai/claude-code` in the Dockerfile runtime stage, extending defense-in-depth against malicious lifecycle scripts to the container build.
 - Add `BackendKind = Literal["openrouter", "claude-sdk"]` type alias in
   `aggregations.py` and annotate `backend_for_model()` and `backend_trend()`

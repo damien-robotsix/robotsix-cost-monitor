@@ -3,6 +3,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
+    "coverage": "vitest run --coverage",
     "lint": "npx @biomejs/biome check src/robotsix_cost_monitor/web/static/ tests/robotsix_cost_monitor/web/static/",
     "format": "npx @biomejs/biome check --write src/robotsix_cost_monitor/web/static/ tests/robotsix_cost_monitor/web/static/",
     "lint:ci": "npx @biomejs/biome ci src/robotsix_cost_monitor/web/static/ tests/robotsix_cost_monitor/web/static/",
@@ -12,6 +13,7 @@
     "@biomejs/biome": "1.9.4",
     "jsdom": "25.0.1",
     "typescript": "^5.7",
+    "@vitest/coverage-v8": "2.1.8",
     "vitest": "2.1.8"
   }
 }

@@ -295,4 +295,9 @@ jobs:
           mode: firewall
       - run: npm run lint:ci
       - run: npm run typecheck
-      - run: npm test
+      - run: npm run coverage
+      - name: Upload JS coverage report
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: js-coverage
+          path: coverage/
