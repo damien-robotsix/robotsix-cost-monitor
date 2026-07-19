@@ -25,7 +25,7 @@ _PERIODIC_SESSION_RE = re.compile(
 
 
 #: Valid serving-backend identifiers.
-BackendKind = Literal["openrouter", "claude-sdk"]
+BackendKind = Literal["openrouter", "claude-sdk", "all"]
 
 
 def _trace_cost(trace: LangfuseTrace) -> float:
