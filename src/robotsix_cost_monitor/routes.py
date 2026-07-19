@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
 
+from .aggregations import BackendKind
 from .analyst import (
     AnalystKind,
     build_digest,
@@ -214,7 +215,7 @@ async def backend_trend(
     service: CostService = Depends(get_service),
 ) -> list[dict[str, Any]]:
     """GET /api/backend-trend — cost trend per backend for a project and window."""
-    return await service.backend_trend(pw.project, pw.hours, backend)
+    return await service.backend_trend(pw.project, pw.hours, cast(BackendKind, backend))
 
 
 @router.get("/api/trend")

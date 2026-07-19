@@ -14,6 +14,7 @@ from typing import Any, TypeVar
 import structlog
 
 from .aggregations import (
+    BackendKind,
     _trace_cost,
     aggregate_by_name,
     aggregate_by_name_backend,
@@ -454,7 +455,7 @@ class CostService:
         )
 
     async def backend_trend(
-        self, slug: str | None, hours: int, backend: str
+        self, slug: str | None, hours: int, backend: BackendKind
     ) -> list[dict[str, Any]]:
         """Return the cost trend for a backend, merged across selected projects.
 
