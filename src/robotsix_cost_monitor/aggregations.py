@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from .clients.models import LangfuseTrace
@@ -24,6 +24,10 @@ _PERIODIC_SESSION_RE = re.compile(
 )
 
 
+#: Valid serving-backend identifiers.
+BackendKind = Literal["openrouter", "claude-sdk"]
+
+
 def _trace_cost(trace: LangfuseTrace) -> float:
     """Extract a trace's total cost, tolerant of Langfuse field-name variants."""
     for key in ("total_cost", "calculated_total_cost", "cost"):
@@ -37,7 +41,7 @@ def _utc_now() -> datetime:
     return datetime.now(UTC)
 
 
-def backend_for_model(model: str) -> str:
+def backend_for_model(model: str) -> BackendKind:
     """Map a model name to its serving backend (transport).
 
     Keys on the model-ID *shape*, not specific names, so it survives model
