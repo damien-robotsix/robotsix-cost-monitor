@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Add `npm audit --audit-level=high` to the `js-tests` CI job, right after `npm audit signatures`, to catch high/critical CVEs in npm dependencies.
 - Add `--ignore-scripts` to global `npm install` of `@anthropic-ai/claude-code` in `Dockerfile.dev` for defense-in-depth parity with the production Dockerfile.
 - Pin TypeScript to exact version `5.9.3` in `package.json` (replacing caret range `^5.7`)
 - Add Vitest coverage configuration (`@vitest/coverage-v8`) with 75% thresholds for JS tests, matching Python-side coverage parity
