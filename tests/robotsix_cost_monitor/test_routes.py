@@ -315,21 +315,26 @@ async def test_unhandled_handler_logs_exception() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_register_exception_handlers_wires_all_four() -> None:
+def test_register_exception_handlers_wires_all_five() -> None:
     app = MagicMock(spec=FastAPI)
     register_exception_handlers(app)
-    assert app.add_exception_handler.call_count == 4
+    assert app.add_exception_handler.call_count == 5
     calls = [(c[0][0], c[0][1]) for c in app.add_exception_handler.call_args_list]
     # exception class → handler function
     from fastapi.exceptions import RequestValidationError as RVE
+    from robotsix_http import ExternalHTTPError
 
     from robotsix_cost_monitor.exceptions import CostMonitorError
-    from robotsix_cost_monitor.routes import cost_monitor_error_handler
+    from robotsix_cost_monitor.routes import (
+        cost_monitor_error_handler,
+        external_http_error_handler,
+    )
 
     assert calls == [
         (RVE, validation_handler),
         (HTTPException, http_exception_handler),
         (CostMonitorError, cost_monitor_error_handler),
+        (ExternalHTTPError, external_http_error_handler),
         (Exception, unhandled_handler),
     ]
 

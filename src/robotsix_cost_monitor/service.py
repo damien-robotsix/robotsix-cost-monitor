@@ -12,6 +12,10 @@ from collections.abc import Awaitable, Callable
 from typing import Any, TypeVar
 
 import structlog
+from robotsix_http import (
+    ExternalRateLimitError,
+    ExternalServiceError,
+)
 
 from .aggregations import (
     BackendKind,
@@ -30,8 +34,6 @@ from .clients.models import LangfuseTrace
 from .config import Config, ProjectConfig
 from .exceptions import (
     CacheError,
-    ExternalRateLimitError,
-    ExternalServiceError,
     ProjectConfigError,
 )
 

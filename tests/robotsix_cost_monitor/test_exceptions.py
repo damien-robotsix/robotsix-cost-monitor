@@ -2,6 +2,16 @@
 
 from __future__ import annotations
 
+from robotsix_http import (
+    ExternalAuthError as HttpExternalAuthError,
+)
+from robotsix_http import (
+    ExternalRateLimitError as HttpExternalRateLimitError,
+)
+from robotsix_http import (
+    ExternalServiceError as HttpExternalServiceError,
+)
+
 from robotsix_cost_monitor.exceptions import (
     CacheError,
     CostMonitorError,
@@ -86,11 +96,18 @@ class TestMRO:
         assert isinstance(err, ExternalServiceError)
         assert isinstance(err, CostMonitorError)
         assert isinstance(err, Exception)
+        assert isinstance(err, HttpExternalAuthError)
 
     def test_rate_limit_is_service_is_cost_monitor(self) -> None:
         err = ExternalRateLimitError("x")
         assert isinstance(err, ExternalServiceError)
         assert isinstance(err, CostMonitorError)
+        assert isinstance(err, HttpExternalRateLimitError)
+
+    def test_service_is_http_service(self) -> None:
+        err = ExternalServiceError("x")
+        assert isinstance(err, CostMonitorError)
+        assert isinstance(err, HttpExternalServiceError)
 
     def test_cache_is_cost_monitor_not_service(self) -> None:
         err = CacheError("x")
