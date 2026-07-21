@@ -34,10 +34,13 @@ modules:
       - tests/robotsix_cost_monitor/test_cli.py
 
   - id: config
-    description: JSON config models + loader (config/config.json)
+    description: JSON config models + loader (config/config.json), example config, JSON schema, and schema generation script
     paths:
       - src/robotsix_cost_monitor/config.py
       - tests/robotsix_cost_monitor/test_config.py
+      - config/config.example.json
+      - config/config.schema.json
+      - scripts/generate_config_schema.py
 
   - id: utils
     description: Shared internal helpers (safe_load_json)
@@ -194,9 +197,4 @@ modules:
       - deploy/README.md
       - deploy/docker-compose.yml
 
-  - id: config-files
-    description: User-facing project configuration files (example config, JSON schema) and schema generation script
-    paths:
-      - config/config.example.json
-      - config/config.schema.json
-      - scripts/generate_config_schema.py
+
