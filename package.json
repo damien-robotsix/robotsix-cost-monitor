@@ -1,6 +1,9 @@
 {
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "test": "vitest run",
     "coverage": "vitest run --coverage",
