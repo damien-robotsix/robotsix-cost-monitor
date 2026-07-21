@@ -145,6 +145,8 @@ modules:
       - uv.lock
       - vitest.config.js
       - vulture_whitelist.py
+      - changelog.d/README.md
+      - checklist_results.md
       - docs/modules.yaml
 
   - id: github-config
@@ -196,3 +198,4 @@ modules:
       - deploy/.env.example
       - deploy/README.md
       - deploy/docker-compose.yml
+
