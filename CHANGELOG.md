@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Add `engines` field to `package.json` (`"node": ">=22"`) so that `.npmrc`'s `engine-strict=true` actually enforces the Node.js version requirement.
 - Replace hand-rolled RetryClient with robotsix-http
 - Add `npm audit --audit-level=high` to the `js-tests` CI job, right after `npm audit signatures`, to catch high/critical CVEs in npm dependencies.
 - Add `--ignore-scripts` to global `npm install` of `@anthropic-ai/claude-code` in `Dockerfile.dev` for defense-in-depth parity with the production Dockerfile.
