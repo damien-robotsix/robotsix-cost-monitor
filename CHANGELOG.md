@@ -5,6 +5,7 @@
   `COST_MONITOR_CONFIG`), retype all six secret fields as `pydantic.SecretStr`,
   move `LOG_LEVEL`/`LOG_FORMAT` into the config model, and drop `.env.example`.
   Commit `config/config.schema.json` with CI drift check.
+- Merge `config-files` module into `config` module in `docs/modules.yaml` (documentation-only consolidation — no files moved).
 - Add `make security` target running `uv audit --frozen` and `zizmor` on GitHub Actions workflows.
 - Mark expert-only and rarely-changed config settings as `"advanced": true` in the Pydantic models and regenerated JSON schema, so the central-deploy Configure UI hides them behind its "Show advanced settings" toggle by default.
 - Add `engines` field to `package.json` (`"node": ">=22"`) so that `.npmrc`'s `engine-strict=true` actually enforces the Node.js version requirement.
