@@ -1,5 +1,7 @@
 """App + config tests using a zero-project config (no network)."""
 
+# mypy: disable-error-code="arg-type"
+
 from __future__ import annotations
 
 import asyncio
@@ -21,7 +23,7 @@ from robotsix_cost_monitor.app import (
     add_correlation_id,
     create_app,
 )
-from robotsix_cost_monitor.config import Config, ProjectConfig, load_config
+from robotsix_cost_monitor.config import Config, ProjectConfig, Settings, load_config
 from robotsix_cost_monitor.service import CostService
 
 
@@ -123,13 +125,12 @@ def test_index_served() -> None:
 
 
 def test_reconcile_last_served_from_disk(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """The persisted last reconcile is served by ``/api/reconcile/last`` — this is
     what lets the dashboard show the last run after a page reload or container
     restart (the file is on the persisted data volume).
     """
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
     recon = tmp_path / "reconcile"
     recon.mkdir()
     (recon / "last.json").write_text(
@@ -151,7 +152,11 @@ def test_reconcile_last_served_from_disk(
         )
     )
 
-    r = _empty_app().get("/api/reconcile/last")
+    app = TestClient(
+        create_app(Config(projects=[], settings=Settings(data_dir=tmp_path)))
+    )
+
+    r = app.get("/api/reconcile/last")
 
     assert r.status_code == 200
     body = r.json()
@@ -185,14 +190,15 @@ def test_project_slug() -> None:
     assert p.slug == "robotsix-mill"
 
 
-def test_load_config_missing(tmp_path: Path) -> None:
+def test_load_config_missing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ROBOTSIX_CONFIG_FILE", str(tmp_path / "nope.json"))
     with pytest.raises(FileNotFoundError):
-        load_config(tmp_path / "nope.json")
+        load_config()
 
 
-def test_load_config_roundtrip(tmp_path: Path) -> None:
-    cfg = tmp_path / "projects.json"
-    cfg.write_text(
+def test_load_config_roundtrip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    cfg_file = tmp_path / "config.json"
+    cfg_file.write_text(
         json.dumps(
             {
                 "projects": [
@@ -207,7 +213,8 @@ def test_load_config_roundtrip(tmp_path: Path) -> None:
             }
         )
     )
-    loaded = load_config(cfg)
+    monkeypatch.setenv("ROBOTSIX_CONFIG_FILE", str(cfg_file))
+    loaded = load_config()
     assert loaded.projects[0].name == "A"
     assert loaded.settings.default_window_hours == 48
     assert loaded.settings.analyst.enabled is False
@@ -262,30 +269,34 @@ def test_last_analyst_run_picks_most_recent(monkeypatch: pytest.MonkeyPatch) -> 
     from robotsix_cost_monitor import app
 
     monkeypatch.setattr(
-        app, "load_proposals", lambda: {"generated_at": "2026-06-19T15:37:25+00:00"}
+        app,
+        "load_proposals",
+        lambda data_dir: {"generated_at": "2026-06-19T15:37:25+00:00"},
     )
     monkeypatch.setattr(
         app,
         "load_targeted_analysis",
-        lambda kind: {
+        lambda kind, data_dir: {
             "ticket": {"generated_at": "2026-06-20T09:00:00"},  # naive → UTC
             "stage": {"generated_at": None},
         }[kind],
     )
 
-    assert app._last_analyst_run() == datetime(2026, 6, 20, 9, 0, tzinfo=UTC)
+    assert app._last_analyst_run(Path(".data")) == datetime(
+        2026, 6, 20, 9, 0, tzinfo=UTC
+    )
 
 
 def test_last_analyst_run_none_when_unrun(monkeypatch: pytest.MonkeyPatch) -> None:
     """No persisted timestamps → ``None`` (so the first run fires immediately)."""
     from robotsix_cost_monitor import app
 
-    monkeypatch.setattr(app, "load_proposals", lambda: {"generated_at": None})
+    monkeypatch.setattr(app, "load_proposals", lambda data_dir: {"generated_at": None})
     monkeypatch.setattr(
-        app, "load_targeted_analysis", lambda kind: {"generated_at": None}
+        app, "load_targeted_analysis", lambda kind, data_dir: {"generated_at": None}
     )
 
-    assert app._last_analyst_run() is None
+    assert app._last_analyst_run(Path(".data")) is None
 
 
 # ---------------------------------------------------------------------------
@@ -574,9 +585,7 @@ def test_add_correlation_id_noop_when_not_set() -> None:
     assert event["message"] == "hello"
 
 
-def test_access_log_contains_request_id(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_access_log_contains_request_id() -> None:
     """Verify the ``ProcessorFormatter`` bridge injects ``request_id`` into
     formatted JSON output for stdlib log records (e.g. uvicorn access logs).
 
@@ -584,9 +593,7 @@ def test_access_log_contains_request_id(
     ``ProcessorFormatter`` configured by ``_configure_logging``, simulating
     what happens when a third-party logger (like uvicorn) emits a record.
     """
-    monkeypatch.setenv("LOG_FORMAT", "json")
-
-    cfg = Config(projects=[])
+    cfg = Config(projects=[], settings=Settings(log_format="json"))
     create_app(cfg)
 
     # Steal the ProcessorFormatter from the root logger's configured handler.
@@ -619,15 +626,11 @@ def test_access_log_contains_request_id(
         correlation_id.set(None)
 
 
-def test_log_level_debug_shows_debug_events(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_log_level_debug_shows_debug_events() -> None:
     """When ``LOG_LEVEL=DEBUG``, debug-level structlog events reach the
     stdlib handler (``filter_by_level`` passes them through).
     """
-    monkeypatch.setenv("LOG_LEVEL", "DEBUG")
-
-    cfg = Config(projects=[])
+    cfg = Config(projects=[], settings=Settings(log_level="DEBUG"))
     create_app(cfg)
 
     # ``dictConfig`` replaces root handlers — add a fresh capture handler.
@@ -647,15 +650,11 @@ def test_log_level_debug_shows_debug_events(
         logging.getLogger().removeHandler(capture)
 
 
-def test_log_level_info_filters_debug_events(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_log_level_info_filters_debug_events() -> None:
     """Default ``LOG_LEVEL=INFO`` — ``filter_by_level`` drops debug events
     before they reach stdlib, so no record appears.
     """
-    monkeypatch.setenv("LOG_LEVEL", "INFO")
-
-    cfg = Config(projects=[])
+    cfg = Config(projects=[], settings=Settings(log_level="INFO"))
     create_app(cfg)
 
     from _pytest.logging import LogCaptureHandler

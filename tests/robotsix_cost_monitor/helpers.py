@@ -13,10 +13,13 @@ fixtures auto-discovered by pytest):
     methods return empty results
 """
 
+# mypy: disable-error-code="arg-type"
+
 from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, Mock
 
@@ -90,6 +93,7 @@ def _config(
     *projects: ProjectConfig,
     ttl: int = 10,
     subscription_call_cap: int = 0,
+    data_dir: Path | None = None,
     **analyst_kwargs: Any,
 ) -> Config:
     """Build a ``Config`` from projects and optional Settings overrides.
@@ -101,6 +105,8 @@ def _config(
         "cache_ttl_seconds": ttl,
         "subscription_call_cap": subscription_call_cap,
     }
+    if data_dir is not None:
+        settings_kwargs["data_dir"] = data_dir
     if analyst_kwargs:
         settings_kwargs["analyst"] = AnalystConfig(**analyst_kwargs)
     return Config(projects=list(projects), settings=Settings(**settings_kwargs))

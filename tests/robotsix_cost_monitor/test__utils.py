@@ -57,14 +57,13 @@ def test_safe_load_json_permission_error_propagates(
 
 
 def test_load_proposals_corrupt(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """load_proposals returns default when proposals.json is corrupt."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
     d = tmp_path / "analyst"
     d.mkdir()
     (d / "proposals.json").write_text("not json {{{")
-    result = analyst_mod.load_proposals()
+    result = analyst_mod.load_proposals(tmp_path)
     assert result == {"generated_at": None, "proposals": []}
 
 
@@ -72,7 +71,6 @@ def test_load_proposals_permission_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """load_proposals lets PermissionError propagate (not caught)."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
     d = tmp_path / "analyst"
     d.mkdir()
     (d / "proposals.json").write_text("{}")
@@ -80,14 +78,13 @@ def test_load_proposals_permission_error(
         Path, "exists", lambda self: (_ for _ in ()).throw(PermissionError)
     )
     with pytest.raises(PermissionError):
-        analyst_mod.load_proposals()
+        analyst_mod.load_proposals(tmp_path)
 
 
 def test_load_targeted_analysis_permission_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """load_targeted_analysis lets PermissionError propagate (not caught)."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
     d = tmp_path / "analyst"
     d.mkdir()
     (d / "ticket.json").write_text("{}")
@@ -95,4 +92,4 @@ def test_load_targeted_analysis_permission_error(
         Path, "exists", lambda self: (_ for _ in ()).throw(PermissionError)
     )
     with pytest.raises(PermissionError):
-        analyst_mod.load_targeted_analysis("ticket")
+        analyst_mod.load_targeted_analysis("ticket", tmp_path)

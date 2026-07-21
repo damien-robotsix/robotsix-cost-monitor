@@ -6,7 +6,9 @@
         "openrouter_key": {
           "anyOf": [
             {
-              "type": "string"
+              "format": "password",
+              "type": "string",
+              "writeOnly": true
             },
             {
               "type": "null"
@@ -74,7 +76,9 @@
         "langfuse_public_key": {
           "anyOf": [
             {
-              "type": "string"
+              "format": "password",
+              "type": "string",
+              "writeOnly": true
             },
             {
               "type": "null"
@@ -86,7 +90,9 @@
         "langfuse_secret_key": {
           "anyOf": [
             {
-              "type": "string"
+              "format": "password",
+              "type": "string",
+              "writeOnly": true
             },
             {
               "type": "null"
@@ -133,14 +139,16 @@
           "type": "string"
         },
         "public_key": {
-          "pattern": "^pk-lf-",
+          "format": "password",
           "title": "Public Key",
-          "type": "string"
+          "type": "string",
+          "writeOnly": true
         },
         "secret_key": {
-          "pattern": "^sk-lf-",
+          "format": "password",
           "title": "Secret Key",
-          "type": "string"
+          "type": "string",
+          "writeOnly": true
         },
         "base_url": {
           "advanced": true,
@@ -151,7 +159,9 @@
         "openrouter_key": {
           "anyOf": [
             {
-              "type": "string"
+              "format": "password",
+              "type": "string",
+              "writeOnly": true
             },
             {
               "type": "null"
@@ -201,6 +211,25 @@
           "default": 0,
           "title": "Subscription Call Cap",
           "type": "integer"
+        },
+        "data_dir": {
+          "advanced": true,
+          "default": ".data",
+          "format": "path",
+          "title": "Data Dir",
+          "type": "string"
+        },
+        "log_format": {
+          "advanced": true,
+          "default": "console",
+          "title": "Log Format",
+          "type": "string"
+        },
+        "log_level": {
+          "advanced": true,
+          "default": "INFO",
+          "title": "Log Level",
+          "type": "string"
         },
         "analyst": {
           "$ref": "#/$defs/AnalystConfig"

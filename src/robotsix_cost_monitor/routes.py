@@ -284,9 +284,9 @@ async def reconcile(
 
 
 @router.get("/api/reconcile/last")
-def reconcile_last() -> dict[str, Any]:
+def reconcile_last(cfg: Config = Depends(get_config)) -> dict[str, Any]:
     """GET /api/reconcile/last — return the most recent reconciliation result."""
-    return load_last_reconcile()
+    return load_last_reconcile(cfg.settings.data_dir)
 
 
 @router.get("/api/analyst/digest")
@@ -301,9 +301,9 @@ async def analyst_digest(
 
 
 @router.get("/api/analyst/proposals")
-def analyst_proposals() -> dict[str, Any]:
+def analyst_proposals(cfg: Config = Depends(get_config)) -> dict[str, Any]:
     """GET /api/analyst/proposals — load saved cost-reduction proposals."""
-    return load_proposals()
+    return load_proposals(cfg.settings.data_dir)
 
 
 @router.post("/api/analyst/run")
@@ -330,9 +330,11 @@ async def analyst_run_targeted(
 
 
 @router.get("/api/analyst/{kind}")
-def analyst_targeted(kind: AnalystKind) -> dict[str, Any]:
+def analyst_targeted(
+    kind: AnalystKind, cfg: Config = Depends(get_config)
+) -> dict[str, Any]:
     """GET /api/analyst/{kind} — load a saved targeted analysis (ticket or stage)."""
-    return load_targeted_analysis(kind)
+    return load_targeted_analysis(kind, cfg.settings.data_dir)
 
 
 @router.get("/", response_class=HTMLResponse)

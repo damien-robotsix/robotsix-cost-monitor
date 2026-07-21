@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Migrate config handling to robotsix config-standard: rename `config/projects.json` → `config/config.json`, locate exclusively via `ROBOTSIX_CONFIG_FILE`, move `data_dir` / `log_format` / `log_level` into typed `Settings` model fields, and upgrade API key fields to `SecretStr`.
 - Add `make security` target running `uv audit --frozen` and `zizmor` on GitHub Actions workflows.
 - Mark expert-only and rarely-changed config settings as `"advanced": true` in the Pydantic models and regenerated JSON schema, so the central-deploy Configure UI hides them behind its "Show advanced settings" toggle by default.
 - Add `engines` field to `package.json` (`"node": ">=22"`) so that `.npmrc`'s `engine-strict=true` actually enforces the Node.js version requirement.

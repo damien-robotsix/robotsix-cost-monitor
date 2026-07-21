@@ -114,32 +114,25 @@ class TestSplitSession:
 
 
 class TestLoadTargetedAnalysis:
-    def test_no_file_returns_default(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-        result = analyst_mod.load_targeted_analysis("ticket")
+    def test_no_file_returns_default(self, tmp_path: Path) -> None:
+        result = analyst_mod.load_targeted_analysis("ticket", tmp_path)
         assert result == {"generated_at": None}
 
-    def test_valid_json(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    def test_valid_json(self, tmp_path: Path) -> None:
         d = tmp_path / "analyst"
         d.mkdir()
         (d / "ticket.json").write_text(
             '{"generated_at": "2025-01-01T00:00:00Z", "summary": "ok"}'
         )
-        result = analyst_mod.load_targeted_analysis("ticket")
+        result = analyst_mod.load_targeted_analysis("ticket", tmp_path)
         assert result["generated_at"] == "2025-01-01T00:00:00Z"
         assert result["summary"] == "ok"
 
-    def test_invalid_json_returns_default(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    def test_invalid_json_returns_default(self, tmp_path: Path) -> None:
         d = tmp_path / "analyst"
         d.mkdir()
         (d / "ticket.json").write_text("not json")
-        result = analyst_mod.load_targeted_analysis("ticket")
+        result = analyst_mod.load_targeted_analysis("ticket", tmp_path)
         assert result == {"generated_at": None}
 
 
@@ -154,8 +147,6 @@ async def test_disabled_without_key() -> None:
 async def test_run_stores_proposals(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-
     analysis = Analysis(
         summary="explore is over-provisioned",
         proposals=[
@@ -166,7 +157,7 @@ async def test_run_stores_proposals(
     )
     monkeypatch.setattr(analyst_mod, "_run_agents", lambda *a, **k: (analysis, []))
 
-    cfg = _config(openrouter_key="sk-x")
+    cfg = _config(openrouter_key="sk-x", data_dir=tmp_path)
     out = await run_analyst(cfg, _FakeService())  # type: ignore[arg-type]
 
     assert out["enabled"] is True
@@ -202,13 +193,11 @@ async def test_run_ticket_analyst_disabled() -> None:
 async def test_run_ticket_analyst_no_top_ticket(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-
     svc = _FakeService()
     object.__setattr__(svc, "top_ticket", AsyncMock(return_value=None))
 
     out = await analyst_mod.run_ticket_analyst(
-        _config(openrouter_key="sk-x"),
+        _config(openrouter_key="sk-x", data_dir=tmp_path),
         svc,  # type: ignore[arg-type]
     )
     assert out["enabled"] is True
@@ -218,14 +207,14 @@ async def test_run_ticket_analyst_no_top_ticket(
 async def test_run_ticket_analyst_normal(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-
     async def _fake_opus_and_file(
         a: Any,
+        *,
         system_prompt: str,
         name: str,
         payload: str,
         out_prefix: str,
+        data_dir: Path,
         extra_out: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return {
@@ -241,7 +230,7 @@ async def test_run_ticket_analyst_normal(
     monkeypatch.setattr(analyst_mod, "_run_opus_analysis_and_file", _fake_opus_and_file)
 
     out = await analyst_mod.run_ticket_analyst(
-        _config(openrouter_key="sk-x"),
+        _config(openrouter_key="sk-x", data_dir=tmp_path),
         _FakeService(),  # type: ignore[arg-type]
     )
     assert out["enabled"] is True
@@ -261,13 +250,11 @@ async def test_run_stage_analyst_disabled() -> None:
 async def test_run_stage_analyst_no_top_stage(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-
     svc = _FakeService()
     object.__setattr__(svc, "top_stage", AsyncMock(return_value=None))
 
     out = await analyst_mod.run_stage_analyst(
-        _config(openrouter_key="sk-x"),
+        _config(openrouter_key="sk-x", data_dir=tmp_path),
         svc,  # type: ignore[arg-type]
     )
     assert out["enabled"] is True
@@ -277,14 +264,14 @@ async def test_run_stage_analyst_no_top_stage(
 async def test_run_stage_analyst_normal(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-
     async def _fake_opus_and_file(
         a: Any,
+        *,
         system_prompt: str,
         name: str,
         payload: str,
         out_prefix: str,
+        data_dir: Path,
         extra_out: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return {
@@ -300,7 +287,7 @@ async def test_run_stage_analyst_normal(
     monkeypatch.setattr(analyst_mod, "_run_opus_analysis_and_file", _fake_opus_and_file)
 
     out = await analyst_mod.run_stage_analyst(
-        _config(openrouter_key="sk-x"),
+        _config(openrouter_key="sk-x", data_dir=tmp_path),
         _FakeService(),  # type: ignore[arg-type]
     )
     assert out["enabled"] is True
@@ -310,21 +297,19 @@ async def test_run_stage_analyst_normal(
 
 
 def test_load_proposals_no_file(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-    result = analyst_mod.load_proposals()
+    result = analyst_mod.load_proposals(tmp_path)
     assert result == {"generated_at": None, "proposals": []}
 
 
-def test_load_proposals_valid(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+def test_load_proposals_valid(tmp_path: Path) -> None:
     d = tmp_path / "analyst"
     d.mkdir()
     (d / "proposals.json").write_text(
         '{"generated_at": "2025-01-01T00:00:00Z", "proposals": [{"title": "T"}]}'
     )
-    result = analyst_mod.load_proposals()
+    result = analyst_mod.load_proposals(tmp_path)
     assert result["generated_at"] == "2025-01-01T00:00:00Z"
     assert result["proposals"][0]["title"] == "T"
 
@@ -332,8 +317,6 @@ def test_load_proposals_valid(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
 async def test_run_opus_analysis_and_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-
     analysis = Analysis(
         summary="test",
         proposals=[Proposal(title="P1", rationale="r")],
@@ -352,6 +335,7 @@ async def test_run_opus_analysis_and_file(
         name="test",
         payload="{}",
         out_prefix="ticket",
+        data_dir=tmp_path,
         extra_out={"extra": "data"},
     )
     assert out["enabled"] is True
@@ -363,8 +347,6 @@ async def test_run_opus_analysis_and_file(
 async def test_run_opus_analysis_and_file_without_filing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-
     analysis = Analysis(
         summary="test",
         proposals=[Proposal(title="P1", rationale="r")],
@@ -383,6 +365,7 @@ async def test_run_opus_analysis_and_file_without_filing(
         name="test",
         payload="{}",
         out_prefix="fleet",
+        data_dir=tmp_path,
     )
     assert out["enabled"] is True
     assert out["proposals"][0]["title"] == "P1"

@@ -6,7 +6,6 @@ import asyncio
 import contextlib
 import logging
 import logging.config
-import os
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from pathlib import Path
@@ -43,15 +42,15 @@ def add_correlation_id(
     return event_dict
 
 
-def _configure_logging() -> None:
+def _configure_logging(cfg: Config) -> None:
     """Configure structlog with ProcessorFormatter bridge + request-ID enrichment.
 
     Shared processors are used by structlog's own chain AND by the
     ``ProcessorFormatter`` foreign_pre_chain so that third-party / Uvicorn
     logs also receive correlation IDs, timestamps, and log levels.
     """
-    fmt = os.environ.get("LOG_FORMAT", "json" if os.environ.get("CI") else "console")
-    log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+    fmt = cfg.settings.log_format
+    log_level = cfg.settings.log_level.upper()
 
     shared_processors = [
         add_correlation_id,
@@ -141,7 +140,7 @@ def _parse_iso(value: Any) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
-def _last_analyst_run() -> datetime | None:
+def _last_analyst_run(data_dir: Path) -> datetime | None:
     """Return the most recent analyst run timestamp.
 
     The most recent ``generated_at`` across the persisted fleet/ticket/stage
@@ -153,9 +152,9 @@ def _last_analyst_run() -> datetime | None:
     the daily analysis would rarely fire.
     """
     stamps = (
-        load_proposals().get("generated_at"),
-        load_targeted_analysis("ticket").get("generated_at"),
-        load_targeted_analysis("stage").get("generated_at"),
+        load_proposals(data_dir).get("generated_at"),
+        load_targeted_analysis("ticket", data_dir).get("generated_at"),
+        load_targeted_analysis("stage", data_dir).get("generated_at"),
     )
     runs = [dt for dt in (_parse_iso(s) for s in stamps) if dt is not None]
     return max(runs) if runs else None
@@ -194,7 +193,9 @@ async def _analyst_loop(cfg: Config, service: CostService, hours: float) -> None
         ("ticket", run_ticket_analyst),
         ("stage", run_stage_analyst),
     )
-    delay = _initial_analyst_delay(interval, _last_analyst_run(), datetime.now(UTC))
+    delay = _initial_analyst_delay(
+        interval, _last_analyst_run(cfg.settings.data_dir), datetime.now(UTC)
+    )
     logger.info(
         "analyst scheduler: first run in %.0fs (interval %.0fs)", delay, interval
     )
@@ -232,15 +233,15 @@ def create_app(config: Config | None = None) -> FastAPI:
     """Assemble the FastAPI application.
 
     Loads the project :class:`~robotsix_cost_monitor.config.Config` (when *config*
-    is ``None``, reads from the path given by ``COST_MONITOR_CONFIG``), builds a
+    is ``None``, reads from the path given by ``ROBOTSIX_CONFIG_FILE``), builds a
     :class:`~robotsix_cost_monitor.service.CostService`, wires the lifespan
     (analyst and reconciliation background loops), mounts the route handlers from
     :mod:`robotsix_cost_monitor.routes`, registers exception handlers, and serves
     the static web assets.
     """
-    _configure_logging()
-
     cfg = config or load_config()
+    _configure_logging(cfg)
+
     service = CostService(cfg)
 
     @contextlib.asynccontextmanager
