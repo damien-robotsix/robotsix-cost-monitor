@@ -68,8 +68,7 @@ RUN groupadd --gid ${APP_GID} app \
 WORKDIR /home/app
 USER app
 
-ENV COST_MONITOR_CONFIG=/home/app/config/projects.json \
-    COST_MONITOR_DATA=/data
+ENV ROBOTSIX_CONFIG_FILE=/home/app/config/config.json
 
 EXPOSE 8080
 

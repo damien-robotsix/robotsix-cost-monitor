@@ -135,7 +135,7 @@ async def test_openrouter_credits_fetch_failure_ignored(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Credits fetch failure is suppressed — reconcile still succeeds."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.reconcile.data_dir", lambda: tmp_path)
 
     proj = _proj("demo")
 
@@ -159,7 +159,7 @@ async def test_openrouter_credits_fetch_failure_ignored(
 
 async def test_first_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """No prior snapshot → records first snapshot, no drift fields."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.reconcile.data_dir", lambda: tmp_path)
 
     proj = _proj("demo")
     with (
@@ -225,7 +225,7 @@ async def _reconcile_context(
     if now is None:
         now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
 
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.reconcile.data_dir", lambda: tmp_path)
 
     prior = now + timedelta(hours=prior_hours_offset)
     snap = {"cumulative": cumulative, "at": prior.isoformat()}
@@ -330,7 +330,7 @@ async def test_langfuse_fetch_failure_produces_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Langfuse network error → error dict, snapshot preserved."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.reconcile.data_dir", lambda: tmp_path)
 
     now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
     prior = now + timedelta(hours=-24)
@@ -379,7 +379,7 @@ async def test_missing_snapshot_file_treated_as_first(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Corrupted/missing snapshot is treated as first run."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.reconcile.data_dir", lambda: tmp_path)
 
     # _load_snapshot is tested directly below; here we verify the integration
     proj = _proj("demo")
@@ -413,7 +413,7 @@ def test_load_snapshot_missing_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """_load_snapshot returns None when file does not exist."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.reconcile.data_dir", lambda: tmp_path)
     assert _load_snapshot("nonexistent") is None
 
 
@@ -421,7 +421,7 @@ def test_load_snapshot_corrupted_json(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """_load_snapshot returns None on invalid JSON."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.reconcile.data_dir", lambda: tmp_path)
     data_dir = tmp_path / "reconcile"
     data_dir.mkdir(parents=True)
     (data_dir / "bad.json").write_text("not json {{")
@@ -433,7 +433,7 @@ def test_save_and_load_roundtrip(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """_save_snapshot then _load_snapshot returns the saved data."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.reconcile.data_dir", lambda: tmp_path)
     now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
 
     _save_snapshot("demo", 42.0, now)
@@ -448,7 +448,7 @@ def test_load_snapshot_stale_data(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """_load_snapshot returns the saved data even if old."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.reconcile.data_dir", lambda: tmp_path)
     old = datetime(2020, 1, 1, 0, 0, 0, tzinfo=UTC)
     _save_snapshot("stale", 1.0, old)
 

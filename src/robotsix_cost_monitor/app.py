@@ -6,7 +6,6 @@ import asyncio
 import contextlib
 import logging
 import logging.config
-import os
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from pathlib import Path
@@ -43,15 +42,15 @@ def add_correlation_id(
     return event_dict
 
 
-def _configure_logging() -> None:
+def _configure_logging(log_format: str = "json", log_level: str = "INFO") -> None:
     """Configure structlog with ProcessorFormatter bridge + request-ID enrichment.
 
     Shared processors are used by structlog's own chain AND by the
     ``ProcessorFormatter`` foreign_pre_chain so that third-party / Uvicorn
     logs also receive correlation IDs, timestamps, and log levels.
     """
-    fmt = os.environ.get("LOG_FORMAT", "json" if os.environ.get("CI") else "console")
-    log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+    fmt = log_format
+    log_level = log_level.upper()
 
     shared_processors = [
         add_correlation_id,
@@ -232,15 +231,14 @@ def create_app(config: Config | None = None) -> FastAPI:
     """Assemble the FastAPI application.
 
     Loads the project :class:`~robotsix_cost_monitor.config.Config` (when *config*
-    is ``None``, reads from the path given by ``COST_MONITOR_CONFIG``), builds a
+    is ``None``, reads from the path given by ``ROBOTSIX_CONFIG_FILE``), builds a
     :class:`~robotsix_cost_monitor.service.CostService`, wires the lifespan
     (analyst and reconciliation background loops), mounts the route handlers from
     :mod:`robotsix_cost_monitor.routes`, registers exception handlers, and serves
     the static web assets.
     """
-    _configure_logging()
-
     cfg = config or load_config()
+    _configure_logging(cfg.settings.log_format, cfg.settings.log_level)
     service = CostService(cfg)
 
     @contextlib.asynccontextmanager

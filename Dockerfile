@@ -81,10 +81,9 @@ RUN groupadd --gid ${APP_GID} app \
 WORKDIR /home/app
 USER app
 
-# Config + runtime-state locations resolved via env vars (see config.py).
-# COST_MONITOR_DATA points at the persistent /data mount.
-ENV COST_MONITOR_CONFIG=/home/app/config/projects.json \
-    COST_MONITOR_DATA=/data
+# Config location resolved via ROBOTSIX_CONFIG_FILE (see config.py).
+# Data dir is set via settings.data_dir in the config file (default .data).
+ENV ROBOTSIX_CONFIG_FILE=/home/app/config/config.json
 
 # Serve on all interfaces inside the container on 8080 (the stack convention;
 # a host nginx terminates TLS + auth and proxies to 127.0.0.1:8080).

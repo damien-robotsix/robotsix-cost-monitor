@@ -1,11 +1,11 @@
 # Configuration Reference
 
-The project is configured through a single JSON file (default: `config/projects.json`,
-overridable via `COST_MONITOR_CONFIG`). The schema is defined by four Pydantic models
+The project is configured through a single JSON file (default: `config/config.json`,
+overridable via `ROBOTSIX_CONFIG_FILE`). The schema is defined by four Pydantic models
 in `robotsix_cost_monitor.config`: `Config`, `ProjectConfig`, `Settings`, and
 `AnalystConfig`.
 
-A complete example is available at [`config/projects.example.json`](https://github.com/damien-robotsix/robotsix-cost-monitor/blob/main/config/projects.example.json).
+A complete example is available at [`config/config.example.json`](https://github.com/damien-robotsix/robotsix-cost-monitor/blob/main/config/config.example.json).
 
 ---
 
@@ -26,9 +26,9 @@ Each entry in the `projects` list connects to one Langfuse project.
 |---|---|---|---|---|
 | `name` | `str` | yes | — | Display label shown in the dashboard UI. |
 | `public_key` | `str` | yes | — | Langfuse public API key. |
-| `secret_key` | `str` | yes | — | Langfuse secret API key. |
+| `secret_key` | `SecretStr` | yes | — | Langfuse secret API key (stored as a Pydantic `SecretStr`). |
 | `base_url` | `str` | no | `https://cloud.langfuse.com` | Base URL of the Langfuse instance (self-hosted or Cloud). |
-| `openrouter_key` | `str` or `null` | no | `null` | OpenRouter API key for this project's cost reconciliation. When `null`, reconciliation is skipped for this project. |
+| `openrouter_key` | `SecretStr` or `null` | no | `null` | OpenRouter API key for this project's cost reconciliation (stored as a Pydantic `SecretStr`). When `null`, reconciliation is skipped for this project. |
 
 ---
 
@@ -41,6 +41,9 @@ Each entry in the `projects` list connects to one Langfuse project.
 | `reconcile_tolerance_usd` | `float` | `1.0` | Maximum allowed drift (USD) between OpenRouter and Langfuse costs before reconciliation is flagged. |
 | `reconcile_schedule_hours` | `float` | `24.0` | Interval in hours between automatic reconciliation runs. Set to `0` to disable scheduled reconciliation. |
 | `subscription_call_cap` | `int` | `0` | Per-day cap on subscription-triggered calls. Set to `0` to disable the cap. |
+| `log_format` | `str` | `"json"` (when `CI` is set) else `"console"` | Structured log output format. `"json"` for production ingestion; `"console"` for coloured human-readable output. |
+| `log_level` | `str` | `"INFO"` | Minimum log level for all loggers. Set to `"DEBUG"` for verbose diagnostics. |
+| `data_dir` | `str` | `".data"` | Directory for persistent runtime state (reconciliation snapshots, analyst proposals). |
 | `analyst` | `AnalystConfig` | `{}` | Nested configuration for the optional LLM cost-analyst (see below). |
 
 ---
@@ -53,7 +56,7 @@ to a non-null value.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `openrouter_key` | `str` or `null` | `null` | OpenRouter API key for the analyst's own LLM calls. `null` disables the analyst entirely. |
+| `openrouter_key` | `SecretStr` or `null` | `null` | OpenRouter API key for the analyst's own LLM calls (stored as a Pydantic `SecretStr`). `null` disables the analyst entirely. |
 | `global_model` | `str` or `null` | `null` | L3 orchestrator model. Blank or `null` uses the tier-3 default. |
 | `trace_model` | `str` or `null` | `null` | L2 per-trace analysis model. Blank or `null` uses the tier-2 default. |
 | `window_hours` | `int` | `24` | Look-back window (hours) for selecting traces to analyse. |
@@ -62,7 +65,7 @@ to a non-null value.
 | `max_trace_analyses` | `int` | `12` | Hard cap on the number of traces the analyst examines in a single run. |
 | `schedule_hours` | `float` | `24.0` | Interval between automatic analyst runs. `0` means manual-only. |
 | `langfuse_public_key` | `str` or `null` | `null` | Public key for the analyst's own Langfuse tracing project. |
-| `langfuse_secret_key` | `str` or `null` | `null` | Secret key for the analyst's own Langfuse tracing project. |
+| `langfuse_secret_key` | `SecretStr` or `null` | `null` | Secret key for the analyst's own Langfuse tracing project (stored as a Pydantic `SecretStr`). |
 | `langfuse_base_url` | `str` or `null` | `null` | Base URL for the analyst's Langfuse instance. |
 | `langfuse_project_id` | `str` or `null` | `null` | Project ID for the analyst's Langfuse tracing. |
 
@@ -72,7 +75,8 @@ to a non-null value.
 
 | Variable | Default | Description |
 |---|---|---|
-| `COST_MONITOR_CONFIG` | `config/projects.json` | Path to the JSON configuration file (relative to repository root). |
-| `COST_MONITOR_DATA` | `.data/` | Directory for persistent runtime state (reconciliation snapshots, analyst proposals). |
-| `LOG_FORMAT` | `json` (when `CI` is set) else `console` | Structured log output format. `json` for production ingestion; `console` for coloured human-readable output during local development. |
-| `LOG_LEVEL` | `INFO` | Minimum log level for all loggers. Set to `DEBUG` for verbose diagnostics. |
+| `ROBOTSIX_CONFIG_FILE` | `config/config.json` | Path to the JSON configuration file (relative to repository root). |
+
+Log format, log level, and data directory are now configured via `settings.log_format`,
+`settings.log_level`, and `settings.data_dir` in the config file rather than environment
+variables.

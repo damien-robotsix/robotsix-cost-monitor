@@ -2,7 +2,7 @@
 
 `robotsix-cost-monitor` provides three subcommands: **serve**, **summary**, and
 **reconcile**. All subcommands load the JSON configuration from the path set by
-`COST_MONITOR_CONFIG` (or `config/projects.json` by default).
+`ROBOTSIX_CONFIG_FILE` (or `config/config.json` by default).
 
 ---
 
@@ -73,7 +73,8 @@ Options:
 |---|---|---|---|
 | `--project` | `str` | `"all"` | Project slug to reconcile, or `"all"` to reconcile every configured project that has an OpenRouter key. |
 
-Reconciliation snapshots are saved under `$COST_MONITOR_DATA/reconcile/<slug>.json`.
+Reconciliation snapshots are saved under `<data_dir>/reconcile/<slug>.json` (where
+`data_dir` is `settings.data_dir` from the config file, defaulting to `.data`).
 
 ---
 
@@ -81,7 +82,7 @@ Reconciliation snapshots are saved under `$COST_MONITOR_DATA/reconcile/<slug>.js
 
 | Variable | Default | Description |
 |---|---|---|
-| `COST_MONITOR_CONFIG` | `config/projects.json` | Path to the JSON configuration file. |
-| `COST_MONITOR_DATA` | `.data/` | Directory for runtime state (reconciliation snapshots, analyst proposals). |
-| `LOG_FORMAT` | `json` (when `CI` is set) else `console` | Structured log output format. `json` for production ingestion; `console` for coloured human-readable output during local development. |
-| `LOG_LEVEL` | `INFO` | Minimum log level for all loggers. Set to `DEBUG` for verbose diagnostics. |
+| `ROBOTSIX_CONFIG_FILE` | `config/config.json` | Path to the JSON configuration file. |
+
+Log format, log level, and data directory are now configured via `settings.log_format`,
+`settings.log_level`, and `settings.data_dir` in the config file.

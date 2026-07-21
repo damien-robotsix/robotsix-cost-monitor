@@ -73,8 +73,8 @@ class CostService:
         self.config = config
         self._clients: dict[str, LangfuseClient] = {
             p.slug: LangfuseClient(
-                public_key=p.public_key,
-                secret_key=p.secret_key,
+                public_key=p.public_key.get_secret_value(),
+                secret_key=p.secret_key.get_secret_value(),
                 base_url=p.base_url,
             )
             for p in config.projects

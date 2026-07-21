@@ -25,15 +25,15 @@ self-contained (`httpx`).
 
 ```bash
 uv sync --locked
-cp config/projects.example.json config/projects.json   # then fill in real keys
+cp config/config.example.json config/config.json   # then fill in real keys
 uv run robotsix-cost-monitor serve --host 127.0.0.1 --port 8099
 # open http://127.0.0.1:8099
 ```
 
 Each project needs a Langfuse `public_key` / `secret_key` / `base_url`. Add an
 `openrouter_key` per project to enable reconciliation. The real config file
-(`config/projects.json`) is gitignored; `config/projects.example.json` is the
-committed template. Override the path with `COST_MONITOR_CONFIG`.
+(`config/config.json`) is gitignored; `config/config.example.json` is the
+committed template. Override the path with `ROBOTSIX_CONFIG_FILE`.
 
 ## CLI
 

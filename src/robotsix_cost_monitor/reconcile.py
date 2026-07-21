@@ -96,7 +96,7 @@ async def reconcile_project(
         )
         return result
 
-    orc = OpenRouterKeyCostSource(api_key=project.openrouter_key)
+    orc = OpenRouterKeyCostSource(api_key=project.openrouter_key.get_secret_value())
     # Per-KEY cumulative usage is the reconciliation basis (isolates this
     # consumer even when several keys share one OpenRouter account).
     try:
@@ -113,7 +113,9 @@ async def reconcile_project(
     # Account-level remaining balance — informational only (shared balance pool).
     # Optional: a balance fetch failure must not fail the reconcile.
     with contextlib.suppress(Exception):
-        result["balance"] = await _fetch_credits(project.openrouter_key)
+        result["balance"] = await _fetch_credits(
+            project.openrouter_key.get_secret_value()
+        )
 
     prior = _load_snapshot(project.slug)
     _save_snapshot(project.slug, cumulative, now)
@@ -127,8 +129,8 @@ async def reconcile_project(
     provider_delta = round(cumulative - float(prior["cumulative"]), 6)
 
     lf = LangfuseClient(
-        public_key=project.public_key,
-        secret_key=project.secret_key,
+        public_key=project.public_key.get_secret_value(),
+        secret_key=project.secret_key.get_secret_value(),
         base_url=project.base_url,
     )
     # Traced cost over the SAME interval as the provider delta (both since the

@@ -14,36 +14,14 @@ from robotsix_cost_monitor.config import (
     Config,
     ProjectConfig,
     Settings,
-    _config_path,
     data_dir,
     load_config,
 )
 
-# -- _config_path -------------------------------------------------------
-
-
-def test_config_path_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("COST_MONITOR_CONFIG", "/custom/config.yaml")
-    assert _config_path() == Path("/custom/config.yaml")
-
-
-def test_config_path_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("COST_MONITOR_CONFIG", raising=False)
-    result = _config_path()
-    assert result.name == "projects.json"
-    assert result.parent.name == "config"
-
-
 # -- data_dir -----------------------------------------------------------
 
 
-def test_data_dir_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", "/custom/data")
-    assert data_dir() == Path("/custom/data")
-
-
 def test_data_dir_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("COST_MONITOR_DATA", raising=False)
     result = data_dir()
     assert result.name == ".data"
 
@@ -78,7 +56,7 @@ def test_example_config_max_trace_analyses_matches_code_default() -> None:
 
     from robotsix_cost_monitor.config import Config
 
-    config = load_config(Config, path=Path("config/projects.example.json"))
+    config = load_config(Config, path=Path("config/config.example.json"))
     assert config.settings.analyst is not None
     assert config.settings.analyst.max_trace_analyses == 12
     assert config.settings.analyst.traces_per_agent == 1
@@ -129,8 +107,8 @@ def test_project_config_field_regex_patterns() -> None:
         public_key="pk-lf-abc123",
         secret_key="sk-lf-xyz789",
     )
-    assert cfg.public_key == "pk-lf-abc123"
-    assert cfg.secret_key == "sk-lf-xyz789"
+    assert cfg.public_key.get_secret_value() == "pk-lf-abc123"
+    assert cfg.secret_key.get_secret_value() == "sk-lf-xyz789"
 
     # Invalid public_key (missing pk-lf- prefix) raises.
     with pytest.raises(ValidationError):
@@ -190,6 +168,9 @@ def test_settings_defaults() -> None:
     assert s.reconcile_tolerance_usd == 1.0
     assert s.reconcile_schedule_hours == 24.0
     assert s.subscription_call_cap == 0
+    assert s.log_format == "json"
+    assert s.log_level == "INFO"
+    assert s.data_dir == ".data"
     assert isinstance(s.analyst, AnalystConfig)
 
 
@@ -227,15 +208,16 @@ def test_load_config_found() -> None:
 
 
 def test_load_config_not_found() -> None:
+    """When path is given to a nonexistent file, robotsix_config returns defaults."""
     nonexistent = Path("/nonexistent/path/config.json")
-    with pytest.raises(FileNotFoundError, match="config not found"):
-        load_config(nonexistent)
+    config = load_config(nonexistent)
+    assert isinstance(config, Config)
+    assert config.projects == []
 
 
 # -- data_dir extra -----------------------------------------------------
 
 
 def test_data_dir_default_is_dot_data(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("COST_MONITOR_DATA", raising=False)
     result = data_dir()
     assert result.name == ".data"

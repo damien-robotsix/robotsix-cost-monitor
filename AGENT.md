@@ -24,17 +24,16 @@ This repo follows the [robotsix stack standards](https://github.com/damien-robot
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `COST_MONITOR_CONFIG` | Path to the JSON project config (relative to repo root) | `config/projects.json` |
-| `COST_MONITOR_DATA` | Writable runtime-state directory (reconciliation snapshots, analyst proposals) | `.data` |
+| `ROBOTSIX_CONFIG_FILE` | Path to the JSON config file (relative to repo root) | `config/config.json` |
 
-Both are documented in `.env.example`. Never rename or remove these env vars
-without updating every call-site (`_config_path()`, `data_dir()` in
-`src/robotsix_cost_monitor/config.py`) and `.env.example`.
+Data directory is configured via `settings.data_dir` in the config file
+(default `.data`). Log format and level are also config fields
+(`settings.log_format`, `settings.log_level`).
 
 ### JSON config shape
 
-The real config lives at `config/projects.json` (gitignored). The committed
-template is `config/projects.example.json`. Top-level keys:
+The real config lives at `config/config.json` (gitignored). The committed
+template is `config/config.example.json`. Top-level keys:
 
 - **`projects`** — list of Langfuse projects to monitor. Each entry: `name`,
   `public_key`, `secret_key`, `base_url`, optional `openrouter_key`.
@@ -115,8 +114,8 @@ in favour of this shared client. New OpenRouter endpoints or features should go 
 
 ## Data directory convention
 
-Persistent runtime state lives under `.data/` (overridable via
-`COST_MONITOR_DATA`). Two subsystems write here:
+Persistent runtime state lives under the directory set by `settings.data_dir`
+in the config file (default `.data`). Two subsystems write here:
 
 | Subsystem | Path | Content |
 |---|---|---|

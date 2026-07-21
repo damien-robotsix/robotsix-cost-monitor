@@ -14,6 +14,9 @@
     "reconcile_tolerance_usd": 1.0,
     "reconcile_schedule_hours": 24.0,
     "subscription_call_cap": 0,
+    "log_format": "json",
+    "log_level": "INFO",
+    "data_dir": ".data",
     "analyst": {
       "openrouter_key": null,
       "global_model": null,

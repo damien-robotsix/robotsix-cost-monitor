@@ -5,7 +5,7 @@
 ```
 .
 ├── config/                     # Operational JSON config (gitignored, template committed)
-│   └── projects.example.json   #   Template listing Langfuse projects + OpenRouter keys
+│   └── config.example.json     #   Template listing Langfuse projects + OpenRouter keys
 ├── deploy/                     # Production deployment stack (docker-compose + env)
 ├── docs/                       # MkDocs documentation source
 ├── src/robotsix_cost_monitor/  # Python package (the application)
@@ -84,7 +84,7 @@ usage (OpenRouter has no per-window cost endpoint):
    and the account-level credit balance via a direct `httpx` call to
    `GET /api/v1/credits` (`_fetch_credits` helper).
 2. It diffs against the **prior snapshot** (stored under
-   `.data/reconcile/<slug>.json`) to get `provider_delta_usd` — the
+   `<data_dir>/reconcile/<slug>.json`) to get `provider_delta_usd` — the
    OpenRouter spend in the interval.
 3. It queries Langfuse for the **openrouter-backend** traced cost over the
    **same interval** (since the prior snapshot).
@@ -143,9 +143,9 @@ CLI commands work without it. It requires two packages installed via the
   (`cache_ttl_seconds`, default 60 s).
 - **Configuration flows through Pydantic.** `Config` →
   `Config.model_validate()` is the only path. Never bypass the models.
-- **Runtime state lives under `.data/`** (overridable via
-  `COST_MONITOR_DATA`). Two subsystems write here: reconciliation
-  (`.data/reconcile/`) and analyst (`.data/analyst/`).
+- **Runtime state lives under the configured data directory**
+  (`settings.data_dir`, default `.data`). Two subsystems write here:
+  reconciliation (`<data_dir>/reconcile/`) and analyst (`<data_dir>/analyst/`).
 - **The dashboard has no built-in auth.** In production, a host nginx
   terminates TLS + basic auth and proxies to `127.0.0.1:8080` inside the
   container.

@@ -129,7 +129,7 @@ def test_reconcile_last_served_from_disk(
     what lets the dashboard show the last run after a page reload or container
     restart (the file is on the persisted data volume).
     """
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.reconcile.data_dir", lambda: tmp_path)
     recon = tmp_path / "reconcile"
     recon.mkdir()
     (recon / "last.json").write_text(
@@ -186,8 +186,10 @@ def test_project_slug() -> None:
 
 
 def test_load_config_missing(tmp_path: Path) -> None:
-    with pytest.raises(FileNotFoundError):
-        load_config(tmp_path / "nope.json")
+    """Loading a nonexistent file returns defaults (robotsix_config behavior)."""
+    config = load_config(tmp_path / "nope.json")
+    assert isinstance(config, Config)
+    assert config.projects == []
 
 
 def test_load_config_roundtrip(tmp_path: Path) -> None:
@@ -584,8 +586,6 @@ def test_access_log_contains_request_id(
     ``ProcessorFormatter`` configured by ``_configure_logging``, simulating
     what happens when a third-party logger (like uvicorn) emits a record.
     """
-    monkeypatch.setenv("LOG_FORMAT", "json")
-
     cfg = Config(projects=[])
     create_app(cfg)
 
@@ -625,9 +625,9 @@ def test_log_level_debug_shows_debug_events(
     """When ``LOG_LEVEL=DEBUG``, debug-level structlog events reach the
     stdlib handler (``filter_by_level`` passes them through).
     """
-    monkeypatch.setenv("LOG_LEVEL", "DEBUG")
+    from robotsix_cost_monitor.config import Settings
 
-    cfg = Config(projects=[])
+    cfg = Config(projects=[], settings=Settings(log_level="DEBUG"))
     create_app(cfg)
 
     # ``dictConfig`` replaces root handlers — add a fresh capture handler.
@@ -653,9 +653,9 @@ def test_log_level_info_filters_debug_events(
     """Default ``LOG_LEVEL=INFO`` — ``filter_by_level`` drops debug events
     before they reach stdlib, so no record appears.
     """
-    monkeypatch.setenv("LOG_LEVEL", "INFO")
+    from robotsix_cost_monitor.config import Settings
 
-    cfg = Config(projects=[])
+    cfg = Config(projects=[], settings=Settings(log_level="INFO"))
     create_app(cfg)
 
     from _pytest.logging import LogCaptureHandler
