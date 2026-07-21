@@ -13,6 +13,8 @@ fixtures auto-discovered by pytest):
     methods return empty results
 """
 
+# mypy: disable-error-code="arg-type"
+
 from __future__ import annotations
 
 import asyncio

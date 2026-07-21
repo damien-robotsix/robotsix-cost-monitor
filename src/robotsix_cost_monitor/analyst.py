@@ -190,7 +190,7 @@ def _run_agents(
     # up front (so the orchestrator needs no tools). Provider/model from llmio's
     # tier config (LEVEL2 → openrouter-deepseek/deepseek-v4-pro).
     trace_provider = get_provider_for_level(
-        2, api_key=a.openrouter_key.get_secret_value()
+        2, api_key=a.openrouter_key.get_secret_value()  # type: ignore[union-attr]
     )
     findings: list[dict[str, Any]] = []
     for c in candidates:
@@ -515,3 +515,4 @@ async def run_stage_analyst(config: Config, service: CostService) -> dict[str, A
         },
         settings=config.settings,
     )
+

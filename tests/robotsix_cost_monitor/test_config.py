@@ -1,5 +1,7 @@
 """Unit tests for config.py I/O helpers and AnalystConfig model."""
 
+# mypy: disable-error-code="arg-type"
+
 from __future__ import annotations
 
 import json

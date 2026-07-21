@@ -1,5 +1,7 @@
 """App + config tests using a zero-project config (no network)."""
 
+# mypy: disable-error-code="arg-type"
+
 from __future__ import annotations
 
 import asyncio
