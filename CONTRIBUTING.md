@@ -116,5 +116,5 @@ present and commit the final lockfile before the change lands on `main`.
   Do not instantiate a second Langfuse client or call the REST API directly.
 - **Public API symbols** (functions, classes, parameters) should not be
   renamed without updating all call-sites and the changelog.
-- **Python syntax** targets 3.14+ — PEP 758 comma-separated exception types
+- **Python syntax** targets 3.14+ — comma-separated exception types (tuple syntax)
   are the norm (`except ValueError, TypeError:`).
