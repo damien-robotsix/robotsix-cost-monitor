@@ -1,4 +1,4 @@
-.PHONY: test install install-test install-lint lint typecheck format serve docs clean schema verify-schema
+.PHONY: test install install-test install-lint lint typecheck format serve docs clean schema verify-schema security
 
 install:
 	UV_MALWARE_CHECK=1 uv sync --locked --all-extras --all-groups
@@ -39,6 +39,10 @@ verify-schema: schema
 		echo "ERROR: config/projects.schema.json is stale — run 'make schema' and commit the result."; \
 		exit 1; \
 	fi
+
+security:
+	uv audit --frozen
+	uvx zizmor --min-severity medium .github/workflows/
 
 clean:
 	rm -rf .coverage .mypy_cache .ruff_cache .pytest_cache htmlcov/
