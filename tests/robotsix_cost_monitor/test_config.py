@@ -14,38 +14,8 @@ from robotsix_cost_monitor.config import (
     Config,
     ProjectConfig,
     Settings,
-    _config_path,
-    data_dir,
     load_config,
 )
-
-# -- _config_path -------------------------------------------------------
-
-
-def test_config_path_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("COST_MONITOR_CONFIG", "/custom/config.yaml")
-    assert _config_path() == Path("/custom/config.yaml")
-
-
-def test_config_path_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("COST_MONITOR_CONFIG", raising=False)
-    result = _config_path()
-    assert result.name == "projects.json"
-    assert result.parent.name == "config"
-
-
-# -- data_dir -----------------------------------------------------------
-
-
-def test_data_dir_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", "/custom/data")
-    assert data_dir() == Path("/custom/data")
-
-
-def test_data_dir_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("COST_MONITOR_DATA", raising=False)
-    result = data_dir()
-    assert result.name == ".data"
 
 
 # -- AnalystConfig ------------------------------------------------------
@@ -78,7 +48,7 @@ def test_example_config_max_trace_analyses_matches_code_default() -> None:
 
     from robotsix_cost_monitor.config import Config
 
-    config = load_config(Config, path=Path("config/projects.example.json"))
+    config = load_config(Config, path=Path("config/config.example.json"))
     assert config.settings.analyst is not None
     assert config.settings.analyst.max_trace_analyses == 12
     assert config.settings.analyst.traces_per_agent == 1
@@ -129,8 +99,8 @@ def test_project_config_field_regex_patterns() -> None:
         public_key="pk-lf-abc123",
         secret_key="sk-lf-xyz789",
     )
-    assert cfg.public_key == "pk-lf-abc123"
-    assert cfg.secret_key == "sk-lf-xyz789"
+    assert cfg.public_key.get_secret_value() == "pk-lf-abc123"
+    assert cfg.secret_key.get_secret_value() == "sk-lf-xyz789"
 
     # Invalid public_key (missing pk-lf- prefix) raises.
     with pytest.raises(ValidationError):
@@ -191,6 +161,9 @@ def test_settings_defaults() -> None:
     assert s.reconcile_schedule_hours == 24.0
     assert s.subscription_call_cap == 0
     assert isinstance(s.analyst, AnalystConfig)
+    assert s.data_dir == Path(".data")
+    assert s.log_format == "console"
+    assert s.log_level == "INFO"
 
 
 def test_settings_subscription_call_cap() -> None:
@@ -198,10 +171,14 @@ def test_settings_subscription_call_cap() -> None:
     assert s.subscription_call_cap == 5000
 
 
+def test_settings_data_dir_default() -> None:
+    assert Settings().data_dir == Path(".data")
+
+
 # -- load_config --------------------------------------------------------
 
 
-def test_load_config_found() -> None:
+def test_load_config_found(monkeypatch: pytest.MonkeyPatch) -> None:
     """Write a minimal valid config to a temp file and load it."""
     data = {
         "projects": [
@@ -218,7 +195,8 @@ def test_load_config_found() -> None:
         tmp_path = Path(f.name)
 
     try:
-        config = load_config(tmp_path)
+        monkeypatch.setenv("ROBOTSIX_CONFIG_FILE", str(tmp_path))
+        config = load_config()
         assert isinstance(config, Config)
         assert len(config.projects) == 1
         assert config.projects[0].name == "Temp Project"
@@ -226,16 +204,7 @@ def test_load_config_found() -> None:
         tmp_path.unlink()
 
 
-def test_load_config_not_found() -> None:
-    nonexistent = Path("/nonexistent/path/config.json")
+def test_load_config_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("ROBOTSIX_CONFIG_FILE", "/nonexistent/path/config.json")
     with pytest.raises(FileNotFoundError, match="config not found"):
-        load_config(nonexistent)
-
-
-# -- data_dir extra -----------------------------------------------------
-
-
-def test_data_dir_default_is_dot_data(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("COST_MONITOR_DATA", raising=False)
-    result = data_dir()
-    assert result.name == ".data"
+        load_config()

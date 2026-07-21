@@ -87,8 +87,11 @@ def test_reconcile_status() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _settings(tolerance: float = 1.0) -> Settings:
-    return Settings(reconcile_tolerance_usd=tolerance)
+def _settings(*, tolerance: float = 1.0, data_dir: Path | None = None) -> Settings:
+    kwargs: dict[str, Any] = {"reconcile_tolerance_usd": tolerance}
+    if data_dir is not None:
+        kwargs["data_dir"] = data_dir
+    return Settings(**kwargs)
 
 
 class _FrozenNow:
@@ -132,11 +135,9 @@ async def test_openrouter_fetch_failure() -> None:
 
 
 async def test_openrouter_credits_fetch_failure_ignored(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """Credits fetch failure is suppressed — reconcile still succeeds."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-
     proj = _proj("demo")
 
     with (
@@ -149,7 +150,7 @@ async def test_openrouter_credits_fetch_failure_ignored(
         mock_orc = orc_cls.return_value
         mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=5.0))
 
-        result = await reconcile_project(proj, _settings())
+        result = await reconcile_project(proj, _settings(data_dir=tmp_path))
 
     # Credits failure is suppressed — no error, no balance key
     assert "error" not in result
@@ -157,10 +158,8 @@ async def test_openrouter_credits_fetch_failure_ignored(
     assert "first snapshot recorded" in result["detail"]
 
 
-async def test_first_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_first_snapshot(tmp_path: Path) -> None:
     """No prior snapshot → records first snapshot, no drift fields."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-
     proj = _proj("demo")
     with (
         patch("robotsix_llmio.openrouter.OpenRouterKeyCostSource") as orc_cls,
@@ -178,7 +177,7 @@ async def test_first_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
         mock_orc = orc_cls.return_value
         mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=12.5))
 
-        result = await reconcile_project(proj, _settings())
+        result = await reconcile_project(proj, _settings(data_dir=tmp_path))
 
     assert result["configured"] is True
     assert "first snapshot recorded" in result["detail"]
@@ -205,7 +204,6 @@ async def test_first_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
 @asynccontextmanager
 async def _reconcile_context(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
     *,
     prior_hours_offset: float = -24,
     cumulative: float = 10.0,
@@ -224,8 +222,6 @@ async def _reconcile_context(
     """
     if now is None:
         now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
-
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
 
     prior = now + timedelta(hours=prior_hours_offset)
     snap = {"cumulative": cumulative, "at": prior.isoformat()}
@@ -250,17 +246,16 @@ async def _reconcile_context(
         mock_lf = lf_cls.return_value
         mock_lf.fetch_cost_by_backend = AsyncMock(return_value=langfuse_backend)
 
-        result = await reconcile_project(proj, _settings(tolerance=tolerance))
+        result = await reconcile_project(proj, _settings(tolerance=tolerance, data_dir=tmp_path))
         yield result
 
 
 async def test_second_call_within_tolerance(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """Prior snapshot exists → diffs against it, drift within tolerance."""
     async with _reconcile_context(
         tmp_path,
-        monkeypatch,
         usage=15.0,
         langfuse_backend={"openrouter": 5.0},
         credits_return={
@@ -279,12 +274,11 @@ async def test_second_call_within_tolerance(
 
 
 async def test_drift_exceeds_tolerance(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """Provider delta and Langfuse cost differ by more than tolerance."""
     async with _reconcile_context(
         tmp_path,
-        monkeypatch,
         usage=20.0,
         langfuse_backend={"openrouter": 3.0},
         credits_return={
@@ -303,12 +297,11 @@ async def test_drift_exceeds_tolerance(
 
 
 async def test_negative_interval_treated_as_zero(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """When now is before the prior snapshot, interval_h is 0.0 (negative cap)."""
     async with _reconcile_context(
         tmp_path,
-        monkeypatch,
         prior_hours_offset=+1,
         usage=8.0,
         langfuse_backend={},
@@ -327,11 +320,9 @@ async def test_negative_interval_treated_as_zero(
 
 
 async def test_langfuse_fetch_failure_produces_error(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """Langfuse network error → error dict, snapshot preserved."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-
     now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
     prior = now + timedelta(hours=-24)
     snap = {"cumulative": 10.0, "at": prior.isoformat()}
@@ -364,7 +355,7 @@ async def test_langfuse_fetch_failure_produces_error(
             side_effect=httpx.RequestError("connection refused")
         )
 
-        result = await reconcile_project(proj, _settings())
+        result = await reconcile_project(proj, _settings(data_dir=tmp_path))
 
     assert "error" in result
     assert "Langfuse fetch failed" in result["error"]
@@ -376,11 +367,9 @@ async def test_langfuse_fetch_failure_produces_error(
 
 
 async def test_missing_snapshot_file_treated_as_first(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """Corrupted/missing snapshot is treated as first run."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-
     # _load_snapshot is tested directly below; here we verify the integration
     proj = _proj("demo")
     with (
@@ -399,7 +388,7 @@ async def test_missing_snapshot_file_treated_as_first(
         mock_orc = orc_cls.return_value
         mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=1.0))
 
-        result = await reconcile_project(proj, _settings())
+        result = await reconcile_project(proj, _settings(data_dir=tmp_path))
 
     assert "first snapshot recorded" in result["detail"]
 
@@ -410,34 +399,31 @@ async def test_missing_snapshot_file_treated_as_first(
 
 
 def test_load_snapshot_missing_file(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """_load_snapshot returns None when file does not exist."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
-    assert _load_snapshot("nonexistent") is None
+    assert _load_snapshot("nonexistent", tmp_path) is None
 
 
 def test_load_snapshot_corrupted_json(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """_load_snapshot returns None on invalid JSON."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
     data_dir = tmp_path / "reconcile"
     data_dir.mkdir(parents=True)
     (data_dir / "bad.json").write_text("not json {{")
 
-    assert _load_snapshot("bad") is None
+    assert _load_snapshot("bad", tmp_path) is None
 
 
 def test_save_and_load_roundtrip(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """_save_snapshot then _load_snapshot returns the saved data."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
     now = datetime(2026, 1, 15, 12, 0, 0, tzinfo=UTC)
 
-    _save_snapshot("demo", 42.0, now)
-    loaded = _load_snapshot("demo")
+    _save_snapshot("demo", 42.0, now, tmp_path)
+    loaded = _load_snapshot("demo", tmp_path)
 
     assert loaded is not None
     assert loaded["cumulative"] == 42.0
@@ -445,14 +431,13 @@ def test_save_and_load_roundtrip(
 
 
 def test_load_snapshot_stale_data(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
 ) -> None:
     """_load_snapshot returns the saved data even if old."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
     old = datetime(2020, 1, 1, 0, 0, 0, tzinfo=UTC)
-    _save_snapshot("stale", 1.0, old)
+    _save_snapshot("stale", 1.0, old, tmp_path)
 
-    loaded = _load_snapshot("stale")
+    loaded = _load_snapshot("stale", tmp_path)
     assert loaded is not None
     assert loaded["cumulative"] == 1.0
     assert loaded["at"] == old.isoformat()

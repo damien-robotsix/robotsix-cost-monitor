@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate config/projects.schema.json from Pydantic models.
+"""Regenerate config/config.schema.json from Pydantic models.
 
 Usage:
     python scripts/generate_config_schema.py
@@ -19,6 +19,6 @@ from robotsix_cost_monitor.config import Config
 schema = Config.model_json_schema()
 schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
 
-out = Path(__file__).resolve().parents[1] / "config" / "projects.schema.json"
+out = Path(__file__).resolve().parents[1] / "config" / "config.schema.json"
 out.write_text(json.dumps(schema, indent=2) + "\n")
 print(f"Schema written to {out}")

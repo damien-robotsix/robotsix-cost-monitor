@@ -21,7 +21,7 @@ import structlog
 from pydantic import BaseModel
 
 from ._utils import safe_load_json
-from .config import AnalystConfig, Config, data_dir
+from .config import AnalystConfig, Config
 from .service import CostService
 
 logger = structlog.get_logger(__name__)
@@ -130,8 +130,8 @@ class Analysis(BaseModel):
     proposals: list[Proposal] = []
 
 
-def _store_path() -> Path:
-    d = data_dir() / "analyst"
+def _store_path(data_dir: Path) -> Path:
+    d = data_dir / "analyst"
     d.mkdir(parents=True, exist_ok=True)
     return d / "proposals.json"
 
@@ -161,9 +161,9 @@ async def build_digest(
     }
 
 
-def load_proposals() -> dict[str, Any]:
+def load_proposals(data_dir: Path) -> dict[str, Any]:
     """Load previously stored cost-reduction proposals from disk."""
-    return safe_load_json(_store_path(), {"generated_at": None, "proposals": []})
+    return safe_load_json(_store_path(data_dir), {"generated_at": None, "proposals": []})
 
 
 def _run_agents(
@@ -188,7 +188,7 @@ def _run_agents(
     # Level 2 (intermediate): parse each expensive trace into a terse finding,
     # up front (so the orchestrator needs no tools). Provider/model from llmio's
     # tier config (LEVEL2 → openrouter-deepseek/deepseek-v4-pro).
-    trace_provider = get_provider_for_level(2, api_key=a.openrouter_key)
+    trace_provider = get_provider_for_level(2, api_key=a.openrouter_key.get_secret_value())
     findings: list[dict[str, Any]] = []
     for c in candidates:
         detail = details.get(c["trace_id"])
@@ -246,8 +246,8 @@ def _maybe_setup_tracing(a: AnalystConfig) -> None:
             from robotsix_llmio.core.tracing import setup_langfuse_tracing
 
             setup_langfuse_tracing(
-                public_key=a.langfuse_public_key,
-                secret_key=a.langfuse_secret_key,
+                public_key=a.langfuse_public_key.get_secret_value(),
+                secret_key=a.langfuse_secret_key.get_secret_value(),
                 base_url=a.langfuse_base_url,
                 project_id=a.langfuse_project_id,
                 service_name="robotsix-cost-analyst",
@@ -353,32 +353,32 @@ async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
 
     out = _build_analysis_response(a, analysis)
     out["analyzed_traces"] = findings
-    _store_path().write_text(json.dumps(out, indent=2))
+    _store_path(config.settings.data_dir).write_text(json.dumps(out, indent=2))
     return out
 
 
 # --- targeted (ticket / stage) analyses -----------------------------------
 
 
-def _targeted_store_path(kind: AnalystKind) -> Path:
-    d = data_dir() / "analyst"
+def _targeted_store_path(kind: AnalystKind, data_dir: Path) -> Path:
+    d = data_dir / "analyst"
     d.mkdir(parents=True, exist_ok=True)
     return d / f"{kind}.json"
 
 
-def _no_top_early_return(kind: AnalystKind, detail: str) -> dict[str, Any]:
+def _no_top_early_return(kind: AnalystKind, data_dir: Path, detail: str) -> dict[str, Any]:
     out: dict[str, Any] = {
         "enabled": True,
         "generated_at": datetime.now(UTC).isoformat(),
         "detail": detail,
     }
-    _targeted_store_path(kind).write_text(json.dumps(out, indent=2))
+    _targeted_store_path(kind, data_dir).write_text(json.dumps(out, indent=2))
     return out
 
 
-def load_targeted_analysis(kind: AnalystKind) -> dict[str, Any]:
+def load_targeted_analysis(kind: AnalystKind, data_dir: Path) -> dict[str, Any]:
     """Last stored ticket/stage analysis (for the page); empty when none yet."""
-    return safe_load_json(_targeted_store_path(kind), {"generated_at": None})
+    return safe_load_json(_targeted_store_path(kind, data_dir), {"generated_at": None})
 
 
 def _split_session(session_id: str) -> tuple[str, str]:
@@ -391,10 +391,12 @@ def _split_session(session_id: str) -> tuple[str, str]:
 
 async def _run_opus_analysis_and_file(
     a: AnalystConfig,
+    *,
     system_prompt: str,
     name: str,
     payload: str,
     out_prefix: AnalystKind,
+    data_dir: Path,
     extra_out: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run Opus analysis and store the result."""
@@ -402,7 +404,7 @@ async def _run_opus_analysis_and_file(
         _opus_analysis, a, system_prompt=system_prompt, payload=payload, name=name
     )
     out = _build_analysis_response(a, analysis, extra=extra_out)
-    _targeted_store_path(out_prefix).write_text(json.dumps(out, indent=2))
+    _targeted_store_path(out_prefix, data_dir).write_text(json.dumps(out, indent=2))
     return out
 
 
@@ -419,7 +421,7 @@ async def run_ticket_analyst(config: Config, service: CostService) -> dict[str, 
 
     top = await service.top_ticket("all", a.window_hours)
     if not top:
-        return _no_top_early_return("ticket", "no ticket sessions in the window")
+        return _no_top_early_return("ticket", config.settings.data_dir, "no ticket sessions in the window")
 
     board_id, ticket_id = _split_session(top["session_id"])
 
@@ -442,6 +444,7 @@ async def run_ticket_analyst(config: Config, service: CostService) -> dict[str, 
         name="cost-analyst-ticket",
         payload=payload,
         out_prefix="ticket",
+        data_dir=config.settings.data_dir,
         extra_out={
             "session_id": top["session_id"],
             "board_id": board_id,
@@ -467,7 +470,7 @@ async def run_stage_analyst(config: Config, service: CostService) -> dict[str, A
 
     top = await service.top_stage("all", a.window_hours, sample=a.max_trace_analyses)
     if not top:
-        return _no_top_early_return("stage", "no traces in the window")
+        return _no_top_early_return("stage", config.settings.data_dir, "no traces in the window")
 
     sampled: list[dict[str, Any]] = []
     for t in top["traces"]:
@@ -491,6 +494,7 @@ async def run_stage_analyst(config: Config, service: CostService) -> dict[str, A
         name="cost-analyst-stage",
         payload=payload,
         out_prefix="stage",
+        data_dir=config.settings.data_dir,
         extra_out={
             "stage": top["stage"],
             "total_cost": top["cost"],

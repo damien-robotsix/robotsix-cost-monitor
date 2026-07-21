@@ -20,28 +20,28 @@ import structlog
 
 from ._utils import safe_load_json
 from .clients.langfuse import LangfuseClient
-from .config import Config, ProjectConfig, Settings, data_dir
+from .config import Config, ProjectConfig, Settings
 from .exceptions import ExternalServiceError
 
 logger = structlog.get_logger(__name__)
 
 
-def _state_dir() -> Path:
-    d = data_dir() / "reconcile"
+def _state_dir(data_dir: Path) -> Path:
+    d = data_dir / "reconcile"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
-def _snapshot_path(slug: str) -> Path:
-    return _state_dir() / f"{slug}.json"
+def _snapshot_path(slug: str, data_dir: Path) -> Path:
+    return _state_dir(data_dir) / f"{slug}.json"
 
 
-def _load_snapshot(slug: str) -> dict[str, Any] | None:
-    return safe_load_json(_snapshot_path(slug), None)
+def _load_snapshot(slug: str, data_dir: Path) -> dict[str, Any] | None:
+    return safe_load_json(_snapshot_path(slug, data_dir), None)
 
 
-def _save_snapshot(slug: str, cumulative: float, at: datetime) -> None:
-    _snapshot_path(slug).write_text(
+def _save_snapshot(slug: str, cumulative: float, at: datetime, data_dir: Path) -> None:
+    _snapshot_path(slug, data_dir).write_text(
         json.dumps({"cumulative": cumulative, "at": at.isoformat()})
     )
 
@@ -96,7 +96,7 @@ async def reconcile_project(
         )
         return result
 
-    orc = OpenRouterKeyCostSource(api_key=project.openrouter_key)
+    orc = OpenRouterKeyCostSource(api_key=project.openrouter_key.get_secret_value())
     # Per-KEY cumulative usage is the reconciliation basis (isolates this
     # consumer even when several keys share one OpenRouter account).
     try:
@@ -113,10 +113,10 @@ async def reconcile_project(
     # Account-level remaining balance — informational only (shared balance pool).
     # Optional: a balance fetch failure must not fail the reconcile.
     with contextlib.suppress(Exception):
-        result["balance"] = await _fetch_credits(project.openrouter_key)
+        result["balance"] = await _fetch_credits(project.openrouter_key.get_secret_value())
 
-    prior = _load_snapshot(project.slug)
-    _save_snapshot(project.slug, cumulative, now)
+    prior = _load_snapshot(project.slug, settings.data_dir)
+    _save_snapshot(project.slug, cumulative, now, settings.data_dir)
 
     if prior is None:
         result["detail"] = "first snapshot recorded — reconciliation on next run"
@@ -127,8 +127,8 @@ async def reconcile_project(
     provider_delta = round(cumulative - float(prior["cumulative"]), 6)
 
     lf = LangfuseClient(
-        public_key=project.public_key,
-        secret_key=project.secret_key,
+        public_key=project.public_key.get_secret_value(),
+        secret_key=project.secret_key.get_secret_value(),
         base_url=project.base_url,
     )
     # Traced cost over the SAME interval as the provider delta (both since the
@@ -172,8 +172,8 @@ async def reconcile_project(
     return result
 
 
-def _last_path() -> Path:
-    return _state_dir() / "last.json"
+def _last_path(data_dir: Path) -> Path:
+    return _state_dir(data_dir) / "last.json"
 
 
 def reconcile_status(results: list[dict[str, Any]]) -> str:
@@ -204,13 +204,13 @@ async def reconcile_all(config: Config) -> dict[str, Any]:
         "tolerance_usd": config.settings.reconcile_tolerance_usd,
         "results": results,
     }
-    _last_path().write_text(json.dumps(out, indent=2))
+    _last_path(config.settings.data_dir).write_text(json.dumps(out, indent=2))
     return out
 
 
-def load_last_reconcile() -> dict[str, Any]:
+def load_last_reconcile(data_dir: Path) -> dict[str, Any]:
     """Return the last stored reconcile result (for the banner); empty when none yet."""
     return safe_load_json(
-        _last_path(),
+        _last_path(data_dir),
         {"generated_at": None, "status": "unknown", "results": []},
     )
