@@ -32,11 +32,11 @@ dev = [
     "respx>=0.22",
     "robotsix-modules",
     "ruff>=0.15.20",
-    "mypy>=1.13,<2",
+    "mypy>=2.3.0,<3",
 ]
 lint = [
     "ruff>=0.15.20",
-    "mypy>=1.13",
+    "mypy>=2.3.0",
     "vulture>=2.11",
 ]
 docs = [
