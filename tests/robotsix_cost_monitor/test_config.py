@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
 from robotsix_cost_monitor.config import (
     AnalystConfig,
@@ -35,13 +35,13 @@ def test_analyst_defaults_disabled() -> None:
 
 
 def test_analyst_enabled_with_openrouter_key() -> None:
-    cfg = AnalystConfig(openrouter_key="sk-abc123")
+    cfg = AnalystConfig(openrouter_key=SecretStr("sk-abc123"))
     assert cfg.enabled is True
 
 
 def test_analyst_empty_strings_are_falsy() -> None:
     cfg = AnalystConfig(
-        openrouter_key="",
+        openrouter_key=SecretStr(""),
     )
     assert cfg.enabled is False
 
@@ -85,8 +85,8 @@ def test_analyst_field_defaults() -> None:
 def test_project_config_slug() -> None:
     cfg = ProjectConfig(
         name="  My Awesome Project  ",
-        public_key="pk-lf-abc",
-        secret_key="sk-lf-xyz",
+        public_key=SecretStr("pk-lf-abc"),
+        secret_key=SecretStr("sk-lf-xyz"),
     )
     assert cfg.slug == "my-awesome-project"
 
@@ -94,8 +94,8 @@ def test_project_config_slug() -> None:
 def test_project_config_slug_special_chars() -> None:
     cfg = ProjectConfig(
         name="Project/A/B",
-        public_key="pk-lf-abc",
-        secret_key="sk-lf-xyz",
+        public_key=SecretStr("pk-lf-abc"),
+        secret_key=SecretStr("sk-lf-xyz"),
     )
     assert cfg.slug == "project-a-b"
 
@@ -104,8 +104,8 @@ def test_project_config_field_regex_patterns() -> None:
     # Valid public_key and secret_key pass.
     cfg = ProjectConfig(
         name="test",
-        public_key="pk-lf-abc123",
-        secret_key="sk-lf-xyz789",
+        public_key=SecretStr("pk-lf-abc123"),
+        secret_key=SecretStr("sk-lf-xyz789"),
     )
     assert cfg.public_key.get_secret_value() == "pk-lf-abc123"
     assert cfg.secret_key.get_secret_value() == "sk-lf-xyz789"
@@ -114,16 +114,16 @@ def test_project_config_field_regex_patterns() -> None:
     with pytest.raises(ValidationError):
         ProjectConfig(
             name="test",
-            public_key="pk-xyz-abc",
-            secret_key="sk-lf-xyz",
+            public_key=SecretStr("pk-xyz-abc"),
+            secret_key=SecretStr("sk-lf-xyz"),
         )
 
     # Invalid secret_key (missing sk-lf- prefix) raises.
     with pytest.raises(ValidationError):
         ProjectConfig(
             name="test",
-            public_key="pk-lf-abc",
-            secret_key="sk-xyz-abc",
+            public_key=SecretStr("pk-lf-abc"),
+            secret_key=SecretStr("sk-xyz-abc"),
         )
 
 
@@ -135,13 +135,13 @@ def test_config_project_lookup() -> None:
         projects=[
             ProjectConfig(
                 name="Alpha Project",
-                public_key="pk-lf-aaa",
-                secret_key="sk-lf-aaa",
+                public_key=SecretStr("pk-lf-aaa"),
+                secret_key=SecretStr("sk-lf-aaa"),
             ),
             ProjectConfig(
                 name="Beta Project",
-                public_key="pk-lf-bbb",
-                secret_key="sk-lf-bbb",
+                public_key=SecretStr("pk-lf-bbb"),
+                secret_key=SecretStr("sk-lf-bbb"),
             ),
         ]
     )

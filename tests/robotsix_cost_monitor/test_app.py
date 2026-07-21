@@ -14,6 +14,7 @@ import pytest
 import structlog
 from asgi_correlation_id import correlation_id
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from robotsix_cost_monitor.app import (
     _analyst_loop,
@@ -166,8 +167,8 @@ def test_reconcile_unconfigured_project() -> None:
             projects=[
                 ProjectConfig(
                     name="demo",
-                    public_key="pk-lf-demo",
-                    secret_key="sk-lf-demo",
+                    public_key=SecretStr("pk-lf-demo"),
+                    secret_key=SecretStr("sk-lf-demo"),
                     base_url="http://x",
                 )
             ]
@@ -180,7 +181,9 @@ def test_reconcile_unconfigured_project() -> None:
 
 def test_project_slug() -> None:
     p = ProjectConfig(
-        name="Robotsix Mill", public_key="pk-lf-rm", secret_key="sk-lf-rm"
+        name="Robotsix Mill",
+        public_key=SecretStr("pk-lf-rm"),
+        secret_key=SecretStr("sk-lf-rm"),
     )
     assert p.slug == "robotsix-mill"
 

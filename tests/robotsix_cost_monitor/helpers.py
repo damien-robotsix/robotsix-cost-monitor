@@ -21,6 +21,7 @@ from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from pydantic import SecretStr
 
 from robotsix_cost_monitor.clients.models import LangfuseTrace
 from robotsix_cost_monitor.config import AnalystConfig, Config, ProjectConfig, Settings
@@ -74,10 +75,10 @@ def _proj(
     """A ProjectConfig with dummy credentials (``base_url`` never called)."""
     return ProjectConfig(
         name=name,
-        public_key=f"pk-lf-{name}",
-        secret_key=f"sk-lf-{name}",
+        public_key=SecretStr(f"pk-lf-{name}"),
+        secret_key=SecretStr(f"sk-lf-{name}"),
         base_url="http://localhost",
-        openrouter_key=openrouter_key,
+        openrouter_key=SecretStr(openrouter_key) if openrouter_key else None,
     )
 
 
