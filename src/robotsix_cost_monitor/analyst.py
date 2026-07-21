@@ -398,10 +398,12 @@ def _split_session(session_id: str) -> tuple[str, str]:
 
 async def _run_opus_analysis_and_file(
     a: AnalystConfig,
+    *,
     system_prompt: str,
     name: str,
     payload: str,
     out_prefix: AnalystKind,
+    data_dir: Path,
     extra_out: dict[str, Any] | None = None,
     settings: Settings | None = None,
 ) -> dict[str, Any]:
@@ -452,6 +454,7 @@ async def run_ticket_analyst(config: Config, service: CostService) -> dict[str, 
         name="cost-analyst-ticket",
         payload=payload,
         out_prefix="ticket",
+        data_dir=config.settings.data_dir,
         extra_out={
             "session_id": top["session_id"],
             "board_id": board_id,
@@ -502,6 +505,7 @@ async def run_stage_analyst(config: Config, service: CostService) -> dict[str, A
         name="cost-analyst-stage",
         payload=payload,
         out_prefix="stage",
+        data_dir=config.settings.data_dir,
         extra_out={
             "stage": top["stage"],
             "total_cost": top["cost"],
