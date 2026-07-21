@@ -235,7 +235,7 @@ jobs:
         with:
           enable-cache: true
           cache-python: true
-      - run: uvx zizmor --min-severity medium .github/workflows/
+      - run: uvx zizmor@1.27.0 --min-severity medium .github/workflows/
 
   sbom:
     name: Generate SBOM
