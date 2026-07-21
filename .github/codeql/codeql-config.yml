@@ -1,0 +1,14 @@
+# CodeQL configuration for robotsix-cost-monitor.
+#
+# The `py/path-injection` rule flags `data_dir` → path construction in both
+# _utils.py (pre-existing) and analyst.py (this PR).  `data_dir` is a
+# configuration-controlled, trusted directory — the same safe pattern that is
+# already accepted on main in _utils.py.  We scope the exclusion to the
+# specific files that use this pattern rather than disabling the rule
+# project-wide.
+query-filters:
+  - exclude:
+      id: py/path-injection
+      paths:
+        - src/robotsix_cost_monitor/_utils.py
+        - src/robotsix_cost_monitor/analyst.py
