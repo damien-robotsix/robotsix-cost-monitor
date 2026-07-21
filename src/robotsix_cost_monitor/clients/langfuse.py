@@ -15,6 +15,7 @@ import json
 from datetime import timedelta
 from typing import Any
 
+from robotsix_http import RetryClient
 from robotsix_llmio.core.langfuse_async_client import AsyncLangfuseReadClient
 
 from ..aggregations import (
@@ -23,7 +24,6 @@ from ..aggregations import (
     _utc_now,
     backend_for_model,
 )
-from ._http import RetryClient
 from .models import LangfuseMetricsRow, LangfuseTrace
 
 __all__ = [
@@ -109,12 +109,15 @@ class LangfuseClient:
         }
         if time_dimension is not None:
             query["timeDimension"] = time_dimension
-        client = RetryClient(timeout=self._timeout)
-        resp = await client.get(
-            self._lf.url("/api/public/metrics"),
-            params={"query": json.dumps(query)},
-            headers={"Authorization": self._lf.auth_header()},
-        )
+        import httpx
+
+        async with httpx.AsyncClient(timeout=self._timeout) as http_client:
+            client = RetryClient(http_client)
+            resp = await client.get(
+                self._lf.url("/api/public/metrics"),
+                params={"query": json.dumps(query)},
+                headers={"Authorization": self._lf.auth_header()},
+            )
         data: dict[str, Any] = resp.json()
         return [
             LangfuseMetricsRow.model_validate(row) for row in (data.get("data") or [])

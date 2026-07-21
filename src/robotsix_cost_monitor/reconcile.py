@@ -19,7 +19,6 @@ import httpx
 import structlog
 
 from ._utils import safe_load_json
-from .clients._http import RetryClient
 from .clients.langfuse import LangfuseClient
 from .config import Config, ProjectConfig, Settings, data_dir
 from .exceptions import ExternalServiceError
@@ -53,10 +52,13 @@ def _hours_between(a: datetime, b: datetime) -> float:
 
 async def _fetch_credits(api_key: str) -> dict[str, float]:
     """Fetch account-level credit balance from OpenRouter (informational)."""
+    from robotsix_http import RetryClient
+
     url = "https://openrouter.ai/api/v1/credits"
     headers = {"Authorization": f"Bearer {api_key}"}
-    client = RetryClient(timeout=20.0)
-    resp = await client.get(url, headers=headers)
+    async with httpx.AsyncClient(timeout=20.0) as http_client:
+        client = RetryClient(http_client)
+        resp = await client.get(url, headers=headers)
     data = resp.json().get("data") or {}
     return {
         "total_credits": float(data.get("total_credits", 0) or 0),

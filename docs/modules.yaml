@@ -82,7 +82,6 @@ modules:
     description: External API client sub-package (Langfuse, OpenRouter) including typed httpx retry client
     paths:
       - src/robotsix_cost_monitor/clients/__init__.py
-      - src/robotsix_cost_monitor/clients/_http.py
       - src/robotsix_cost_monitor/clients/models.py
       - src/robotsix_cost_monitor/clients/langfuse.py
       - tests/robotsix_cost_monitor/clients/test_http.py

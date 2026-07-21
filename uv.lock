@@ -1245,6 +1245,7 @@ dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
     { name = "robotsix-config" },
+    { name = "robotsix-http" },
     { name = "robotsix-llmio" },
     { name = "structlog" },
     { name = "uvicorn", extra = ["standard"] },
@@ -1282,6 +1283,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28" },
     { name = "pydantic", specifier = ">=2.10" },
     { name = "robotsix-config", git = "https://github.com/damien-robotsix/robotsix-config.git?rev=358da8b9c66f1dd52b85854ceabfffdc35229e63" },
+    { name = "robotsix-http", git = "https://github.com/damien-robotsix/robotsix-http.git?rev=4cf79993f07c0d56e50cf02af816058144beacb9" },
     { name = "robotsix-llmio", git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=2fd2be4dcf7f0a44e91012fd1167517e5e09180e" },
     { name = "robotsix-llmio", extras = ["openrouter", "claude-sdk"], marker = "extra == 'analyst'", git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=2fd2be4dcf7f0a44e91012fd1167517e5e09180e" },
     { name = "structlog", specifier = ">=24.1" },
@@ -1307,6 +1309,14 @@ lint = [
     { name = "mypy", specifier = ">=1.13" },
     { name = "ruff", specifier = ">=0.15.20" },
     { name = "vulture", specifier = ">=2.11" },
+]
+
+[[package]]
+name = "robotsix-http"
+version = "0.1.dev4+g4cf79993f"
+source = { git = "https://github.com/damien-robotsix/robotsix-http.git?rev=4cf79993f07c0d56e50cf02af816058144beacb9#4cf79993f07c0d56e50cf02af816058144beacb9" }
+dependencies = [
+    { name = "httpx" },
 ]
 
 [[package]]

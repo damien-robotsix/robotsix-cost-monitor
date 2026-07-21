@@ -14,6 +14,7 @@ import structlog
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
+from robotsix_http import ExternalHTTPError
 
 from .aggregations import BackendKind
 from .analyst import (
@@ -135,6 +136,34 @@ async def cost_monitor_error_handler(
     )
 
 
+async def external_http_error_handler(
+    request: Request, exc: ExternalHTTPError
+) -> JSONResponse:
+    """Return a typed error for robotsix-http exceptions.
+
+    Derives the error code from the exception type so the response
+    envelope matches :func:`cost_monitor_error_handler`.
+    """
+    from robotsix_http import (
+        ExternalAuthError,
+        ExternalRateLimitError,
+        ExternalServiceError,
+    )
+
+    if isinstance(exc, ExternalAuthError):
+        code = "EXTERNAL_AUTH_ERROR"
+    elif isinstance(exc, ExternalRateLimitError):
+        code = "RATE_LIMITED"
+    elif isinstance(exc, ExternalServiceError):
+        code = "EXTERNAL_SERVICE_ERROR"
+    else:
+        code = "EXTERNAL_SERVICE_ERROR"
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"error": {"code": code, "detail": str(exc)}},
+    )
+
+
 async def unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch-all: log the full traceback, return sanitized 500."""
     logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
@@ -151,6 +180,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(RequestValidationError, validation_handler)  # type: ignore[arg-type]
     app.add_exception_handler(HTTPException, http_exception_handler)  # type: ignore[arg-type]
     app.add_exception_handler(CostMonitorError, cost_monitor_error_handler)  # type: ignore[arg-type]
+    app.add_exception_handler(ExternalHTTPError, external_http_error_handler)
     app.add_exception_handler(Exception, unhandled_handler)
 
 
