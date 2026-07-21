@@ -246,7 +246,9 @@ async def _reconcile_context(
         mock_lf = lf_cls.return_value
         mock_lf.fetch_cost_by_backend = AsyncMock(return_value=langfuse_backend)
 
-        result = await reconcile_project(proj, _settings(tolerance=tolerance, data_dir=tmp_path))
+        result = await reconcile_project(
+            proj, _settings(tolerance=tolerance, data_dir=tmp_path)
+        )
         yield result
 
 

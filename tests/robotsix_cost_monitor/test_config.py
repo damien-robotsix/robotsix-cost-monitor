@@ -17,7 +17,6 @@ from robotsix_cost_monitor.config import (
     load_config,
 )
 
-
 # -- AnalystConfig ------------------------------------------------------
 
 

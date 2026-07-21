@@ -163,7 +163,9 @@ async def build_digest(
 
 def load_proposals(data_dir: Path) -> dict[str, Any]:
     """Load previously stored cost-reduction proposals from disk."""
-    return safe_load_json(_store_path(data_dir), {"generated_at": None, "proposals": []})
+    return safe_load_json(
+        _store_path(data_dir), {"generated_at": None, "proposals": []}
+    )
 
 
 def _run_agents(
@@ -188,7 +190,9 @@ def _run_agents(
     # Level 2 (intermediate): parse each expensive trace into a terse finding,
     # up front (so the orchestrator needs no tools). Provider/model from llmio's
     # tier config (LEVEL2 → openrouter-deepseek/deepseek-v4-pro).
-    trace_provider = get_provider_for_level(2, api_key=a.openrouter_key.get_secret_value())
+    trace_provider = get_provider_for_level(
+        2, api_key=a.openrouter_key.get_secret_value()
+    )
     findings: list[dict[str, Any]] = []
     for c in candidates:
         detail = details.get(c["trace_id"])
@@ -366,7 +370,9 @@ def _targeted_store_path(kind: AnalystKind, data_dir: Path) -> Path:
     return d / f"{kind}.json"
 
 
-def _no_top_early_return(kind: AnalystKind, data_dir: Path, detail: str) -> dict[str, Any]:
+def _no_top_early_return(
+    kind: AnalystKind, data_dir: Path, detail: str
+) -> dict[str, Any]:
     out: dict[str, Any] = {
         "enabled": True,
         "generated_at": datetime.now(UTC).isoformat(),
@@ -421,7 +427,9 @@ async def run_ticket_analyst(config: Config, service: CostService) -> dict[str, 
 
     top = await service.top_ticket("all", a.window_hours)
     if not top:
-        return _no_top_early_return("ticket", config.settings.data_dir, "no ticket sessions in the window")
+        return _no_top_early_return(
+            "ticket", config.settings.data_dir, "no ticket sessions in the window"
+        )
 
     board_id, ticket_id = _split_session(top["session_id"])
 
@@ -470,7 +478,9 @@ async def run_stage_analyst(config: Config, service: CostService) -> dict[str, A
 
     top = await service.top_stage("all", a.window_hours, sample=a.max_trace_analyses)
     if not top:
-        return _no_top_early_return("stage", config.settings.data_dir, "no traces in the window")
+        return _no_top_early_return(
+            "stage", config.settings.data_dir, "no traces in the window"
+        )
 
     sampled: list[dict[str, Any]] = []
     for t in top["traces"]:

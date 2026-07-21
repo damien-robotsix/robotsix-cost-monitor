@@ -113,7 +113,9 @@ async def reconcile_project(
     # Account-level remaining balance — informational only (shared balance pool).
     # Optional: a balance fetch failure must not fail the reconcile.
     with contextlib.suppress(Exception):
-        result["balance"] = await _fetch_credits(project.openrouter_key.get_secret_value())
+        result["balance"] = await _fetch_credits(
+            project.openrouter_key.get_secret_value()
+        )
 
     prior = _load_snapshot(project.slug, settings.data_dir)
     _save_snapshot(project.slug, cumulative, now, settings.data_dir)

@@ -330,7 +330,9 @@ async def analyst_run_targeted(
 
 
 @router.get("/api/analyst/{kind}")
-def analyst_targeted(kind: AnalystKind, cfg: Config = Depends(get_config)) -> dict[str, Any]:
+def analyst_targeted(
+    kind: AnalystKind, cfg: Config = Depends(get_config)
+) -> dict[str, Any]:
     """GET /api/analyst/{kind} — load a saved targeted analysis (ticket or stage)."""
     return load_targeted_analysis(kind, cfg.settings.data_dir)
 

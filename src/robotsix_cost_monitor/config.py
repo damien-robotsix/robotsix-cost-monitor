@@ -8,7 +8,6 @@ gitignored); ``config/config.example.json`` is the committed template.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from pydantic import BaseModel, Field, SecretStr, field_validator
 from robotsix_config import load_config as _load_config
@@ -95,7 +94,12 @@ class AnalystConfig(BaseModel):
         default=None, json_schema_extra={"advanced": True}
     )
 
-    @field_validator("openrouter_key", "langfuse_public_key", "langfuse_secret_key", mode="before")
+    @field_validator(
+        "openrouter_key",
+        "langfuse_public_key",
+        "langfuse_secret_key",
+        mode="before",
+    )
     @classmethod
     def _coerce_empty_to_none(cls, v: object) -> object:
         return None if v == "" else v

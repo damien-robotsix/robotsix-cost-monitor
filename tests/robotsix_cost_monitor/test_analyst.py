@@ -114,9 +114,7 @@ class TestSplitSession:
 
 
 class TestLoadTargetedAnalysis:
-    def test_no_file_returns_default(
-        self, tmp_path: Path
-    ) -> None:
+    def test_no_file_returns_default(self, tmp_path: Path) -> None:
         result = analyst_mod.load_targeted_analysis("ticket", tmp_path)
         assert result == {"generated_at": None}
 
@@ -130,9 +128,7 @@ class TestLoadTargetedAnalysis:
         assert result["generated_at"] == "2025-01-01T00:00:00Z"
         assert result["summary"] == "ok"
 
-    def test_invalid_json_returns_default(
-        self, tmp_path: Path
-    ) -> None:
+    def test_invalid_json_returns_default(self, tmp_path: Path) -> None:
         d = tmp_path / "analyst"
         d.mkdir()
         (d / "ticket.json").write_text("not json")

@@ -267,7 +267,9 @@ def test_last_analyst_run_picks_most_recent(monkeypatch: pytest.MonkeyPatch) -> 
     from robotsix_cost_monitor import app
 
     monkeypatch.setattr(
-        app, "load_proposals", lambda data_dir: {"generated_at": "2026-06-19T15:37:25+00:00"}
+        app,
+        "load_proposals",
+        lambda data_dir: {"generated_at": "2026-06-19T15:37:25+00:00"},
     )
     monkeypatch.setattr(
         app,
@@ -278,7 +280,9 @@ def test_last_analyst_run_picks_most_recent(monkeypatch: pytest.MonkeyPatch) -> 
         }[kind],
     )
 
-    assert app._last_analyst_run(Path(".data")) == datetime(2026, 6, 20, 9, 0, tzinfo=UTC)
+    assert app._last_analyst_run(Path(".data")) == datetime(
+        2026, 6, 20, 9, 0, tzinfo=UTC
+    )
 
 
 def test_last_analyst_run_none_when_unrun(monkeypatch: pytest.MonkeyPatch) -> None:
