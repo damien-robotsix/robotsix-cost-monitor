@@ -185,10 +185,14 @@ def _run_agents(
 
     _maybe_setup_tracing(a)
 
+    # openrouter_key is guaranteed non-None here — the caller checks a.enabled.
+    assert a.openrouter_key is not None
     # Level 2 (intermediate): parse each expensive trace into a terse finding,
     # up front (so the orchestrator needs no tools). Provider/model from llmio's
     # tier config (LEVEL2 → openrouter-deepseek/deepseek-v4-pro).
-    trace_provider = get_provider_for_level(2, api_key=a.openrouter_key)
+    trace_provider = get_provider_for_level(
+        2, api_key=a.openrouter_key.get_secret_value()
+    )
     findings: list[dict[str, Any]] = []
     for c in candidates:
         detail = details.get(c["trace_id"])
@@ -241,13 +245,13 @@ def _run_agents(
 
 def _maybe_setup_tracing(a: AnalystConfig) -> None:
     """Wire the analyst's own Langfuse tracing (best-effort, idempotent)."""
-    if a.langfuse_public_key and a.langfuse_secret_key:
+    if a.langfuse_public_key is not None and a.langfuse_secret_key is not None:
         with contextlib.suppress(Exception):
             from robotsix_llmio.core.tracing import setup_langfuse_tracing
 
             setup_langfuse_tracing(
-                public_key=a.langfuse_public_key,
-                secret_key=a.langfuse_secret_key,
+                public_key=a.langfuse_public_key.get_secret_value(),
+                secret_key=a.langfuse_secret_key.get_secret_value(),
                 base_url=a.langfuse_base_url,
                 project_id=a.langfuse_project_id,
                 service_name="robotsix-cost-analyst",

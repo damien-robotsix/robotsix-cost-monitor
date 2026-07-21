@@ -60,7 +60,7 @@ def test_load_proposals_corrupt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """load_proposals returns default when proposals.json is corrupt."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.analyst.data_dir", lambda: tmp_path)
     d = tmp_path / "analyst"
     d.mkdir()
     (d / "proposals.json").write_text("not json {{{")
@@ -72,7 +72,7 @@ def test_load_proposals_permission_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """load_proposals lets PermissionError propagate (not caught)."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.analyst.data_dir", lambda: tmp_path)
     d = tmp_path / "analyst"
     d.mkdir()
     (d / "proposals.json").write_text("{}")
@@ -87,7 +87,7 @@ def test_load_targeted_analysis_permission_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """load_targeted_analysis lets PermissionError propagate (not caught)."""
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.analyst.data_dir", lambda: tmp_path)
     d = tmp_path / "analyst"
     d.mkdir()
     (d / "ticket.json").write_text("{}")

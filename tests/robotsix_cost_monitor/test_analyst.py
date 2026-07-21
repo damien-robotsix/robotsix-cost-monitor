@@ -117,12 +117,12 @@ class TestLoadTargetedAnalysis:
     def test_no_file_returns_default(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+        monkeypatch.setattr("robotsix_cost_monitor.analyst.data_dir", lambda: tmp_path)
         result = analyst_mod.load_targeted_analysis("ticket")
         assert result == {"generated_at": None}
 
     def test_valid_json(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+        monkeypatch.setattr("robotsix_cost_monitor.analyst.data_dir", lambda: tmp_path)
         d = tmp_path / "analyst"
         d.mkdir()
         (d / "ticket.json").write_text(
@@ -135,7 +135,7 @@ class TestLoadTargetedAnalysis:
     def test_invalid_json_returns_default(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+        monkeypatch.setattr("robotsix_cost_monitor.analyst.data_dir", lambda: tmp_path)
         d = tmp_path / "analyst"
         d.mkdir()
         (d / "ticket.json").write_text("not json")
@@ -154,7 +154,7 @@ async def test_disabled_without_key() -> None:
 async def test_run_stores_proposals(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.analyst.data_dir", lambda: tmp_path)
 
     analysis = Analysis(
         summary="explore is over-provisioned",
@@ -202,7 +202,7 @@ async def test_run_ticket_analyst_disabled() -> None:
 async def test_run_ticket_analyst_no_top_ticket(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.analyst.data_dir", lambda: tmp_path)
 
     svc = _FakeService()
     object.__setattr__(svc, "top_ticket", AsyncMock(return_value=None))
@@ -218,7 +218,7 @@ async def test_run_ticket_analyst_no_top_ticket(
 async def test_run_ticket_analyst_normal(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.analyst.data_dir", lambda: tmp_path)
 
     async def _fake_opus_and_file(
         a: Any,
@@ -261,7 +261,7 @@ async def test_run_stage_analyst_disabled() -> None:
 async def test_run_stage_analyst_no_top_stage(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.analyst.data_dir", lambda: tmp_path)
 
     svc = _FakeService()
     object.__setattr__(svc, "top_stage", AsyncMock(return_value=None))
@@ -277,7 +277,7 @@ async def test_run_stage_analyst_no_top_stage(
 async def test_run_stage_analyst_normal(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.analyst.data_dir", lambda: tmp_path)
 
     async def _fake_opus_and_file(
         a: Any,
@@ -312,13 +312,13 @@ async def test_run_stage_analyst_normal(
 def test_load_proposals_no_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.analyst.data_dir", lambda: tmp_path)
     result = analyst_mod.load_proposals()
     assert result == {"generated_at": None, "proposals": []}
 
 
 def test_load_proposals_valid(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.analyst.data_dir", lambda: tmp_path)
     d = tmp_path / "analyst"
     d.mkdir()
     (d / "proposals.json").write_text(
@@ -332,7 +332,7 @@ def test_load_proposals_valid(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
 async def test_run_opus_analysis_and_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.analyst.data_dir", lambda: tmp_path)
 
     analysis = Analysis(
         summary="test",
@@ -363,7 +363,7 @@ async def test_run_opus_analysis_and_file(
 async def test_run_opus_analysis_and_file_without_filing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", str(tmp_path))
+    monkeypatch.setattr("robotsix_cost_monitor.analyst.data_dir", lambda: tmp_path)
 
     analysis = Analysis(
         summary="test",

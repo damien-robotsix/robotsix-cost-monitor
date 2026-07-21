@@ -7,43 +7,21 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
 from robotsix_cost_monitor.config import (
     AnalystConfig,
     Config,
     ProjectConfig,
     Settings,
-    _config_path,
     data_dir,
     load_config,
 )
 
-# -- _config_path -------------------------------------------------------
-
-
-def test_config_path_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("COST_MONITOR_CONFIG", "/custom/config.yaml")
-    assert _config_path() == Path("/custom/config.yaml")
-
-
-def test_config_path_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("COST_MONITOR_CONFIG", raising=False)
-    result = _config_path()
-    assert result.name == "projects.json"
-    assert result.parent.name == "config"
-
-
 # -- data_dir -----------------------------------------------------------
 
 
-def test_data_dir_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("COST_MONITOR_DATA", "/custom/data")
-    assert data_dir() == Path("/custom/data")
-
-
 def test_data_dir_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("COST_MONITOR_DATA", raising=False)
     result = data_dir()
     assert result.name == ".data"
 
@@ -57,13 +35,13 @@ def test_analyst_defaults_disabled() -> None:
 
 
 def test_analyst_enabled_with_openrouter_key() -> None:
-    cfg = AnalystConfig(openrouter_key="sk-abc123")
+    cfg = AnalystConfig(openrouter_key=SecretStr("sk-abc123"))
     assert cfg.enabled is True
 
 
 def test_analyst_empty_strings_are_falsy() -> None:
     cfg = AnalystConfig(
-        openrouter_key="",
+        openrouter_key=SecretStr(""),
     )
     assert cfg.enabled is False
 
@@ -78,7 +56,7 @@ def test_example_config_max_trace_analyses_matches_code_default() -> None:
 
     from robotsix_cost_monitor.config import Config
 
-    config = load_config(Config, path=Path("config/projects.example.json"))
+    config = load_config(Config, path=Path("config/config.example.json"))
     assert config.settings.analyst is not None
     assert config.settings.analyst.max_trace_analyses == 12
     assert config.settings.analyst.traces_per_agent == 1
@@ -107,8 +85,8 @@ def test_analyst_field_defaults() -> None:
 def test_project_config_slug() -> None:
     cfg = ProjectConfig(
         name="  My Awesome Project  ",
-        public_key="pk-lf-abc",
-        secret_key="sk-lf-xyz",
+        public_key=SecretStr("pk-lf-abc"),
+        secret_key=SecretStr("sk-lf-xyz"),
     )
     assert cfg.slug == "my-awesome-project"
 
@@ -116,8 +94,8 @@ def test_project_config_slug() -> None:
 def test_project_config_slug_special_chars() -> None:
     cfg = ProjectConfig(
         name="Project/A/B",
-        public_key="pk-lf-abc",
-        secret_key="sk-lf-xyz",
+        public_key=SecretStr("pk-lf-abc"),
+        secret_key=SecretStr("sk-lf-xyz"),
     )
     assert cfg.slug == "project-a-b"
 
@@ -126,26 +104,26 @@ def test_project_config_field_regex_patterns() -> None:
     # Valid public_key and secret_key pass.
     cfg = ProjectConfig(
         name="test",
-        public_key="pk-lf-abc123",
-        secret_key="sk-lf-xyz789",
+        public_key=SecretStr("pk-lf-abc123"),
+        secret_key=SecretStr("sk-lf-xyz789"),
     )
-    assert cfg.public_key == "pk-lf-abc123"
-    assert cfg.secret_key == "sk-lf-xyz789"
+    assert cfg.public_key.get_secret_value() == "pk-lf-abc123"
+    assert cfg.secret_key.get_secret_value() == "sk-lf-xyz789"
 
     # Invalid public_key (missing pk-lf- prefix) raises.
     with pytest.raises(ValidationError):
         ProjectConfig(
             name="test",
-            public_key="pk-xyz-abc",
-            secret_key="sk-lf-xyz",
+            public_key=SecretStr("pk-xyz-abc"),
+            secret_key=SecretStr("sk-lf-xyz"),
         )
 
     # Invalid secret_key (missing sk-lf- prefix) raises.
     with pytest.raises(ValidationError):
         ProjectConfig(
             name="test",
-            public_key="pk-lf-abc",
-            secret_key="sk-xyz-abc",
+            public_key=SecretStr("pk-lf-abc"),
+            secret_key=SecretStr("sk-xyz-abc"),
         )
 
 
@@ -157,13 +135,13 @@ def test_config_project_lookup() -> None:
         projects=[
             ProjectConfig(
                 name="Alpha Project",
-                public_key="pk-lf-aaa",
-                secret_key="sk-lf-aaa",
+                public_key=SecretStr("pk-lf-aaa"),
+                secret_key=SecretStr("sk-lf-aaa"),
             ),
             ProjectConfig(
                 name="Beta Project",
-                public_key="pk-lf-bbb",
-                secret_key="sk-lf-bbb",
+                public_key=SecretStr("pk-lf-bbb"),
+                secret_key=SecretStr("sk-lf-bbb"),
             ),
         ]
     )
@@ -190,6 +168,9 @@ def test_settings_defaults() -> None:
     assert s.reconcile_tolerance_usd == 1.0
     assert s.reconcile_schedule_hours == 24.0
     assert s.subscription_call_cap == 0
+    assert s.log_format == "json"
+    assert s.log_level == "INFO"
+    assert s.data_dir == ".data"
     assert isinstance(s.analyst, AnalystConfig)
 
 
@@ -227,15 +208,16 @@ def test_load_config_found() -> None:
 
 
 def test_load_config_not_found() -> None:
+    """When path is given to a nonexistent file, robotsix_config returns defaults."""
     nonexistent = Path("/nonexistent/path/config.json")
-    with pytest.raises(FileNotFoundError, match="config not found"):
-        load_config(nonexistent)
+    config = load_config(nonexistent)
+    assert isinstance(config, Config)
+    assert config.projects == []
 
 
 # -- data_dir extra -----------------------------------------------------
 
 
 def test_data_dir_default_is_dot_data(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("COST_MONITOR_DATA", raising=False)
     result = data_dir()
     assert result.name == ".data"

@@ -1,16 +1,18 @@
 """Configuration models + loader for robotsix-cost-monitor.
 
-A single JSON file (``config/projects.json``) lists the Langfuse projects to
+A single JSON file (``config/config.json``) lists the Langfuse projects to
 monitor plus optional global settings. Real keys live only in that file (it is
-gitignored); ``config/projects.example.json`` is the committed template.
+gitignored); ``config/config.example.json`` is the committed template.
+
+The config is located via the ``ROBOTSIX_CONFIG_FILE`` environment variable
+(default ``config/config.json``).
 """
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr, field_validator
 from robotsix_config import load_config as _load_config
 
 
@@ -18,13 +20,31 @@ class ProjectConfig(BaseModel):
     """One Langfuse project to monitor."""
 
     name: str
-    public_key: str = Field(pattern=r"^pk-lf-")
-    secret_key: str = Field(pattern=r"^sk-lf-")
+    public_key: SecretStr
+    secret_key: SecretStr
     base_url: str = Field(
         default="https://cloud.langfuse.com", json_schema_extra={"advanced": True}
     )
     # Optional OpenRouter API/management key for reconciliation of this project.
-    openrouter_key: str | None = None
+    openrouter_key: SecretStr | None = None
+
+    @field_validator("public_key", mode="before")
+    @classmethod
+    def _validate_public_key(cls, v: object) -> str | SecretStr:
+        if isinstance(v, SecretStr):
+            v = v.get_secret_value()
+        if not isinstance(v, str) or not v.startswith("pk-lf-"):
+            raise ValueError("public_key must start with pk-lf-")
+        return v
+
+    @field_validator("secret_key", mode="before")
+    @classmethod
+    def _validate_secret_key(cls, v: object) -> str | SecretStr:
+        if isinstance(v, SecretStr):
+            v = v.get_secret_value()
+        if not isinstance(v, str) or not v.startswith("sk-lf-"):
+            raise ValueError("secret_key must start with sk-lf-")
+        return v
 
     @property
     def slug(self) -> str:
@@ -45,7 +65,7 @@ class AnalystConfig(BaseModel):
     # openrouter-deepseek/deepseek-v4-pro for the trace agent; LEVEL3 →
     # claude-sdk/opus for the orchestrator). These optional overrides only pin a
     # specific MODEL for a level; blank → the llmio tier default.
-    openrouter_key: str | None = None
+    openrouter_key: SecretStr | None = None
     global_model: str | None = Field(
         default=None, json_schema_extra={"advanced": True}
     )  # L3 orchestrator model; blank → tier-3 default
@@ -67,8 +87,8 @@ class AnalystConfig(BaseModel):
     schedule_hours: float = Field(default=24.0, json_schema_extra={"advanced": True})
 
     # -- The analyst's own Langfuse project (so its L2/L3 runs are traced) --
-    langfuse_public_key: str | None = None
-    langfuse_secret_key: str | None = None
+    langfuse_public_key: SecretStr | None = None
+    langfuse_secret_key: SecretStr | None = None
     langfuse_base_url: str | None = Field(
         default=None, json_schema_extra={"advanced": True}
     )
@@ -79,7 +99,9 @@ class AnalystConfig(BaseModel):
     @property
     def enabled(self) -> bool:
         """Whether the cost-analyst mode is enabled in the effective config."""
-        return bool(self.openrouter_key)
+        return self.openrouter_key is not None and bool(
+            self.openrouter_key.get_secret_value()
+        )
 
 
 class Settings(BaseModel):
@@ -98,6 +120,14 @@ class Settings(BaseModel):
     # Per-day subscription call cap for volume-vs-cap monitoring; 0 = disabled/unknown.
     subscription_call_cap: int = Field(default=0, json_schema_extra={"advanced": True})
     analyst: AnalystConfig = Field(default_factory=AnalystConfig)
+    # Log output format: "json" (structured, for production)
+    # or "console" (colour, for dev).
+    log_format: str = Field(default="json", json_schema_extra={"advanced": True})
+    # Minimum log level: "DEBUG", "INFO", "WARNING", "ERROR".
+    log_level: str = Field(default="INFO", json_schema_extra={"advanced": True})
+    # Path to the runtime-state directory (reconciliation snapshots, analyst
+    # proposals). Relative paths are resolved against the repo root.
+    data_dir: str = Field(default=".data", json_schema_extra={"advanced": True})
 
 
 class Config(BaseModel):
@@ -114,42 +144,22 @@ class Config(BaseModel):
         return None
 
 
-def _config_path() -> Path:
-    """Resolve the config path.
-
-    Honors ``COST_MONITOR_CONFIG``; otherwise ``config/projects.json`` relative
-    to the repo root (two parents up from this file's package).
-    """
-    env = os.environ.get("COST_MONITOR_CONFIG")
-    if env:
-        return Path(env)
-    return Path(__file__).resolve().parents[2] / "config" / "projects.json"
-
-
 def data_dir() -> Path:
     """Resolve the runtime-state directory for persistence.
 
-    Honors ``COST_MONITOR_DATA``; otherwise ``.data`` relative to the repo root
-    (two parents up from this file's package). In a container the package lives
-    in site-packages, so the env var must point at a writable/persisted path.
+    Always returns ``.data`` relative to the repo root (two parents up from this
+    file's package). In a container the package lives in site-packages, so mount
+    a writable volume at this path.
     """
-    env = os.environ.get("COST_MONITOR_DATA")
-    if env:
-        return Path(env)
     return Path(__file__).resolve().parents[2] / ".data"
 
 
 def load_config(path: Path | None = None) -> Config:
-    """Load and validate the configuration.
+    """Load and validate the configuration via ``ROBOTSIX_CONFIG_FILE``.
 
-    Raises ``FileNotFoundError`` with a helpful message when the config is
-    missing (the example template is committed; the real file is not).
+    When *path* is given (tests), passes it through directly to
+    :func:`robotsix_config.load_config`.
     """
-    p = path or _config_path()
-    if not p.exists():
-        raise FileNotFoundError(
-            f"config not found at {p} — copy config/projects.example.json to "
-            f"config/projects.json and fill in your Langfuse keys "
-            f"(or set COST_MONITOR_CONFIG)."
-        )
-    return _load_config(Config, path=p)
+    if path is not None:
+        return _load_config(Config, path=path)
+    return _load_config(Config)

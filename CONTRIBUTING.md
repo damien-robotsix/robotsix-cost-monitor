@@ -9,8 +9,8 @@ cd robotsix-cost-monitor
 uv sync --locked
 
 # Create a local config (gitignored — never commit real keys)
-cp config/projects.example.json config/projects.json
-# Edit config/projects.json and fill in your Langfuse keys
+cp config/config.example.json config/config.json
+# Edit config/config.json and fill in your Langfuse keys
 ```
 
 The project targets **Python ≥ 3.14**. Dependency management uses
