@@ -20,7 +20,9 @@ class ProjectConfig(BaseModel):
     name: str
     public_key: str = Field(pattern=r"^pk-lf-")
     secret_key: str = Field(pattern=r"^sk-lf-")
-    base_url: str = "https://cloud.langfuse.com"
+    base_url: str = Field(
+        default="https://cloud.langfuse.com", json_schema_extra={"advanced": True}
+    )
     # Optional OpenRouter API/management key for reconciliation of this project.
     openrouter_key: str | None = None
 
@@ -44,25 +46,35 @@ class AnalystConfig(BaseModel):
     # claude-sdk/opus for the orchestrator). These optional overrides only pin a
     # specific MODEL for a level; blank → the llmio tier default.
     openrouter_key: str | None = None
-    global_model: str | None = None  # L3 orchestrator model; blank → tier-3 default
-    trace_model: str | None = None  # L2 trace model; blank → tier-2 default
-    window_hours: int = 24
-    top_stages: int = 8
+    global_model: str | None = Field(
+        default=None, json_schema_extra={"advanced": True}
+    )  # L3 orchestrator model; blank → tier-3 default
+    trace_model: str | None = Field(
+        default=None, json_schema_extra={"advanced": True}
+    )  # L2 trace model; blank → tier-2 default
+    window_hours: int = Field(default=24, json_schema_extra={"advanced": True})
+    top_stages: int = Field(default=8, json_schema_extra={"advanced": True})
     # Trace selection is PER AGENT (so cheaper agents aren't crowded out by the
     # priciest one): take the top `traces_per_agent` traces of each agent, then
     # cap the total at `max_trace_analyses`. Keep max_trace_analyses ≥ the number
     # of agents for full coverage.
-    traces_per_agent: int = 1
-    max_trace_analyses: int = 12  # overall cap on traces analyzed per run
+    traces_per_agent: int = Field(default=1, json_schema_extra={"advanced": True})
+    max_trace_analyses: int = Field(
+        default=12, json_schema_extra={"advanced": True}
+    )  # overall cap on traces analyzed per run
     # >0 → run ALL analyses (fleet + most-costly ticket + most-costly stage) on
     # this cadence; default daily. 0 disables the scheduler (manual only).
-    schedule_hours: float = 24.0
+    schedule_hours: float = Field(default=24.0, json_schema_extra={"advanced": True})
 
     # -- The analyst's own Langfuse project (so its L2/L3 runs are traced) --
     langfuse_public_key: str | None = None
     langfuse_secret_key: str | None = None
-    langfuse_base_url: str | None = None
-    langfuse_project_id: str | None = None
+    langfuse_base_url: str | None = Field(
+        default=None, json_schema_extra={"advanced": True}
+    )
+    langfuse_project_id: str | None = Field(
+        default=None, json_schema_extra={"advanced": True}
+    )
 
     @property
     def enabled(self) -> bool:
@@ -73,14 +85,18 @@ class AnalystConfig(BaseModel):
 class Settings(BaseModel):
     """Global dashboard settings."""
 
-    default_window_hours: int = 168
-    cache_ttl_seconds: int = 60
-    reconcile_tolerance_usd: float = 1.0
+    default_window_hours: int = Field(default=168, json_schema_extra={"advanced": True})
+    cache_ttl_seconds: int = Field(default=60, json_schema_extra={"advanced": True})
+    reconcile_tolerance_usd: float = Field(
+        default=1.0, json_schema_extra={"advanced": True}
+    )
     # Auto-run reconciliation every N hours (0 disables; default daily). The
     # stored result drives the dashboard warning banner.
-    reconcile_schedule_hours: float = 24.0
+    reconcile_schedule_hours: float = Field(
+        default=24.0, json_schema_extra={"advanced": True}
+    )
     # Per-day subscription call cap for volume-vs-cap monitoring; 0 = disabled/unknown.
-    subscription_call_cap: int = 0
+    subscription_call_cap: int = Field(default=0, json_schema_extra={"advanced": True})
     analyst: AnalystConfig = Field(default_factory=AnalystConfig)
 
 

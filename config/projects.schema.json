@@ -16,6 +16,7 @@
           "title": "Openrouter Key"
         },
         "global_model": {
+          "advanced": true,
           "anyOf": [
             {
               "type": "string"
@@ -28,6 +29,7 @@
           "title": "Global Model"
         },
         "trace_model": {
+          "advanced": true,
           "anyOf": [
             {
               "type": "string"
@@ -40,26 +42,31 @@
           "title": "Trace Model"
         },
         "window_hours": {
+          "advanced": true,
           "default": 24,
           "title": "Window Hours",
           "type": "integer"
         },
         "top_stages": {
+          "advanced": true,
           "default": 8,
           "title": "Top Stages",
           "type": "integer"
         },
         "traces_per_agent": {
+          "advanced": true,
           "default": 1,
           "title": "Traces Per Agent",
           "type": "integer"
         },
         "max_trace_analyses": {
+          "advanced": true,
           "default": 12,
           "title": "Max Trace Analyses",
           "type": "integer"
         },
         "schedule_hours": {
+          "advanced": true,
           "default": 24.0,
           "title": "Schedule Hours",
           "type": "number"
@@ -89,6 +96,7 @@
           "title": "Langfuse Secret Key"
         },
         "langfuse_base_url": {
+          "advanced": true,
           "anyOf": [
             {
               "type": "string"
@@ -101,6 +109,7 @@
           "title": "Langfuse Base Url"
         },
         "langfuse_project_id": {
+          "advanced": true,
           "anyOf": [
             {
               "type": "string"
@@ -134,6 +143,7 @@
           "type": "string"
         },
         "base_url": {
+          "advanced": true,
           "default": "https://cloud.langfuse.com",
           "title": "Base Url",
           "type": "string"
@@ -163,26 +173,31 @@
       "description": "Global dashboard settings.",
       "properties": {
         "default_window_hours": {
+          "advanced": true,
           "default": 168,
           "title": "Default Window Hours",
           "type": "integer"
         },
         "cache_ttl_seconds": {
+          "advanced": true,
           "default": 60,
           "title": "Cache Ttl Seconds",
           "type": "integer"
         },
         "reconcile_tolerance_usd": {
+          "advanced": true,
           "default": 1.0,
           "title": "Reconcile Tolerance Usd",
           "type": "number"
         },
         "reconcile_schedule_hours": {
+          "advanced": true,
           "default": 24.0,
           "title": "Reconcile Schedule Hours",
           "type": "number"
         },
         "subscription_call_cap": {
+          "advanced": true,
           "default": 0,
           "title": "Subscription Call Cap",
           "type": "integer"
