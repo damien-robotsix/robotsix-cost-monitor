@@ -162,6 +162,7 @@ modules:
       - .github/workflows/lint-workflows.yml
       - .github/workflows/release-please.yml
       - .github/workflows/release.yml
+      - .github/workflows/sbom.yml
       - .github/workflows/scan-container.yml
 
   - id: robotsix-mill

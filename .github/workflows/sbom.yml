@@ -1,5 +1,7 @@
 name: SBOM
 
+permissions: {}
+
 on:
   workflow_call:
     inputs:
