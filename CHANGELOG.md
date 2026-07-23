@@ -1,5 +1,8 @@
 ## 0.0.0 (unreleased)
 
+- Add `@anthropic-ai/claude-code` to `package.json` devDependencies so
+  Dependabot's npm ecosystem tracks version bumps for the globally-installed
+  CLI in the Dockerfiles.
 - **Breaking:** Cut over to `robotsix-standards` config standard — rename config
   file to `config/config.json`, resolve via `ROBOTSIX_CONFIG_FILE` (drop
   `COST_MONITOR_CONFIG`), retype all six secret fields as `pydantic.SecretStr`,
