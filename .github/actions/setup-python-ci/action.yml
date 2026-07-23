@@ -1,0 +1,45 @@
+name: Setup Python CI
+description: >-
+  Hardened runner + checkout + setup-uv boilerplate for Python CI jobs.
+  Wraps the standard 3-step preamble — harden-runner, checkout,
+  setup-uv — into a single reusable composite action.
+
+inputs:
+  python-version:
+    description: >-
+      Python version to install via setup-uv (e.g. "3.14").
+      Leave empty to skip Python installation (cache only).
+    required: false
+    default: ""
+  enable-cache:
+    description: Whether to enable UV cache in setup-uv.
+    required: false
+    default: "true"
+  cache-python:
+    description: Whether to cache the Python installation in setup-uv.
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      with:
+        persist-credentials: false
+
+    - if: inputs.python-version != ''
+      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      with:
+        enable-cache: ${{ inputs.enable-cache }}
+        cache-python: ${{ inputs.cache-python }}
+        python-version: ${{ inputs.python-version }}
+
+    - if: inputs.python-version == ''
+      uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+      with:
+        enable-cache: ${{ inputs.enable-cache }}
+        cache-python: ${{ inputs.cache-python }}
