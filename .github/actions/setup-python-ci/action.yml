@@ -1,8 +1,8 @@
 name: Setup Python CI
 description: >-
   Hardened runner + checkout + setup-uv boilerplate for Python CI jobs.
-  Wraps the standard 3-step preamble — harden-runner, checkout,
-  setup-uv — into a single reusable composite action.
+  Wraps the standard 3-step preamble (harden-runner, checkout,
+  setup-uv) into a single reusable composite action.
 
 inputs:
   python-version:
@@ -31,14 +31,14 @@ runs:
       with:
         persist-credentials: false
 
-    - if: inputs.python-version != ''
+    - if: ${{ inputs.python-version != '' }}
       uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       with:
         enable-cache: ${{ inputs.enable-cache }}
         cache-python: ${{ inputs.cache-python }}
         python-version: ${{ inputs.python-version }}
 
-    - if: inputs.python-version == ''
+    - if: ${{ inputs.python-version == '' }}
       uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
       with:
         enable-cache: ${{ inputs.enable-cache }}
