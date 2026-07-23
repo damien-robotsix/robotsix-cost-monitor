@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- DRY CI boilerplate: extracted harden-runner → checkout → setup-uv into `.github/actions/setup-python-ci` composite action, replacing 9 duplicate 3-step blocks across all Python CI jobs.
 - **Breaking:** Cut over to `robotsix-standards` config standard — rename config
   file to `config/config.json`, resolve via `ROBOTSIX_CONFIG_FILE` (drop
   `COST_MONITOR_CONFIG`), retype all six secret fields as `pydantic.SecretStr`,
