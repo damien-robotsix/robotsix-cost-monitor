@@ -414,7 +414,7 @@ async def _run_opus_analysis_and_file(
     )
     out = _build_analysis_response(a, analysis, extra=extra_out)
     _targeted_store_path(out_prefix, settings).write_text(  # lgtm[py/path-injection]
-        json.dumps(out, indent=2)
+        json.dumps(out, indent=2)  # lgtm[py/path-injection]
     )
     return out
 

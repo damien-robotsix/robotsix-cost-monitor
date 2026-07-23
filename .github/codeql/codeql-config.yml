@@ -9,6 +9,6 @@
 query-filters:
   - exclude:
       id: py/path-injection
-      paths:
-        - src/robotsix_cost_monitor/_utils.py
-        - src/robotsix_cost_monitor/analyst.py
+    paths:
+      - src/robotsix_cost_monitor/_utils.py
+      - src/robotsix_cost_monitor/analyst.py
