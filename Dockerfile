@@ -65,6 +65,7 @@ RUN apt-get update \
     && npm install -g --ignore-scripts @anthropic-ai/claude-code@2.1.158 \
     && claude --version \
     && rm -rf /var/lib/apt/lists/*
+# Version pinned in sync with package.json devDependencies — Dependabot tracks it there.
 
 # Run as a non-root user with a writable home directory. The UID/GID match
 # the deploy host's user (robotsix = 1001) so the bind-mounted ~/.claude (whose
