@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Add security response headers middleware (`secure`) with a permissive CSP (inline scripts/styles) and standard headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, HSTS, `Permissions-Policy`).
 - **Breaking:** Cut over to `robotsix-standards` config standard — rename config
   file to `config/config.json`, resolve via `ROBOTSIX_CONFIG_FILE` (drop
   `COST_MONITOR_CONFIG`), retype all six secret fields as `pydantic.SecretStr`,

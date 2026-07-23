@@ -272,6 +272,39 @@ def create_app(config: Config | None = None) -> FastAPI:
 
     app.add_middleware(CorrelationIdMiddleware)
 
+    from secure import (
+        ContentSecurityPolicy,
+        PermissionsPolicy,
+        ReferrerPolicy,
+        Secure,
+        Server,
+        StrictTransportSecurity,
+        XContentTypeOptions,
+        XFrameOptions,
+    )
+    from secure.middleware import SecureASGIMiddleware
+
+    csp = (
+        ContentSecurityPolicy()
+        .default_src("'self'")
+        .script_src("'self'", "'unsafe-inline'")
+        .style_src("'self'", "'unsafe-inline'")
+        .img_src("'self'", "data:")
+        .object_src("'none'")
+        .base_uri("'self'")
+        .form_action("'self'")
+    )
+    secure_headers = Secure(
+        csp=csp,
+        server=Server().set(""),
+        hsts=StrictTransportSecurity().max_age(31536000).include_subdomains(),
+        referrer=ReferrerPolicy().strict_origin_when_cross_origin(),
+        xcto=XContentTypeOptions().nosniff(),
+        xfo=XFrameOptions().sameorigin(),
+        permissions=PermissionsPolicy().geolocation().microphone().camera(),
+    )
+    app.add_middleware(SecureASGIMiddleware, secure=secure_headers)
+
     register_exception_handlers(app)
     app.include_router(router)
 
