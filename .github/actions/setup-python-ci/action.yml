@@ -1,5 +1,5 @@
 name: Setup Python CI
-description: Hardened runner + checkout + setup-uv boilerplate for Python CI jobs
+description: Hardened runner + checkout + setup-uv boilerplate for Python CI jobs.
 
 inputs:
   python-version:
