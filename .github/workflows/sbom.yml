@@ -1,6 +1,12 @@
+# No workflow-level or job-level `permissions:` block: a called workflow
+# inherits the GITHUB_TOKEN permissions granted by the *caller's* `uses:` job,
+# and may only downgrade them. Declaring `permissions: {}` here explicitly
+# DENIED the `id-token`/`attestations` that a caller grants for `attest: true`,
+# and GitHub rejects that conflict at start-up (the Release workflow's
+# start-up failure). Letting the job inherit lets each caller size the token:
+# release.yml grants id-token/attestations/contents (attest runs); ci.yml can
+# grant only contents (attest is skipped via `if: inputs.attest`).
 name: SBOM
-
-permissions: {}
 
 on:
   workflow_call:
@@ -16,7 +22,6 @@ jobs:
     name: Generate SBOM
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions: {}
     env:
       UV_CACHE_DIR: .cache/uv
       UV_MALWARE_CHECK: "1"
