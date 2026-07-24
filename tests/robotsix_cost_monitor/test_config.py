@@ -26,6 +26,18 @@ def test_data_dir_default(monkeypatch: pytest.MonkeyPatch) -> None:
     assert result.name == ".data"
 
 
+def test_data_dir_respects_settings_data_dir() -> None:
+    """data_dir(settings) uses the configured data_dir field."""
+    # Relative path — resolved against repo root.
+    result = data_dir(settings=Settings(data_dir="custom/path"))
+    assert result.name == "path"
+    assert result.parent.name == "custom"
+
+    # Absolute path — used as-is.
+    result = data_dir(settings=Settings(data_dir="/absolute/custom"))
+    assert result == Path("/absolute/custom")
+
+
 # -- AnalystConfig ------------------------------------------------------
 
 

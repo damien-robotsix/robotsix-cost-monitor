@@ -146,7 +146,9 @@ def test_reconcile_last_served_from_disk(
     what lets the dashboard show the last run after a page reload or container
     restart (the file is on the persisted data volume).
     """
-    monkeypatch.setattr("robotsix_cost_monitor.reconcile.data_dir", lambda: tmp_path)
+    monkeypatch.setattr(
+        "robotsix_cost_monitor.reconcile.data_dir", lambda settings=None: tmp_path
+    )
     recon = tmp_path / "reconcile"
     recon.mkdir()
     (recon / "last.json").write_text(

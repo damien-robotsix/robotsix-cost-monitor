@@ -144,13 +144,19 @@ class Config(BaseModel):
         return None
 
 
-def data_dir() -> Path:
+def data_dir(settings: Settings | None = None) -> Path:
     """Resolve the runtime-state directory for persistence.
 
-    Always returns ``.data`` relative to the repo root (two parents up from this
-    file's package). In a container the package lives in site-packages, so mount
-    a writable volume at this path.
+    When *settings* is given, the ``settings.data_dir`` field is used (relative
+    paths are resolved against the repo root).  Without *settings* the legacy
+    default ``.data`` relative to the repo root is returned for backward
+    compatibility.
     """
+    if settings is not None:
+        path = Path(settings.data_dir)
+        if not path.is_absolute():
+            path = Path(__file__).resolve().parents[2] / path
+        return path
     return Path(__file__).resolve().parents[2] / ".data"
 
 

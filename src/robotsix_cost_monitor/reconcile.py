@@ -26,22 +26,26 @@ from .exceptions import ExternalServiceError
 logger = structlog.get_logger(__name__)
 
 
-def _state_dir() -> Path:
-    d = data_dir() / "reconcile"
+def _state_dir(settings: Settings | None = None) -> Path:
+    d = data_dir(settings) / "reconcile"
     d.mkdir(parents=True, exist_ok=True)
     return d
 
 
-def _snapshot_path(slug: str) -> Path:
-    return _state_dir() / f"{slug}.json"
+def _snapshot_path(slug: str, settings: Settings | None = None) -> Path:
+    return _state_dir(settings) / f"{slug}.json"
 
 
-def _load_snapshot(slug: str) -> dict[str, Any] | None:
-    return safe_load_json(_snapshot_path(slug), None)
+def _load_snapshot(
+    slug: str, settings: Settings | None = None
+) -> dict[str, Any] | None:
+    return safe_load_json(_snapshot_path(slug, settings), None)
 
 
-def _save_snapshot(slug: str, cumulative: float, at: datetime) -> None:
-    _snapshot_path(slug).write_text(
+def _save_snapshot(
+    slug: str, cumulative: float, at: datetime, settings: Settings | None = None
+) -> None:
+    _snapshot_path(slug, settings).write_text(
         json.dumps({"cumulative": cumulative, "at": at.isoformat()})
     )
 
@@ -117,8 +121,8 @@ async def reconcile_project(
             project.openrouter_key.get_secret_value()
         )
 
-    prior = _load_snapshot(project.slug)
-    _save_snapshot(project.slug, cumulative, now)
+    prior = _load_snapshot(project.slug, settings)
+    _save_snapshot(project.slug, cumulative, now, settings)
 
     if prior is None:
         result["detail"] = "first snapshot recorded — reconciliation on next run"
@@ -174,8 +178,8 @@ async def reconcile_project(
     return result
 
 
-def _last_path() -> Path:
-    return _state_dir() / "last.json"
+def _last_path(settings: Settings | None = None) -> Path:
+    return _state_dir(settings) / "last.json"
 
 
 def reconcile_status(results: list[dict[str, Any]]) -> str:
@@ -206,13 +210,13 @@ async def reconcile_all(config: Config) -> dict[str, Any]:
         "tolerance_usd": config.settings.reconcile_tolerance_usd,
         "results": results,
     }
-    _last_path().write_text(json.dumps(out, indent=2))
+    _last_path(config.settings).write_text(json.dumps(out, indent=2))
     return out
 
 
-def load_last_reconcile() -> dict[str, Any]:
+def load_last_reconcile(settings: Settings | None = None) -> dict[str, Any]:
     """Return the last stored reconcile result (for the banner); empty when none yet."""
     return safe_load_json(
-        _last_path(),
+        _last_path(settings),
         {"generated_at": None, "status": "unknown", "results": []},
     )

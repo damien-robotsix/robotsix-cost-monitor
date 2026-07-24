@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- `Settings.data_dir` now actually controls the runtime-state directory (was previously declared on the model but ignored — `data_dir()` hardcoded `.data`). The `data_dir()` function accepts an optional `Settings` argument; callers in the analyst and reconciler pipelines now pass `config.settings` so custom `data_dir` paths work end-to-end.
 - Enable pytest strictness settings: `--strict-markers`, `--strict-config`, `xfail_strict`, and `filterwarnings = ["error"]` to catch deprecation warnings and marker configuration issues early in CI.
 - Fix stale `config/projects.schema.json` references in `.pre-commit-config.yaml` and `Makefile` — both now use the correct `config/config.schema.json` path.
 - Add security response headers middleware (`secure`) with a permissive CSP (inline scripts/styles) and standard headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, HSTS, `Permissions-Policy`).
