@@ -118,3 +118,6 @@ known_first_party = ["robotsix_cost_monitor"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["."]
+addopts = ["--strict-markers", "--strict-config"]
+xfail_strict = true
+filterwarnings = ["error"]
