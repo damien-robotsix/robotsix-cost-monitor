@@ -16,7 +16,7 @@
     "@biomejs/biome": "1.9.4",
     "jsdom": "25.0.1",
     "typescript": "5.9.3",
-    "@vitest/coverage-v8": "3.2.7",
+    "@vitest/coverage-v8": "4.1.10",
     "vitest": "3.2.7"
   }
 }
