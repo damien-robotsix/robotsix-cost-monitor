@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Fix stale `config/projects.schema.json` references in `.pre-commit-config.yaml` and `Makefile` — both now use the correct `config/config.schema.json` path.
 - Add security response headers middleware (`secure`) with a permissive CSP (inline scripts/styles) and standard headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, HSTS, `Permissions-Policy`).
 - **Breaking:** Cut over to `robotsix-standards` config standard — rename config
   file to `config/config.json`, resolve via `ROBOTSIX_CONFIG_FILE` (drop

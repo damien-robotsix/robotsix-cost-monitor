@@ -35,8 +35,8 @@ schema:
 	uv run python scripts/generate_config_schema.py
 
 verify-schema: schema
-	@if ! git diff --exit-code config/projects.schema.json; then \
-		echo "ERROR: config/projects.schema.json is stale — run 'make schema' and commit the result."; \
+	@if ! git diff --exit-code config/config.schema.json; then \
+		echo "ERROR: config/config.schema.json is stale — run 'make schema' and commit the result."; \
 		exit 1; \
 	fi
 
