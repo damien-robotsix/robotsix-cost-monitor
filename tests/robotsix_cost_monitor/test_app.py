@@ -348,9 +348,13 @@ def test_last_analyst_run_none_when_unrun(monkeypatch: pytest.MonkeyPatch) -> No
     """No persisted timestamps → ``None`` (so the first run fires immediately)."""
     from robotsix_cost_monitor import app
 
-    monkeypatch.setattr(app, "load_proposals", lambda settings=None: {"generated_at": None})
     monkeypatch.setattr(
-        app, "load_targeted_analysis", lambda kind, settings=None: {"generated_at": None}
+        app, "load_proposals", lambda settings=None: {"generated_at": None}
+    )
+    monkeypatch.setattr(
+        app,
+        "load_targeted_analysis",
+        lambda kind, settings=None: {"generated_at": None},
     )
 
     assert app._last_analyst_run() is None
