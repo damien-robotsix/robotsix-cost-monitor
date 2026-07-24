@@ -16,6 +16,12 @@ import pytest
 
 from robotsix_cost_monitor import analyst as analyst_mod
 from robotsix_cost_monitor.analyst import (
+    _COST_MODEL_NOTE,
+    _ORCHESTRATOR_SYSTEM,
+    _PROPOSAL_JSON,
+    _STAGE_SYSTEM,
+    _TICKET_SYSTEM,
+    _TRACE_SYSTEM,
     Analysis,
     Proposal,
     _parse_analysis,
@@ -431,3 +437,41 @@ class TestMaybeSetupTracing:
         analyst_mod._maybe_setup_tracing(a)
         assert called.get("public_key") == "pk-test"
         assert called.get("secret_key") == "sk-test"
+
+
+# -- prompt-constant smoke tests ---------------------------------------------
+
+_PROMPT_CONSTANTS = [
+    _COST_MODEL_NOTE,
+    _PROPOSAL_JSON,
+    _ORCHESTRATOR_SYSTEM,
+    _TRACE_SYSTEM,
+    _TICKET_SYSTEM,
+    _STAGE_SYSTEM,
+]
+
+
+@pytest.mark.parametrize("constant", _PROMPT_CONSTANTS)
+def test_prompt_constant_is_non_empty_string(constant: str) -> None:
+    """Every LLM prompt constant is a non-empty string."""
+    assert isinstance(constant, str)
+    assert len(constant) > 0
+
+
+def test_proposal_json_instructions() -> None:
+    """_PROPOSAL_JSON enforces JSON-only output and the proposals schema."""
+    assert "Return ONLY a JSON object" in _PROPOSAL_JSON
+    assert "proposals" in _PROPOSAL_JSON
+
+
+@pytest.mark.parametrize(
+    "constant",
+    [
+        _ORCHESTRATOR_SYSTEM,
+        _TICKET_SYSTEM,
+        _STAGE_SYSTEM,
+    ],
+)
+def test_prompt_composes_proposal_json(constant: str) -> None:
+    """Prompts that request structured output must include _PROPOSAL_JSON."""
+    assert _PROPOSAL_JSON in constant
