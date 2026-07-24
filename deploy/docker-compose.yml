@@ -1,48 +1,46 @@
-# -------------------------------------------------------------------------
-# robotsix-cost-monitor — central-deploy stack for server.robotsix.net.
+# central-deploy-contract-version: 1
 #
-# Unlike the repo-root docker-compose.yml (which BUILDS the image for local
-# development), this stack PULLS the published image from GHCR. Central-deploy
-# replaces the former Watchtower continuous-pull pattern with button-triggered
-# deploys via the central-deploy system.
+# Production deployment via robotsix-central-deploy (the deploy contract this
+# file follows). The repo-root docker-compose.yml is the local-dev stack
+# (BUILDS the image) and is ignored by the deployment system. Lifecycle
+# (restart policy, networking, gateway routing at
+# cost-monitor.deploy.robotsix.net, redeploys) is managed by central-deploy —
+# no Watchtower, no restart:, no host binds. The image HEALTHCHECK is the
+# canonical health probe.
 #
-# Services:
-#   - cost-monitor : the dashboard, bound to 127.0.0.1 ONLY. A shared host
-#                    nginx terminates TLS + basic auth for
-#                    cost.robotsix.net and proxies to it.
-#
-# Bring-up and one-shot commands are documented in ./README.md.
-# -------------------------------------------------------------------------
-
-x-central-deploy:
-  contract-version: "1.0"
-
-name: robotsix-cost-monitor
-
+# The dashboard has NO auth of its own and the gateway is an unauthenticated
+# reverse proxy, so `settings.auth.username`/`settings.auth.password` MUST be
+# set in the operator config (see config/config.schema.json). Application
+# config and secrets (Langfuse projects, OpenRouter keys, auth) live in the
+# mounted config file: central-deploy merges operator edits into the config
+# volume and writes config.json there before the container starts (the
+# config-target label below). The environment: block carries only the config
+# file path pointer.
 services:
   cost-monitor:
-    image: ghcr.io/damien-robotsix/robotsix-cost-monitor:${IMAGE_TAG:-main}
-    # The image healthcheck probes :8080, so the server must serve on 8080.
+    image: ghcr.io/damien-robotsix/robotsix-cost-monitor:main
     command: serve --host 0.0.0.0 --port 8080
-    restart: unless-stopped
     labels:
-      robotsix.deploy.config-target: cost_monitor_config
-
-    # Loopback-only publish: the dashboard has NO auth of its own, so it must
-    # never be reachable directly from the internet. The shared host nginx
-    # proxies cost.robotsix.net -> 127.0.0.1:8099 with TLS + basic auth.
+      # Full in-container path of the config file (contract §5/§8): its dirname
+      # must match the cost_monitor_config mount below; central-deploy resolves
+      # the volume from it and writes config.json there on every config save.
+      robotsix.deploy.config-target: "/home/app/config/config.json"
     ports:
-      - "127.0.0.1:${MONITOR_PORT:-8099}:8080"
-
+      - "8099:8080"
+    environment:
+      # Infrastructure wiring only — where the app finds the mounted config
+      # file (written by central-deploy via the config-target label above).
+      ROBOTSIX_CONFIG_FILE: /home/app/config/config.json
     volumes:
-      # Named volumes — the central-deploy system manages lifecycle.
+      # Operator-managed runtime config, written by central-deploy.
       - cost_monitor_config:/home/app/config
+      # Persistent runtime state (reconciliation snapshots, analyst proposals).
       - cost_monitor_data:/data
 
 volumes:
   cost_monitor_config:
     labels:
-      robotsix.deploy.stateful: "true"
+      robotsix.deploy.config-target: "/home/app/config/config.json"
   cost_monitor_data:
     labels:
       robotsix.deploy.stateful: "true"
