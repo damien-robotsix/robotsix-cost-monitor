@@ -328,12 +328,14 @@ def test_last_analyst_run_picks_most_recent(monkeypatch: pytest.MonkeyPatch) -> 
     from robotsix_cost_monitor import app
 
     monkeypatch.setattr(
-        app, "load_proposals", lambda: {"generated_at": "2026-06-19T15:37:25+00:00"}
+        app,
+        "load_proposals",
+        lambda settings=None: {"generated_at": "2026-06-19T15:37:25+00:00"},
     )
     monkeypatch.setattr(
         app,
         "load_targeted_analysis",
-        lambda kind: {
+        lambda kind, settings=None: {
             "ticket": {"generated_at": "2026-06-20T09:00:00"},  # naive → UTC
             "stage": {"generated_at": None},
         }[kind],
@@ -346,9 +348,13 @@ def test_last_analyst_run_none_when_unrun(monkeypatch: pytest.MonkeyPatch) -> No
     """No persisted timestamps → ``None`` (so the first run fires immediately)."""
     from robotsix_cost_monitor import app
 
-    monkeypatch.setattr(app, "load_proposals", lambda: {"generated_at": None})
     monkeypatch.setattr(
-        app, "load_targeted_analysis", lambda kind: {"generated_at": None}
+        app, "load_proposals", lambda settings=None: {"generated_at": None}
+    )
+    monkeypatch.setattr(
+        app,
+        "load_targeted_analysis",
+        lambda kind, settings=None: {"generated_at": None},
     )
 
     assert app._last_analyst_run() is None

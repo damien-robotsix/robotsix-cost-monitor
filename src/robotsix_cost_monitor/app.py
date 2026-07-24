@@ -25,7 +25,7 @@ from .analyst import (
     run_stage_analyst,
     run_ticket_analyst,
 )
-from .config import Config, load_config
+from .config import Config, Settings, load_config
 from .reconcile import reconcile_all
 from .routes import register_exception_handlers, router
 from .service import CostService
@@ -140,7 +140,7 @@ def _parse_iso(value: Any) -> datetime | None:
     return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
-def _last_analyst_run() -> datetime | None:
+def _last_analyst_run(settings: Settings | None = None) -> datetime | None:
     """Return the most recent analyst run timestamp.
 
     The most recent ``generated_at`` across the persisted fleet/ticket/stage
@@ -152,9 +152,9 @@ def _last_analyst_run() -> datetime | None:
     the daily analysis would rarely fire.
     """
     stamps = (
-        load_proposals().get("generated_at"),
-        load_targeted_analysis("ticket").get("generated_at"),
-        load_targeted_analysis("stage").get("generated_at"),
+        load_proposals(settings).get("generated_at"),
+        load_targeted_analysis("ticket", settings).get("generated_at"),
+        load_targeted_analysis("stage", settings).get("generated_at"),
     )
     runs = [dt for dt in (_parse_iso(s) for s in stamps) if dt is not None]
     return max(runs) if runs else None
@@ -193,7 +193,9 @@ async def _analyst_loop(cfg: Config, service: CostService, hours: float) -> None
         ("ticket", run_ticket_analyst),
         ("stage", run_stage_analyst),
     )
-    delay = _initial_analyst_delay(interval, _last_analyst_run(), datetime.now(UTC))
+    delay = _initial_analyst_delay(
+        interval, _last_analyst_run(cfg.settings), datetime.now(UTC)
+    )
     logger.info(
         "analyst scheduler: first run in %.0fs (interval %.0fs)", delay, interval
     )
