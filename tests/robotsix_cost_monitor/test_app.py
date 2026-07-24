@@ -36,6 +36,22 @@ def test_health() -> None:
     assert r.json()["status"] == "ok"
 
 
+def test_security_headers_on_html_page() -> None:
+    """The index HTML page includes security response headers."""
+    r = _empty_app().get("/")
+    assert r.status_code == 200
+    assert r.headers["x-content-type-options"] == "nosniff"
+    assert "content-security-policy" in r.headers
+
+
+def test_security_headers_on_json_api() -> None:
+    """JSON API responses also include security response headers."""
+    r = _empty_app().get("/health")
+    assert r.status_code == 200
+    assert r.headers["x-content-type-options"] == "nosniff"
+    assert "content-security-policy" in r.headers
+
+
 def test_summary_empty_is_zero() -> None:
     r = _empty_app().get("/api/summary?hours=24")
     assert r.status_code == 200
