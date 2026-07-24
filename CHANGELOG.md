@@ -1,6 +1,7 @@
 ## 0.0.0 (unreleased)
 
 - Pass `cfg.settings` to `load_last_reconcile`, `load_proposals`, and `load_targeted_analysis` in the dashboard API routes so they respect a custom `data_dir` setting instead of always reading from `.data/`.
+- Thread `settings` through `_last_analyst_run()` so the analyst scheduler's restart-resilience check sees data written to a custom `data_dir`, preventing redundant analysis runs after container restarts.
 - `Settings.data_dir` now actually controls the runtime-state directory (was previously declared on the model but ignored — `data_dir()` hardcoded `.data`). The `data_dir()` function accepts an optional `Settings` argument; callers in the analyst and reconciler pipelines now pass `config.settings` so custom `data_dir` paths work end-to-end.
 - Enable pytest strictness settings: `--strict-markers`, `--strict-config`, `xfail_strict`, and `filterwarnings = ["error"]` to catch deprecation warnings and marker configuration issues early in CI.
 - Fix stale `config/projects.schema.json` references in `.pre-commit-config.yaml` and `Makefile` — both now use the correct `config/config.schema.json` path.
