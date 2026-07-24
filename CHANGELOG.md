@@ -43,7 +43,7 @@
 - Migrate config loading from `robotsix-yaml-config` to the fleet-standard
   `robotsix-config` library. The config file format changes from YAML
   (`config/projects.yaml`) to JSON (`config/projects.json`), with the example
-  template at `config/projects.example.json`.  
+  template at `config/projects.example.json`.
   The `load_config()` helper now delegates to `robotsix_config.load_config()`
   for validation. Remove the `robotsix-yaml-config` dependency.
 - Fix: Replace YAML `...` placeholder with actual `step-security/harden-runner` step in the `module-validation` job of `.github/workflows/ci.yml`. The harden-runner step now appears as the first step (same pinned SHA `9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4`) with `egress-policy: audit`, matching every other job in the workflow file.
