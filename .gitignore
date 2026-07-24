@@ -23,3 +23,4 @@ site/
 sbom.cyclonedx.json
 node_modules/
 /coverage
+config/projects.yaml

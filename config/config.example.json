@@ -9,6 +9,10 @@
     }
   ],
   "settings": {
+    "auth": {
+      "username": "admin",
+      "password": "CHANGE-ME"
+    },
     "default_window_hours": 168,
     "cache_ttl_seconds": 60,
     "reconcile_tolerance_usd": 1.0,

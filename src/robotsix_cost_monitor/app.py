@@ -305,6 +305,50 @@ def create_app(config: Config | None = None) -> FastAPI:
     )
     app.add_middleware(SecureASGIMiddleware, secure=secure_headers)
 
+    # HTTP Basic auth — the dashboard has no other access control, so it must
+    # be protected whenever it is reachable beyond loopback (e.g. via the
+    # central-deploy gateway, which is an unauthenticated reverse proxy). When
+    # unconfigured the check is a no-op (local dev / SSH tunnel). /health is
+    # always exempt so the container healthcheck keeps working.
+    _auth = cfg.settings.auth
+    _auth_user = _auth.username
+    _auth_pass = _auth.password.get_secret_value()
+    if _auth_user and _auth_pass:
+        import base64
+        import binascii
+        import hmac
+
+        from fastapi import Request
+        from fastapi.responses import PlainTextResponse
+
+        _expected = f"{_auth_user}:{_auth_pass}"
+
+        @app.middleware("http")
+        async def _basic_auth(request: Request, call_next: Any) -> Any:
+            if request.url.path == "/health":
+                return await call_next(request)
+            header = request.headers.get("authorization", "")
+            if header.startswith("Basic "):
+                try:
+                    decoded = base64.b64decode(header[6:]).decode("utf-8")
+                except binascii.Error, UnicodeDecodeError:
+                    decoded = ""
+                # Constant-time compare to avoid leaking the credential.
+                if hmac.compare_digest(decoded, _expected):
+                    return await call_next(request)
+            return PlainTextResponse(
+                "Unauthorized",
+                status_code=401,
+                headers={"WWW-Authenticate": 'Basic realm="cost-monitor"'},
+            )
+
+        logger.info("HTTP Basic auth enabled for the dashboard")
+    else:
+        logger.warning(
+            "dashboard auth is DISABLED (settings.auth.username/password unset) "
+            "— safe only on loopback; do not expose via the gateway"
+        )
+
     register_exception_handlers(app)
     app.include_router(router)
 

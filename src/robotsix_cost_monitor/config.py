@@ -104,9 +104,25 @@ class AnalystConfig(BaseModel):
         )
 
 
+class AuthConfig(BaseModel):
+    """HTTP Basic auth for the dashboard.
+
+    The dashboard has no other access control, so when it is exposed through
+    the central-deploy gateway (an unauthenticated reverse proxy) this MUST
+    be set — otherwise the cost data is public. When either field is empty
+    the dashboard is served open (local dev / SSH-tunnel only). ``/health``
+    is always exempt so the container healthcheck works.
+    """
+
+    username: str = ""
+    password: SecretStr = SecretStr("")
+
+
 class Settings(BaseModel):
     """Global dashboard settings."""
 
+    # HTTP Basic auth — REQUIRED when exposed via the gateway (see AuthConfig).
+    auth: AuthConfig = Field(default_factory=AuthConfig)
     default_window_hours: int = Field(default=168, json_schema_extra={"advanced": True})
     cache_ttl_seconds: int = Field(default=60, json_schema_extra={"advanced": True})
     reconcile_tolerance_usd: float = Field(

@@ -30,6 +30,49 @@ def _empty_app() -> TestClient:
     return TestClient(create_app(Config(projects=[])))
 
 
+def _auth_app() -> TestClient:
+    from robotsix_cost_monitor.config import AuthConfig, Settings
+
+    cfg = Config(
+        projects=[],
+        settings=Settings(
+            auth=AuthConfig(
+                username="admin",
+                password=SecretStr("s3cret"),  # pragma: allowlist secret
+            )
+        ),
+    )
+    return TestClient(create_app(cfg))
+
+
+def test_auth_required_returns_401_without_credentials() -> None:
+    r = _auth_app().get("/")
+    assert r.status_code == 401
+    assert r.headers.get("www-authenticate", "").lower().startswith("basic")
+
+
+def test_auth_rejects_wrong_credentials() -> None:
+    r = _auth_app().get("/", auth=("admin", "wrong"))
+    assert r.status_code == 401
+
+
+def test_auth_accepts_correct_credentials() -> None:
+    r = _auth_app().get("/", auth=("admin", "s3cret"))
+    assert r.status_code == 200
+
+
+def test_auth_health_is_exempt() -> None:
+    # The container healthcheck hits /health without credentials.
+    r = _auth_app().get("/health")
+    assert r.status_code == 200
+
+
+def test_auth_disabled_when_unconfigured() -> None:
+    # No username/password -> dashboard is open (loopback/dev).
+    r = _empty_app().get("/")
+    assert r.status_code == 200
+
+
 def test_health() -> None:
     r = _empty_app().get("/health")
     assert r.status_code == 200

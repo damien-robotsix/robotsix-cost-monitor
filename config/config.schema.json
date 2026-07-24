@@ -131,6 +131,25 @@
       "title": "AnalystConfig",
       "type": "object"
     },
+    "AuthConfig": {
+      "description": "HTTP Basic auth for the dashboard.\n\nThe dashboard has no other access control, so when it is exposed through\nthe central-deploy gateway (an unauthenticated reverse proxy) this MUST\nbe set \u2014 otherwise the cost data is public. When either field is empty\nthe dashboard is served open (local dev / SSH-tunnel only). ``/health``\nis always exempt so the container healthcheck works.",
+      "properties": {
+        "username": {
+          "default": "",
+          "title": "Username",
+          "type": "string"
+        },
+        "password": {
+          "default": "",
+          "format": "password",
+          "title": "Password",
+          "type": "string",
+          "writeOnly": true
+        }
+      },
+      "title": "AuthConfig",
+      "type": "object"
+    },
     "ProjectConfig": {
       "description": "One Langfuse project to monitor.",
       "properties": {
@@ -182,6 +201,9 @@
     "Settings": {
       "description": "Global dashboard settings.",
       "properties": {
+        "auth": {
+          "$ref": "#/$defs/AuthConfig"
+        },
         "default_window_hours": {
           "advanced": true,
           "default": 168,
