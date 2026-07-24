@@ -1289,7 +1289,7 @@ requires-dist = [
     { name = "robotsix-llmio", extras = ["openrouter", "claude-sdk"], marker = "extra == 'analyst'", git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=2fd2be4dcf7f0a44e91012fd1167517e5e09180e" },
     { name = "secure", specifier = ">=2.0.1" },
     { name = "structlog", specifier = ">=24.1" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.49.0" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.51.0" },
 ]
 provides-extras = ["analyst"]
 
