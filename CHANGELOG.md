@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Fix high-severity npm audit vulnerability (GHSA-mh99-v99m-4gvg) in brace-expansion transitive dependency by adding an override to pin brace-expansion to >=5.0.8.
 - Pass `cfg.settings` to `load_last_reconcile`, `load_proposals`, and `load_targeted_analysis` in the dashboard API routes so they respect a custom `data_dir` setting instead of always reading from `.data/`.
 - Thread `settings` through `_last_analyst_run()` so the analyst scheduler's restart-resilience check sees data written to a custom `data_dir`, preventing redundant analysis runs after container restarts.
 - `Settings.data_dir` now actually controls the runtime-state directory (was previously declared on the model but ignored — `data_dir()` hardcoded `.data`). The `data_dir()` function accepts an optional `Settings` argument; callers in the analyst and reconciler pipelines now pass `config.settings` so custom `data_dir` paths work end-to-end.
