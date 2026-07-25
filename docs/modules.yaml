@@ -177,6 +177,7 @@ modules:
       - .robotsix-mill/periodic/docstring_coverage.yaml
       - .robotsix-mill/periodic/health.yaml
       - .robotsix-mill/periodic/module_curator.yaml
+      - .robotsix-mill/periodic/module_size.yaml
       - .robotsix-mill/periodic/repo_description_sync.yaml
       - .robotsix-mill/periodic/security_posture.yaml
       - .robotsix-mill/periodic/survey.yaml
