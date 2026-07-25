@@ -1,5 +1,8 @@
 ## 0.0.0 (unreleased)
 
+- Add `analyst` CLI subcommand (`robotsix-cost-monitor analyst`) with
+  `--kind` option (fleet/ticket/stage/all), mirroring the existing
+  reconcile subcommand pattern.
 - Fix Docker build failure in the runtime stage: remove `--ignore-scripts` from the `npm install -g` command for `@anthropic-ai/claude-code` so the postinstall script can download the platform-native binary.
 - Restore `--ignore-scripts` flag on `npm install -g @anthropic-ai/claude-code` in Dockerfile (lost during version bump).
 - Remove dead `security_posture` periodic workflow file (was silently rejected by the loader, not in the workflow catalog).

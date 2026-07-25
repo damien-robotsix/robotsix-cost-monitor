@@ -1,7 +1,7 @@
 # CLI Reference
 
-`robotsix-cost-monitor` provides three subcommands: **serve**, **summary**, and
-**reconcile**. All subcommands load the JSON configuration from the path set by
+`robotsix-cost-monitor` provides four subcommands: **serve**, **summary**,
+**reconcile**, and **analyst**. All subcommands load the JSON configuration from the path set by
 `ROBOTSIX_CONFIG_FILE` (or `config/config.json` by default).
 
 ---
@@ -75,6 +75,32 @@ Options:
 
 Reconciliation snapshots are saved under `<data_dir>/reconcile/<slug>.json` (where
 `data_dir` is `settings.data_dir` from the config file, defaulting to `.data`).
+
+---
+
+## `robotsix-cost-monitor analyst`
+
+Run the LLM cost analyst for one or all analysis kinds.
+
+```console
+$ robotsix-cost-monitor analyst --help
+Usage: robotsix-cost-monitor analyst [OPTIONS]
+
+  Run the LLM cost analyst.
+
+Options:
+  --kind TEXT  Analysis kind: fleet, ticket, stage, or all (default).  [default: all]
+  --help       Show this message and exit.
+```
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `--kind` | `str` | `"all"` | Analysis kind to run. `fleet` runs the fleet-level digest, `ticket` analyses the top-cost ticket session, `stage` samples top-cost trace stages. `all` (the default) runs all three and returns a dict keyed by kind. |
+
+Analyst output is saved under `<data_dir>/analyst/` (where `data_dir` is
+`settings.data_dir` from the config file, defaulting to `.data`). The analyst
+requires `settings.analyst.openrouter_key` to be configured — when missing,
+each kind returns `{"enabled": false, "detail": "..."}`.
 
 ---
 

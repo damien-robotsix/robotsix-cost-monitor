@@ -9,6 +9,7 @@ import sys
 
 import uvicorn
 
+from .analyst import run_analyst, run_stage_analyst, run_ticket_analyst
 from .config import load_config
 from .reconcile import reconcile_project
 from .service import CostService
@@ -29,6 +30,14 @@ def main(argv: list[str] | None = None) -> int:
 
     recon = sub.add_parser("reconcile", help="run OpenRouter↔Langfuse reconciliation")
     recon.add_argument("--project", default="all")
+
+    analyst = sub.add_parser("analyst", help="run the LLM cost analyst")
+    analyst.add_argument(
+        "--kind",
+        default="all",
+        choices=["all", "fleet", "ticket", "stage"],
+        help="analysis kind: fleet, ticket, stage, or all (default)",
+    )
 
     args = parser.parse_args(argv)
 
@@ -59,6 +68,23 @@ def main(argv: list[str] | None = None) -> int:
         )
         recon_rows = [asyncio.run(reconcile_project(p, cfg.settings)) for p in targets]
         print(json.dumps(recon_rows, indent=2))
+        return 0
+    if args.cmd == "analyst":
+        svc = CostService(cfg)
+        kind = args.kind
+        if kind == "fleet":
+            result = asyncio.run(run_analyst(cfg, svc))
+        elif kind == "ticket":
+            result = asyncio.run(run_ticket_analyst(cfg, svc))
+        elif kind == "stage":
+            result = asyncio.run(run_stage_analyst(cfg, svc))
+        else:  # all
+            result = {
+                "fleet": asyncio.run(run_analyst(cfg, svc)),
+                "ticket": asyncio.run(run_ticket_analyst(cfg, svc)),
+                "stage": asyncio.run(run_stage_analyst(cfg, svc)),
+            }
+        print(json.dumps(result, indent=2))
         return 0
 
     parser.print_help()
