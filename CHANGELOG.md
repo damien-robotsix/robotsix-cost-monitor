@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Remove dead `security_posture` periodic workflow file (was silently rejected by the loader, not in the workflow catalog).
 - Fix high-severity npm audit vulnerability (GHSA-mh99-v99m-4gvg) in brace-expansion transitive dependency by adding an override to pin brace-expansion to >=5.0.8.
 - Pass `cfg.settings` to `load_last_reconcile`, `load_proposals`, and `load_targeted_analysis` in the dashboard API routes so they respect a custom `data_dir` setting instead of always reading from `.data/`.
 - Thread `settings` through `_last_analyst_run()` so the analyst scheduler's restart-resilience check sees data written to a custom `data_dir`, preventing redundant analysis runs after container restarts.
