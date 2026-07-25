@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Fix Docker build failure in the runtime stage: remove `--ignore-scripts` from the `npm install -g` command for `@anthropic-ai/claude-code` so the postinstall script can download the platform-native binary.
 - Restore `--ignore-scripts` flag on `npm install -g @anthropic-ai/claude-code` in Dockerfile (lost during version bump).
 - Remove dead `security_posture` periodic workflow file (was silently rejected by the loader, not in the workflow catalog).
 - Fix high-severity npm audit vulnerability (GHSA-mh99-v99m-4gvg) in brace-expansion transitive dependency by adding an override to pin brace-expansion to >=5.0.8.
