@@ -17,14 +17,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
-import structlog
 from pydantic import BaseModel
 
 from ._utils import safe_load_json
 from .config import AnalystConfig, Config, Settings, data_dir
 from .service import CostService
-
-logger = structlog.get_logger(__name__)
 
 #: Pseudo-enum for the three analysis scopes.
 AnalystKind = Literal["ticket", "stage", "fleet"]
