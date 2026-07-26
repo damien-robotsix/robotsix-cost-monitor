@@ -41,7 +41,7 @@ Each entry in the `projects` list connects to one Langfuse project.
 | `reconcile_tolerance_usd` | `float` | `1.0` | Maximum allowed drift (USD) between OpenRouter and Langfuse costs before reconciliation is flagged. |
 | `reconcile_schedule_hours` | `float` | `24.0` | Interval in hours between automatic reconciliation runs. Set to `0` to disable scheduled reconciliation. |
 | `subscription_call_cap` | `int` | `0` | Per-day cap on subscription-triggered calls. Set to `0` to disable the cap. |
-| `log_format` | `str` | `"json"` (when `CI` is set) else `"console"` | Structured log output format. `"json"` for production ingestion; `"console"` for coloured human-readable output. |
+| `log_format` | `str` | `"json"` | Structured log output format. `"json"` for production ingestion; `"console"` for coloured human-readable output. |
 | `log_level` | `str` | `"INFO"` | Minimum log level for all loggers. Set to `"DEBUG"` for verbose diagnostics. |
 | `data_dir` | `str` | `".data"` | Directory for persistent runtime state (reconciliation snapshots, analyst proposals). |
 | `analyst` | `AnalystConfig` | `{}` | Nested configuration for the optional LLM cost-analyst (see below). |
