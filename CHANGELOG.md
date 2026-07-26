@@ -1,5 +1,6 @@
 ## 0.0.0 (unreleased)
 
+- Remove stale `::: robotsix_cost_monitor.clients._http` directive from `docs/api.md`; the module was migrated to the shared `robotsix-http` library.
 - Remove unused `logger` variable and `structlog` import from `analyst.py` — the module had no logging calls, so the variable was dead code.
 - Add `analyst` CLI subcommand (`robotsix-cost-monitor analyst`) with
   `--kind` option (fleet/ticket/stage/all), mirroring the existing
