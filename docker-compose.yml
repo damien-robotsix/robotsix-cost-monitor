@@ -2,7 +2,7 @@
 # robotsix-cost-monitor — local development Compose file.
 #
 # `docker compose up -d --build` builds the image and runs the dashboard at
-# http://localhost:${MONITOR_PORT:-8099}.
+# http://localhost:8099.
 #
 # One-shot CLI commands override the default `serve` command:
 #
@@ -20,11 +20,10 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
 
-    # Default: serve the dashboard on 8080 inside the container.
-    command: serve --host 0.0.0.0 --port 8080
-
+    # Bind address and port are read from config/config.json at startup
+    # (settings.server_host / settings.server_port).
     ports:
-      - "${MONITOR_PORT:-8099}:8080"
+      - "8099:8080"
 
     volumes:
       # Config bind-mount — projects.yaml available without an image rebuild.

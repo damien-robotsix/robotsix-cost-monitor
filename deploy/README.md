@@ -11,14 +11,14 @@ merge to main ─▶ release.yml builds & pushes ghcr.io/…/robotsix-cost-monit
                                               │
                             central-deploy ───┘ (button-triggered) ─▶ redeploys
                                                                       cost-monitor
-internet ─▶ nginx (TLS + basic auth) ─▶ 127.0.0.1:8099 ─▶ cost-monitor container
+internet ─▶ nginx (TLS + basic auth) ─▶ 127.0.0.1:8099 ─▶ cost-monitor container (:8080)
 ```
 
 - **Continuous deploy:** pushing to `main` publishes a moving `:main` image
   (`../.github/workflows/release.yml`). Central-deploy triggers redeployment
   on demand (button in the central-deploy dashboard) instead of Watchtower
   polling every 5 minutes.
-- **Ingress:** the dashboard binds to `127.0.0.1:8099` only. The host's shared
+- **Ingress:** the dashboard binds to `127.0.0.1:8099` (host port, forwards to container port `8080`). The host's shared
   nginx terminates TLS and enforces HTTP basic auth for `cost.robotsix.net`,
   then proxies to it. The dashboard has **no auth of its own**.
 
@@ -44,7 +44,7 @@ cd /opt/robotsix-cost-monitor
 
 ```sh
 cp deploy/.env.example .env
-$EDITOR .env          # IMAGE_TAG, MONITOR_PORT
+$EDITOR .env          # IMAGE_TAG
 ```
 
 ### 3. Provision configuration
@@ -100,9 +100,10 @@ docker compose ps            # cost-monitor should be Up
 docker compose logs -f cost-monitor
 ```
 
-The dashboard is now on `127.0.0.1:8099`. It is **not** yet reachable from the
-internet — put it behind the shared host nginx with TLS + basic auth for
-`cost.robotsix.net` (same pattern as the other robotsix services).
+The dashboard is now reachable at `http://127.0.0.1:8099` (host port `8099` maps to
+container port `8080`). It is **not** yet exposed to the internet — put it behind the
+shared host nginx with TLS + basic auth for `cost.robotsix.net` (same pattern as the
+other robotsix services).
 
 ---
 
