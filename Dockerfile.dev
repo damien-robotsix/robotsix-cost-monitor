@@ -58,7 +58,7 @@ ENV VIRTUAL_ENV=/opt/venv \
 ARG CLAUDE_CODE_VERSION=2.1.220
 RUN apt-get update \
     && apt-get install -y --no-install-recommends nodejs npm \
-    && npm install -g --ignore-scripts @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
+    && npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
     && claude --version \
     && rm -rf /var/lib/apt/lists/*
 
