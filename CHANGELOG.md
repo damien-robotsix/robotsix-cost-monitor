@@ -2,6 +2,7 @@
 ## 0.0.0 (unreleased)
 
 - Document the `auth` settings field and its `AuthConfig` sub-fields in the configuration reference (`docs/reference/configuration.md`).
+- Added `robotsix_cost_monitor.exceptions` module to API docs (`docs/api.md`).
 - Bump `@anthropic-ai/claude-code` in both Dockerfiles from 2.1.199/2.1.158 to 2.1.220 to match `package.json`. Added `ARG CLAUDE_CODE_VERSION` in each Dockerfile so future bumps only need to update the ARG default.
 - Remove `--ignore-scripts` from claude-code npm install in `Dockerfile.dev`, matching the production Dockerfile. The `@anthropic-ai/claude-code` 2.x package fetches a native binary during its postinstall script; skipping it breaks `claude --version`.
 - Add `@anthropic-ai/claude-code` to `package.json` devDependencies so
