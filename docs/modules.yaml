@@ -150,8 +150,9 @@ modules:
       - docs/modules.yaml
 
   - id: github-config
-    description: GitHub templates, Dependabot config, and CI/CD workflows
+    description: GitHub templates, Dependabot config, CI/CD workflows, and composite actions
     paths:
+      - .github/actions/setup-python-ci/action.yml
       - .github/ISSUE_TEMPLATE/bug_report.yml
       - .github/ISSUE_TEMPLATE/config.yml
       - .github/ISSUE_TEMPLATE/feature_request.yml
