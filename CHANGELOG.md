@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Added `"fleet"` handling to the `POST /api/analyst/run/{kind}` route so the API matches the CLI behavior of running the full fleet analyst.  Changed the fallback status code from 404 to 422 for unknown analyst kinds.
 - Document the `auth` settings field and its `AuthConfig` sub-fields in the configuration reference (`docs/reference/configuration.md`).
 - Added `robotsix_cost_monitor.exceptions` module to API docs (`docs/api.md`).
 - Bump `@anthropic-ai/claude-code` in both Dockerfiles from 2.1.199/2.1.158 to 2.1.220 to match `package.json`. Added `ARG CLAUDE_CODE_VERSION` in each Dockerfile so future bumps only need to update the ARG default.
