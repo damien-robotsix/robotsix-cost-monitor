@@ -6,7 +6,7 @@ This directory holds everything needed to run `robotsix-cost-monitor` on
 
 How it fits together:
 
-```
+```text
 merge to main ─▶ release.yml builds & pushes ghcr.io/…/robotsix-cost-monitor:main
                                               │
                             central-deploy ───┘ (button-triggered) ─▶ redeploys
