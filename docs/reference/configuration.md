@@ -46,7 +46,17 @@ Each entry in the `projects` list connects to one Langfuse project.
 | `log_format` | `str` | `"json"` | Structured log output format. `"json"` for production ingestion; `"console"` for coloured human-readable output. |
 | `log_level` | `str` | `"INFO"` | Minimum log level for all loggers. Set to `"DEBUG"` for verbose diagnostics. |
 | `data_dir` | `str` | `".data"` | Directory for persistent runtime state (reconciliation snapshots, analyst proposals). |
+| `auth` | `AuthConfig` | `{}` (empty = disabled) | HTTP Basic authentication credentials for the dashboard. When `username` and `password` are set, all endpoints except `/health` require HTTP Basic auth. When either is empty, the dashboard is served with no access control. |
 | `analyst` | `AnalystConfig` | `{}` | Nested configuration for the optional LLM cost-analyst (see below). |
+
+---
+
+## `settings.auth` — Dashboard authentication (`AuthConfig`)
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `username` | `str` | `""` | HTTP Basic auth username. When empty, auth is disabled. |
+| `password` | `SecretStr` | `""` | HTTP Basic auth password. Stored as a Pydantic `SecretStr`. |
 
 ---
 
