@@ -1,5 +1,8 @@
 ## 0.0.0 (unreleased)
 
+- Add `@anthropic-ai/claude-code` to `package.json` devDependencies so
+  Dependabot's npm ecosystem tracks version bumps for the globally-installed
+  CLI in the Dockerfiles.
 - Move dashboard bind address from Compose `command:` override into config: added `server_host`/`server_port` settings (defaults `0.0.0.0`/`8080`). The CLI `serve` subcommand reads these from config, with `--host`/`--port` flags retained for overrides. Replaced `${MONITOR_PORT}` env-var port mapping with a fixed `8099:8080` in `docker-compose.yml`.
 - Remove stale `::: robotsix_cost_monitor.clients._http` directive from `docs/api.md`; the module was migrated to the shared `robotsix-http` library.
 - Fix `log_format` default column in configuration docs: remove non-existent CI-based `"console"` fallback; the code unconditionally defaults to `"json"`.
