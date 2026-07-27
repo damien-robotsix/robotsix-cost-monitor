@@ -128,9 +128,13 @@ class Analysis(BaseModel):
 
 
 def _store_path(settings: Settings | None = None) -> Path:
-    d = data_dir(settings) / "analyst"
+    root = data_dir(settings).resolve()
+    d = root / "analyst"
     d.mkdir(parents=True, exist_ok=True)
-    return d / "proposals.json"
+    p = d / "proposals.json"
+    # Resolve to catch traversal; verify stays under data_dir.
+    p.resolve(strict=False).relative_to(root)
+    return p
 
 
 async def build_digest(
@@ -365,9 +369,13 @@ async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
 
 
 def _targeted_store_path(kind: AnalystKind, settings: Settings | None = None) -> Path:
-    d = data_dir(settings) / "analyst"
+    root = data_dir(settings).resolve()
+    d = root / "analyst"
     d.mkdir(parents=True, exist_ok=True)
-    return d / f"{kind}.json"
+    p = d / f"{kind}.json"
+    # Resolve to catch traversal; verify stays under data_dir.
+    p.resolve(strict=False).relative_to(root)
+    return p
 
 
 def _no_top_early_return(
@@ -413,8 +421,8 @@ async def _run_opus_analysis_and_file(
         _opus_analysis, a, system_prompt=system_prompt, payload=payload, name=name
     )
     out = _build_analysis_response(a, analysis, extra=extra_out)
-    _targeted_store_path(out_prefix, settings).write_text(  # lgtm[py/path-injection]
-        json.dumps(out, indent=2)  # lgtm[py/path-injection]
+    _targeted_store_path(out_prefix, settings).write_text(
+        json.dumps(out, indent=2)
     )
     return out
 
