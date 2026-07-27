@@ -204,6 +204,18 @@
         "auth": {
           "$ref": "#/$defs/AuthConfig"
         },
+        "server_host": {
+          "advanced": true,
+          "default": "0.0.0.0",
+          "title": "Server Host",
+          "type": "string"
+        },
+        "server_port": {
+          "advanced": true,
+          "default": 8080,
+          "title": "Server Port",
+          "type": "integer"
+        },
         "default_window_hours": {
           "advanced": true,
           "default": 168,

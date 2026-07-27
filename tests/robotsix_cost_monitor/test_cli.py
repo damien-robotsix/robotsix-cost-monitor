@@ -33,29 +33,43 @@ def _cfg(
 
 
 def test_serve_default_host_port() -> None:
-    """``serve`` subcommand calls uvicorn.run with default host/port."""
-    with patch("robotsix_cost_monitor.cli.uvicorn.run") as mock_run:
+    """``serve`` subcommand reads host/port from config when no CLI flags given."""
+    cfg = _cfg()
+    cfg.settings.server_host = "0.0.0.0"
+    cfg.settings.server_port = 8080
+
+    with (
+        patch("robotsix_cost_monitor.cli.load_config", return_value=cfg),
+        patch("robotsix_cost_monitor.cli.uvicorn.run") as mock_run,
+    ):
         exit_code = main(["serve"])
 
     assert exit_code == 0
     mock_run.assert_called_once_with(
         "robotsix_cost_monitor.app:create_app",
-        host="127.0.0.1",
-        port=8099,
+        host="0.0.0.0",
+        port=8080,
         factory=True,
         log_config=None,
     )
 
 
 def test_serve_custom_host_port() -> None:
-    """``serve`` subcommand passes custom --host and --port to uvicorn."""
-    with patch("robotsix_cost_monitor.cli.uvicorn.run") as mock_run:
-        exit_code = main(["serve", "--host", "0.0.0.0", "--port", "3000"])
+    """``serve`` subcommand CLI --host/--port override config values."""
+    cfg = _cfg()
+    cfg.settings.server_host = "0.0.0.0"
+    cfg.settings.server_port = 8080
+
+    with (
+        patch("robotsix_cost_monitor.cli.load_config", return_value=cfg),
+        patch("robotsix_cost_monitor.cli.uvicorn.run") as mock_run,
+    ):
+        exit_code = main(["serve", "--host", "127.0.0.1", "--port", "3000"])
 
     assert exit_code == 0
     mock_run.assert_called_once_with(
         "robotsix_cost_monitor.app:create_app",
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=3000,
         factory=True,
         log_config=None,
@@ -68,15 +82,22 @@ def test_serve_custom_host_port() -> None:
 
 
 def test_no_args_defaults_to_serve() -> None:
-    """No subcommand → acts like serve (uvicorn.run called)."""
-    with patch("robotsix_cost_monitor.cli.uvicorn.run") as mock_run:
+    """No subcommand → acts like serve (reads host/port from config)."""
+    cfg = _cfg()
+    cfg.settings.server_host = "0.0.0.0"
+    cfg.settings.server_port = 8080
+
+    with (
+        patch("robotsix_cost_monitor.cli.load_config", return_value=cfg),
+        patch("robotsix_cost_monitor.cli.uvicorn.run") as mock_run,
+    ):
         exit_code = main([])
 
     assert exit_code == 0
     mock_run.assert_called_once_with(
         "robotsix_cost_monitor.app:create_app",
-        host="127.0.0.1",
-        port=8099,
+        host="0.0.0.0",
+        port=8080,
         factory=True,
         log_config=None,
     )

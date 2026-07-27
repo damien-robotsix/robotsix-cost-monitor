@@ -17,15 +17,15 @@ Usage: robotsix-cost-monitor serve [OPTIONS]
   Run the dashboard web server.
 
 Options:
-  --host  TEXT  [default: 127.0.0.1]
-  --port  INT   [default: 8099]
+  --host  TEXT  [default: <config server_host>]
+  --port  INT   [default: <config server_port>]
   --help        Show this message and exit.
 ```
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `--host` | `str` | `127.0.0.1` | Host address to bind the server to. |
-| `--port` | `int` | `8099` | TCP port to listen on. |
+| `--host` | `str` | `server_host` from config (`0.0.0.0`) | Host address to bind the server to. When omitted, reads `settings.server_host` from the config file. |
+| `--port` | `int` | `server_port` from config (`8080`) | TCP port to listen on. When omitted, reads `settings.server_port` from the config file. |
 
 The server uses Uvicorn with the app factory `robotsix_cost_monitor.app:create_app`.
 

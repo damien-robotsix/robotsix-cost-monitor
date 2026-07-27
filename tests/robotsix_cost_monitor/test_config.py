@@ -175,6 +175,8 @@ def test_config_project_empty() -> None:
 
 def test_settings_defaults() -> None:
     s = Settings()
+    assert s.server_host == "0.0.0.0"
+    assert s.server_port == 8080
     assert s.default_window_hours == 168
     assert s.cache_ttl_seconds == 60
     assert s.reconcile_tolerance_usd == 1.0

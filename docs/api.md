@@ -1,26 +1,35 @@
 # API Reference
 
-::: robotsix_cost_monitor
+```{eval-rst}
+.. automodule:: robotsix_cost_monitor
+   :members:
+   :imported-members:
 
-::: robotsix_cost_monitor.app
+.. automodule:: robotsix_cost_monitor.aggregations
+   :members:
 
-::: robotsix_cost_monitor.routes
+.. automodule:: robotsix_cost_monitor.analyst
+   :members:
 
-::: robotsix_cost_monitor.cli
+.. automodule:: robotsix_cost_monitor.app
+   :members:
 
-::: robotsix_cost_monitor.config
+.. automodule:: robotsix_cost_monitor.cli
+   :members:
 
-::: robotsix_cost_monitor.aggregations
+.. automodule:: robotsix_cost_monitor.clients
+   :members:
+   :submodules:
 
-::: robotsix_cost_monitor.service
+.. automodule:: robotsix_cost_monitor.config
+   :members:
 
-::: robotsix_cost_monitor.reconcile
+.. automodule:: robotsix_cost_monitor.reconcile
+   :members:
 
-::: robotsix_cost_monitor.analyst
+.. automodule:: robotsix_cost_monitor.routes
+   :members:
 
-::: robotsix_cost_monitor.clients.langfuse
-
-::: robotsix_cost_monitor.clients
-::: robotsix_cost_monitor.exceptions
-
-::: robotsix_cost_monitor.clients.models
+.. automodule:: robotsix_cost_monitor.service
+   :members:
+```

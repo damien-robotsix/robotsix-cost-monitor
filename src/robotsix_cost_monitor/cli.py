@@ -21,8 +21,8 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd")
 
     serve = sub.add_parser("serve", help="run the dashboard web server")
-    serve.add_argument("--host", default="127.0.0.1")
-    serve.add_argument("--port", type=int, default=8099)
+    serve.add_argument("--host", default=None)
+    serve.add_argument("--port", type=int, default=None)
 
     summary = sub.add_parser("summary", help="print a cost summary as JSON")
     summary.add_argument("--project", default="all")
@@ -42,8 +42,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.cmd == "serve" or args.cmd is None:
-        host = getattr(args, "host", "127.0.0.1")
-        port = getattr(args, "port", 8099)
+        cfg = load_config()
+        host_val: str | None = getattr(args, "host", None)
+        port_val: int | None = getattr(args, "port", None)
+        host = host_val if host_val is not None else cfg.settings.server_host
+        port = port_val if port_val is not None else cfg.settings.server_port
         uvicorn.run(
             "robotsix_cost_monitor.app:create_app",
             host=host,

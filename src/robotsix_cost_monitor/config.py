@@ -123,6 +123,9 @@ class Settings(BaseModel):
 
     # HTTP Basic auth — REQUIRED when exposed via the gateway (see AuthConfig).
     auth: AuthConfig = Field(default_factory=AuthConfig)
+    # Bind address for the dashboard web server.
+    server_host: str = Field(default="0.0.0.0", json_schema_extra={"advanced": True})  # noqa: S104
+    server_port: int = Field(default=8080, json_schema_extra={"advanced": True})
     default_window_hours: int = Field(default=168, json_schema_extra={"advanced": True})
     cache_ttl_seconds: int = Field(default=60, json_schema_extra={"advanced": True})
     reconcile_tolerance_usd: float = Field(

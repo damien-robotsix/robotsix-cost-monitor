@@ -19,7 +19,6 @@
 services:
   cost-monitor:
     image: ghcr.io/damien-robotsix/robotsix-cost-monitor:main
-    command: serve --host 0.0.0.0 --port 8080
     labels:
       # Full in-container path of the config file (contract §5/§8): its dirname
       # must match the cost_monitor_config mount below; central-deploy resolves

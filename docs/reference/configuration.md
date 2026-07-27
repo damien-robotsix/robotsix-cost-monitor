@@ -36,6 +36,8 @@ Each entry in the `projects` list connects to one Langfuse project.
 
 | Key | Type | Default | Description |
 |---|---|---|---|
+| `server_host` | `str` | `"0.0.0.0"` | Host address the dashboard web server binds to. Overridable via `serve --host`. |
+| `server_port` | `int` | `8080` | TCP port the dashboard web server listens on. Overridable via `serve --port`. |
 | `default_window_hours` | `int` | `168` | Default time window (in hours) for dashboard cost aggregations (7 days). |
 | `cache_ttl_seconds` | `int` | `60` | How long per-trace cost results are cached before re-fetching from Langfuse. |
 | `reconcile_tolerance_usd` | `float` | `1.0` | Maximum allowed drift (USD) between OpenRouter and Langfuse costs before reconciliation is flagged. |
