@@ -10,6 +10,7 @@ The config is located via the ``ROBOTSIX_CONFIG_FILE`` environment variable
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from pydantic import BaseModel, Field, SecretStr, field_validator
@@ -188,8 +189,8 @@ def data_dir(settings: Settings | None = None) -> Path:
         path = Path(settings.data_dir)
         if not path.is_absolute():
             path = Path(__file__).resolve().parents[2] / path
-        return path
-    return Path(__file__).resolve().parents[2] / ".data"
+        return Path(os.path.abspath(path))
+    return Path(os.path.abspath(Path(__file__).resolve().parents[2] / ".data"))
 
 
 def load_config(path: Path | None = None) -> Config:

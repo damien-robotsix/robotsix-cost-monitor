@@ -13,7 +13,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
-import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -129,8 +128,7 @@ class Analysis(BaseModel):
 
 
 def _store_path(settings: Settings | None = None) -> Path:
-    root = Path(os.path.abspath(data_dir(settings)))
-    d = root / "analyst"
+    d = data_dir(settings) / "analyst"
     d.mkdir(parents=True, exist_ok=True)
     return d / "proposals.json"
 
@@ -367,8 +365,7 @@ async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
 
 
 def _targeted_store_path(kind: AnalystKind, settings: Settings | None = None) -> Path:
-    root = Path(os.path.abspath(data_dir(settings)))
-    d = root / "analyst"
+    d = data_dir(settings) / "analyst"
     d.mkdir(parents=True, exist_ok=True)
     return d / f"{kind}.json"
 
