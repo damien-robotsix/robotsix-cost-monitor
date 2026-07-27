@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -128,13 +129,10 @@ class Analysis(BaseModel):
 
 
 def _store_path(settings: Settings | None = None) -> Path:
-    root = data_dir(settings).resolve()
+    root = Path(os.path.abspath(data_dir(settings)))
     d = root / "analyst"
     d.mkdir(parents=True, exist_ok=True)
-    p = d / "proposals.json"
-    # Resolve to catch traversal; verify stays under data_dir.
-    p.resolve(strict=False).relative_to(root)
-    return p
+    return d / "proposals.json"
 
 
 async def build_digest(
@@ -369,13 +367,10 @@ async def run_analyst(config: Config, service: CostService) -> dict[str, Any]:
 
 
 def _targeted_store_path(kind: AnalystKind, settings: Settings | None = None) -> Path:
-    root = data_dir(settings).resolve()
+    root = Path(os.path.abspath(data_dir(settings)))
     d = root / "analyst"
     d.mkdir(parents=True, exist_ok=True)
-    p = d / f"{kind}.json"
-    # Resolve to catch traversal; verify stays under data_dir.
-    p.resolve(strict=False).relative_to(root)
-    return p
+    return d / f"{kind}.json"
 
 
 def _no_top_early_return(
