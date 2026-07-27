@@ -189,8 +189,10 @@ def data_dir(settings: Settings | None = None) -> Path:
         path = Path(settings.data_dir)
         if not path.is_absolute():
             path = Path(__file__).resolve().parents[2] / path
-        return Path(os.path.abspath(path))
-    return Path(os.path.abspath(Path(__file__).resolve().parents[2] / ".data"))
+        return Path(os.path.abspath(path)).resolve()
+    return Path(
+        os.path.abspath(Path(__file__).resolve().parents[2] / ".data")
+    ).resolve()
 
 
 def load_config(path: Path | None = None) -> Config:

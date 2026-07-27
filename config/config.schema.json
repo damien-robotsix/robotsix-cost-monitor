@@ -255,7 +255,7 @@
         },
         "log_format": {
           "advanced": true,
-          "default": "console",
+          "default": "json",
           "title": "Log Format",
           "type": "string"
         },
@@ -267,24 +267,6 @@
         },
         "analyst": {
           "$ref": "#/$defs/AnalystConfig"
-        },
-        "log_format": {
-          "advanced": true,
-          "default": "json",
-          "title": "Log Format",
-          "type": "string"
-        },
-        "log_level": {
-          "advanced": true,
-          "default": "INFO",
-          "title": "Log Level",
-          "type": "string"
-        },
-        "data_dir": {
-          "advanced": true,
-          "default": ".data",
-          "title": "Data Dir",
-          "type": "string"
         }
       },
       "title": "Settings",

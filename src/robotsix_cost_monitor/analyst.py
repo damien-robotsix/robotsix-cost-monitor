@@ -413,9 +413,7 @@ async def _run_opus_analysis_and_file(
         _opus_analysis, a, system_prompt=system_prompt, payload=payload, name=name
     )
     out = _build_analysis_response(a, analysis, extra=extra_out)
-    _targeted_store_path(out_prefix, settings).write_text(
-        json.dumps(out, indent=2)
-    )
+    _targeted_store_path(out_prefix, settings).write_text(json.dumps(out, indent=2))
     return out
 
 
