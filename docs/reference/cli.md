@@ -23,7 +23,7 @@ Options:
 ```
 
 | Option | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `--host` | `str` | `server_host` from config (`0.0.0.0`) | Host address to bind the server to. When omitted, reads `settings.server_host` from the config file. |
 | `--port` | `int` | `server_port` from config (`8080`) | TCP port to listen on. When omitted, reads `settings.server_port` from the config file. |
 
@@ -48,7 +48,7 @@ Options:
 ```
 
 | Option | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `--project` | `str` | `"all"` | Project slug to query, or `"all"` for every configured project. |
 | `--hours` | `int` | `0` | Look-back window in hours. When `0` (the default), the value of `settings.default_window_hours` from the config file is used. |
 
@@ -70,7 +70,7 @@ Options:
 ```
 
 | Option | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `--project` | `str` | `"all"` | Project slug to reconcile, or `"all"` to reconcile every configured project that has an OpenRouter key. |
 
 Reconciliation snapshots are saved under `<data_dir>/reconcile/<slug>.json` (where
@@ -94,7 +94,7 @@ Options:
 ```
 
 | Option | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `--kind` | `str` | `"all"` | Analysis kind to run. `fleet` runs the fleet-level digest, `ticket` analyses the top-cost ticket session, `stage` samples top-cost trace stages. `all` (the default) runs all three and returns a dict keyed by kind. |
 
 Analyst output is saved under `<data_dir>/analyst/` (where `data_dir` is
@@ -107,7 +107,7 @@ each kind returns `{"enabled": false, "detail": "..."}`.
 ## Environment variables
 
 | Variable | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `ROBOTSIX_CONFIG_FILE` | `config/config.json` | Path to the JSON configuration file. |
 
 Log format, log level, and data directory are now configured via `settings.log_format`,

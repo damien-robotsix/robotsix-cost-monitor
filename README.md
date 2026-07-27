@@ -46,7 +46,7 @@ uv run robotsix-cost-monitor reconcile [--project SLUG]
 ## API
 
 | Method | Path | Query Parameters | Response |
-|--------|------|------------------|----------|
+| -------- | ------ | ------------------ | ---------- |
 | GET | `/health` | — | `{"status":"ok","projects":["…"]}` |
 | GET | `/` | — | Dashboard HTML page |
 | GET | `/analyst` | — | Analyst dashboard HTML page |

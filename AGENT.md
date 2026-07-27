@@ -23,7 +23,7 @@ This repo follows the [robotsix stack standards](https://github.com/damien-robot
 ### Environment variables
 
 | Variable | Purpose | Default |
-|---|---|---|
+| --- | --- | --- |
 | `ROBOTSIX_CONFIG_FILE` | Path to the JSON config file (relative to repo root) | `config/config.json` |
 
 Data directory is configured via `settings.data_dir` in the config file
@@ -46,7 +46,7 @@ New fields added to the config MUST flow through the Pydantic models in
 
 ### Model hierarchy (`src/robotsix_cost_monitor/config.py`)
 
-```
+```text
 Config                       # top-level: projects + settings
 ├── projects: list[ProjectConfig]
 │     name, public_key, secret_key, base_url, openrouter_key?
@@ -118,7 +118,7 @@ Persistent runtime state lives under the directory set by `settings.data_dir`
 in the config file (default `.data`). Two subsystems write here:
 
 | Subsystem | Path | Content |
-|---|---|---|
+| --- | --- | --- |
 | Reconciliation | `.data/reconcile/<slug>.json` | Per-project cumulative-usage snapshots + `last.json` aggregate result |
 | Analyst | `.data/analyst/proposals.json` | Stored cost-reduction proposals (surfaced in the dashboard) |
 

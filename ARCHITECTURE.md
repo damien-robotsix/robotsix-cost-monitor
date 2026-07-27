@@ -2,7 +2,7 @@
 
 ## Directory layout
 
-```
+```text
 .
 ├── config/                     # Operational JSON config (gitignored, template committed)
 │   └── config.example.json     #   Template listing Langfuse projects + OpenRouter keys
@@ -32,7 +32,7 @@
 
 ## Data flow
 
-```
+```text
 ┌──────────────┐   REST (httpx)    ┌──────────────┐
 │  Langfuse     │ ◄─────────────── │  Langfuse     │
 │  (per project)│                  │  Client       │
@@ -100,7 +100,7 @@ Both background loops are started in the FastAPI **lifespan** (async context
 manager in `create_app()`) and cancelled on shutdown:
 
 | Loop | Config key | Default | What it does |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `_reconcile_loop` | `settings.reconcile_schedule_hours` | 24 h | Runs `reconcile_all()` for every project; stores result in `.data/reconcile/last.json` (powers the warning banner) |
 | `_analyst_loop` | `settings.analyst.schedule_hours` | 24 h | Runs all three analyses (fleet, most-costly ticket, most-costly stage); persists results under `.data/analyst/` |
 
@@ -118,7 +118,7 @@ CLI commands work without it. It requires two packages installed via the
 `[analyst]` extra:
 
 | Package | Role |
-|---|---|
+| --- | --- |
 | `robotsix-llmio` | Level-2 (DeepSeek via OpenRouter) and Level-3 (Claude Opus) LLM agents that analyse cost patterns |
 
 - All imports of these packages are **lazy** (inside function bodies in

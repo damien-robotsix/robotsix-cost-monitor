@@ -71,16 +71,22 @@ hook.
 > manually from the GitHub Actions UI (`Actions` → `Release Please` →
 > `Run workflow`). This is useful for testing or forcing a release without
 > pushing to `main`.
-2. Make your changes. Add or update tests to cover new behaviour.
-3. Run the full check suite locally:
+
+1. Make your changes. Add or update tests to cover new behaviour.
+2. Run the full check suite locally:
+
    ```bash
    uv run ruff check . && uv run ruff format --check .
    uv run mypy src/
    uv run pytest
    ```
-4. Push and open a PR. CI will run the full matrix.
-5. If you touched files outside `tests/`, `.github/`, or `CHANGELOG.md`,
-   add a changelog entry under `## [Unreleased]` with the appropriate category header (`### Added`, `### Changed`, `### Fixed`, etc.) in `CHANGELOG.md`. Release-please will later categorize and move entries into versioned sections.
+
+3. Push and open a PR. CI will run the full matrix.
+4. If you touched files outside `tests/`, `.github/`, or `CHANGELOG.md`,
+   add a changelog entry under `## [Unreleased]` with the appropriate
+   category header (`### Added`, `### Changed`, `### Fixed`, etc.) in
+   `CHANGELOG.md`. Release-please will later categorize and move entries
+   into versioned sections.
 
 ## Git-dependency upgrade process
 
@@ -90,13 +96,16 @@ SHAs:
 - `robotsix-llmio` (LLM agent framework)
 
 To upgrade it to a newer revision:
+
 1. Update the commit SHA in the `[project.optional-dependencies]` table of
    `pyproject.toml`.
 2. Remove the git dependency line **temporarily** from `pyproject.toml`
    and its `[tool.uv.sources]` block (if present), then run:
+
    ```bash
    uv lock
    ```
+
    (The sandbox has no GitHub credentials, so `uv lock` fails with a git
    credential error if the git dependency is present. The lockfile generated
    without it is fine for local dev.)

@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
 - Add `@anthropic-ai/claude-code` to `package.json` devDependencies so
@@ -70,6 +71,7 @@
 - Promoted `_safe_load_json` to `safe_load_json` in a new `_utils.py` shared module; updated all imports in `reconcile.py`, `analyst.py`, and `test_reconcile.py`.
 - Refactor `RetryClient.get()` to reduce nesting: extract `_attempt_get` and `_raise_on_exhaustion` helpers, and reuse `_get_retry_delay` in the network-error path instead of an inline jitter formula.
 - Collapse duplicated `analyst_ticket_run` and `analyst_stage_run` POST handlers into a single `/api/analyst/run/{kind}` route with a 404 guard for unknown kinds.
+
 # Changelog
 
 All notable changes to this project are documented here.
@@ -80,6 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
 - Add `scripts/generate_config_schema.py` to auto-regenerate `config/projects.schema.json` from the Pydantic config models, plus `make schema` / `make verify-schema` targets, a CI freshness gate (`config-schema` job), and a pre-commit hook to prevent silent schema drift.
 - Document `LOG_FORMAT` env var in both `docs/reference/configuration.md` and `docs/reference/cli.md` env-var tables.
 - Updated `docs/index.md` with links to the Configuration Reference and CLI Reference pages.
@@ -128,6 +131,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `.npmrc` with `save-exact`, `min-release-age`, and `engine-strict`. Pinned all npm devDependencies to exact versions in `package.json`.
 
 ### Changed
+
 - Remove stale `tests/web/` references from `package.json` Biome scripts and `biome.json` include array (directory was emptied in a prior ticket).
 - Remove stale `analyst_stage` and `analyst_ticket` entries from `vulture_whitelist.py` (these route handlers were collapsed into `analyst_targeted(kind)`).
 - Consolidated `clients-http` module into `clients` in `docs/modules.yaml` taxonomy; `_http.py` is an internal detail of the clients sub-package.
@@ -192,6 +196,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced hand-rolled brokered request pattern with `BrokeredRequester` from `robotsix_agent_comm.sdk.brokered_request`.
 
 ### Fixed
+
 - Fix incorrect username in deploy README: `appuser` → `app` to match the Dockerfile.
 - Fix: remove `base_url` from the JSON Schema `required` list for `ProjectConfig`, matching the Pydantic model default (`https://cloud.langfuse.com`).
 - Fix deploy `docker-compose.yml` volume mount paths to match the Dockerfile: config volume now mounts to `/home/app/config` and data volume to `/data`.
@@ -208,6 +213,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed example config `max_trace_analyses` drift. The committed `config/projects.example.yaml` now sets `max_trace_analyses: 12`, matching the Pydantic default.
 
 ### Removed
+
 - Remove `pytest-cov>=6.0` from dev dependencies in `pyproject.toml` and `uv.lock` — it is not pre-cached in the CI sandbox image.
 - Remove orphaned `[tool.bandit]` section from `pyproject.toml` — bandit was never installed or invoked; security scanning is already covered by Ruff S rules, trufflehog, detect-secrets, and CodeQL in CI.
 - Removed the broker filing panel from the analyst dashboard (`filingHTML`, `managerReply`, and `FilingResult` typedef in `analyst.js`).
@@ -215,5 +221,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed legacy nested-dict reply branch from `managerReply()` in analyst.js. The `typeof rr.reply === 'object'` branch was dead code — no production backend path produces a nested-dict reply.
 
 ### Security
+
 - Add `step-security/harden-runner@v2.19.4` as the first step in every directly-defined CI job for runtime network egress control and supply-chain attack detection. Starts with `egress-policy: audit` mode across ci.yml (8 jobs) and release.yml (1 job).
 - Add `zizmor` GitHub Actions security audit to CI. A new `workflow-audit` job runs `uvx zizmor --min-severity medium .github/workflows/` on every PR to detect unpinned action refs, template injection, excessive permissions, and other GitHub Actions security issues.

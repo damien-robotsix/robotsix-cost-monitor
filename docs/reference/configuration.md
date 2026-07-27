@@ -12,7 +12,7 @@ A complete example is available at [`config/config.example.json`](https://github
 ## Top-level (`Config`)
 
 | Key | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `projects` | `list[ProjectConfig]` | `[]` | Langfuse projects to monitor. |
 | `settings` | `Settings` | `{}` | Global dashboard and automation settings. |
 
@@ -23,7 +23,7 @@ A complete example is available at [`config/config.example.json`](https://github
 Each entry in the `projects` list connects to one Langfuse project.
 
 | Key | Type | Required | Default | Description |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | `name` | `str` | yes | — | Display label shown in the dashboard UI. |
 | `public_key` | `str` | yes | — | Langfuse public API key. |
 | `secret_key` | `SecretStr` | yes | — | Langfuse secret API key (stored as a Pydantic `SecretStr`). |
@@ -35,7 +35,7 @@ Each entry in the `projects` list connects to one Langfuse project.
 ## `settings` — Global settings (`Settings`)
 
 | Key | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `server_host` | `str` | `"0.0.0.0"` | Host address the dashboard web server binds to. Overridable via `serve --host`. |
 | `server_port` | `int` | `8080` | TCP port the dashboard web server listens on. Overridable via `serve --port`. |
 | `default_window_hours` | `int` | `168` | Default time window (in hours) for dashboard cost aggregations (7 days). |
@@ -57,7 +57,7 @@ suggest optimisations. It is **enabled** when `settings.analyst.openrouter_key` 
 to a non-null value.
 
 | Key | Type | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `openrouter_key` | `SecretStr` or `null` | `null` | OpenRouter API key for the analyst's own LLM calls (stored as a Pydantic `SecretStr`). `null` disables the analyst entirely. |
 | `global_model` | `str` or `null` | `null` | L3 orchestrator model. Blank or `null` uses the tier-3 default. |
 | `trace_model` | `str` or `null` | `null` | L2 per-trace analysis model. Blank or `null` uses the tier-2 default. |
@@ -76,7 +76,7 @@ to a non-null value.
 ## Environment variables
 
 | Variable | Default | Description |
-|---|---|---|
+| --- | --- | --- |
 | `ROBOTSIX_CONFIG_FILE` | `config/config.json` | Path to the JSON configuration file (relative to repository root). |
 
 Log format, log level, and data directory are now configured via `settings.log_format`,
