@@ -10,6 +10,7 @@ The config is located via the ``ROBOTSIX_CONFIG_FILE`` environment variable
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from pydantic import BaseModel, Field, SecretStr, field_validator
@@ -45,6 +46,11 @@ class ProjectConfig(BaseModel):
         if not isinstance(v, str) or not v.startswith("sk-lf-"):
             raise ValueError("secret_key must start with sk-lf-")
         return v
+
+    @field_validator("openrouter_key", mode="before")
+    @classmethod
+    def _coerce_empty_openrouter_key(cls, v: object) -> object:
+        return None if v == "" else v
 
     @property
     def slug(self) -> str:
@@ -96,6 +102,16 @@ class AnalystConfig(BaseModel):
         default=None, json_schema_extra={"advanced": True}
     )
 
+    @field_validator(
+        "openrouter_key",
+        "langfuse_public_key",
+        "langfuse_secret_key",
+        mode="before",
+    )
+    @classmethod
+    def _coerce_empty_to_none(cls, v: object) -> object:
+        return None if v == "" else v
+
     @property
     def enabled(self) -> bool:
         """Whether the cost-analyst mode is enabled in the effective config."""
@@ -138,15 +154,13 @@ class Settings(BaseModel):
     )
     # Per-day subscription call cap for volume-vs-cap monitoring; 0 = disabled/unknown.
     subscription_call_cap: int = Field(default=0, json_schema_extra={"advanced": True})
-    analyst: AnalystConfig = Field(default_factory=AnalystConfig)
-    # Log output format: "json" (structured, for production)
-    # or "console" (colour, for dev).
+    # Runtime data directory for persistence (.data by default; /data in containers).
+    data_dir: Path = Field(default=Path(".data"), json_schema_extra={"advanced": True})
+    # Structured log output format: "console" or "json".
     log_format: str = Field(default="json", json_schema_extra={"advanced": True})
-    # Minimum log level: "DEBUG", "INFO", "WARNING", "ERROR".
+    # Minimum log level for all loggers.
     log_level: str = Field(default="INFO", json_schema_extra={"advanced": True})
-    # Path to the runtime-state directory (reconciliation snapshots, analyst
-    # proposals). Relative paths are resolved against the repo root.
-    data_dir: str = Field(default=".data", json_schema_extra={"advanced": True})
+    analyst: AnalystConfig = Field(default_factory=AnalystConfig)
 
 
 class Config(BaseModel):
@@ -175,8 +189,10 @@ def data_dir(settings: Settings | None = None) -> Path:
         path = Path(settings.data_dir)
         if not path.is_absolute():
             path = Path(__file__).resolve().parents[2] / path
-        return path
-    return Path(__file__).resolve().parents[2] / ".data"
+        return Path(os.path.abspath(path)).resolve()
+    return Path(
+        os.path.abspath(Path(__file__).resolve().parents[2] / ".data")
+    ).resolve()
 
 
 def load_config(path: Path | None = None) -> Config:

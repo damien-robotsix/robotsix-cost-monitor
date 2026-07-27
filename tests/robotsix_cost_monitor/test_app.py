@@ -1,5 +1,7 @@
 """App + config tests using a zero-project config (no network)."""
 
+# mypy: disable-error-code="arg-type"
+
 from __future__ import annotations
 
 import asyncio
@@ -22,7 +24,7 @@ from robotsix_cost_monitor.app import (
     add_correlation_id,
     create_app,
 )
-from robotsix_cost_monitor.config import Config, ProjectConfig, load_config
+from robotsix_cost_monitor.config import Config, ProjectConfig, Settings, load_config
 from robotsix_cost_monitor.service import CostService
 
 
@@ -213,7 +215,11 @@ def test_reconcile_last_served_from_disk(
         )
     )
 
-    r = _empty_app().get("/api/reconcile/last")
+    app = TestClient(
+        create_app(Config(projects=[], settings=Settings(data_dir=tmp_path)))
+    )
+
+    r = app.get("/api/reconcile/last")
 
     assert r.status_code == 200
     body = r.json()
@@ -256,9 +262,9 @@ def test_load_config_missing(tmp_path: Path) -> None:
     assert config.projects == []
 
 
-def test_load_config_roundtrip(tmp_path: Path) -> None:
-    cfg = tmp_path / "projects.json"
-    cfg.write_text(
+def test_load_config_roundtrip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    cfg_file = tmp_path / "config.json"
+    cfg_file.write_text(
         json.dumps(
             {
                 "projects": [
@@ -273,7 +279,8 @@ def test_load_config_roundtrip(tmp_path: Path) -> None:
             }
         )
     )
-    loaded = load_config(cfg)
+    monkeypatch.setenv("ROBOTSIX_CONFIG_FILE", str(cfg_file))
+    loaded = load_config()
     assert loaded.projects[0].name == "A"
     assert loaded.settings.default_window_hours == 48
     assert loaded.settings.analyst.enabled is False
@@ -646,9 +653,7 @@ def test_add_correlation_id_noop_when_not_set() -> None:
     assert event["message"] == "hello"
 
 
-def test_access_log_contains_request_id(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_access_log_contains_request_id() -> None:
     """Verify the ``ProcessorFormatter`` bridge injects ``request_id`` into
     formatted JSON output for stdlib log records (e.g. uvicorn access logs).
 
@@ -689,9 +694,7 @@ def test_access_log_contains_request_id(
         correlation_id.set(None)
 
 
-def test_log_level_debug_shows_debug_events(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_log_level_debug_shows_debug_events() -> None:
     """When ``LOG_LEVEL=DEBUG``, debug-level structlog events reach the
     stdlib handler (``filter_by_level`` passes them through).
     """
@@ -717,9 +720,7 @@ def test_log_level_debug_shows_debug_events(
         logging.getLogger().removeHandler(capture)
 
 
-def test_log_level_info_filters_debug_events(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_log_level_info_filters_debug_events() -> None:
     """Default ``LOG_LEVEL=INFO`` — ``filter_by_level`` drops debug events
     before they reach stdlib, so no record appears.
     """

@@ -20,3 +20,4 @@ jobs:
       security-events: write  # upload CodeQL SARIF results to the Security tab
     with:
       languages: python,javascript-typescript
+      config-file: .github/codeql/codeql-config.yml

@@ -180,7 +180,7 @@ async def test_run_stores_proposals(
     )
     monkeypatch.setattr(analyst_mod, "_run_agents", lambda *a, **k: (analysis, []))
 
-    cfg = _config(openrouter_key="sk-x")
+    cfg = _config(openrouter_key="sk-x", data_dir=tmp_path)
     out = await run_analyst(cfg, _FakeService())  # type: ignore[arg-type]
 
     assert out["enabled"] is True
@@ -224,7 +224,7 @@ async def test_run_ticket_analyst_no_top_ticket(
     object.__setattr__(svc, "top_ticket", AsyncMock(return_value=None))
 
     out = await analyst_mod.run_ticket_analyst(
-        _config(openrouter_key="sk-x"),
+        _config(openrouter_key="sk-x", data_dir=tmp_path),
         svc,  # type: ignore[arg-type]
     )
     assert out["enabled"] is True
@@ -240,10 +240,12 @@ async def test_run_ticket_analyst_normal(
 
     async def _fake_opus_and_file(
         a: Any,
+        *,
         system_prompt: str,
         name: str,
         payload: str,
         out_prefix: str,
+        data_dir: Path,
         extra_out: dict[str, Any] | None = None,
         settings: Any = None,
     ) -> dict[str, Any]:
@@ -260,7 +262,7 @@ async def test_run_ticket_analyst_normal(
     monkeypatch.setattr(analyst_mod, "_run_opus_analysis_and_file", _fake_opus_and_file)
 
     out = await analyst_mod.run_ticket_analyst(
-        _config(openrouter_key="sk-x"),
+        _config(openrouter_key="sk-x", data_dir=tmp_path),
         _FakeService(),  # type: ignore[arg-type]
     )
     assert out["enabled"] is True
@@ -288,7 +290,7 @@ async def test_run_stage_analyst_no_top_stage(
     object.__setattr__(svc, "top_stage", AsyncMock(return_value=None))
 
     out = await analyst_mod.run_stage_analyst(
-        _config(openrouter_key="sk-x"),
+        _config(openrouter_key="sk-x", data_dir=tmp_path),
         svc,  # type: ignore[arg-type]
     )
     assert out["enabled"] is True
@@ -304,10 +306,12 @@ async def test_run_stage_analyst_normal(
 
     async def _fake_opus_and_file(
         a: Any,
+        *,
         system_prompt: str,
         name: str,
         payload: str,
         out_prefix: str,
+        data_dir: Path,
         extra_out: dict[str, Any] | None = None,
         settings: Any = None,
     ) -> dict[str, Any]:
@@ -324,7 +328,7 @@ async def test_run_stage_analyst_normal(
     monkeypatch.setattr(analyst_mod, "_run_opus_analysis_and_file", _fake_opus_and_file)
 
     out = await analyst_mod.run_stage_analyst(
-        _config(openrouter_key="sk-x"),
+        _config(openrouter_key="sk-x", data_dir=tmp_path),
         _FakeService(),  # type: ignore[arg-type]
     )
     assert out["enabled"] is True
@@ -382,6 +386,7 @@ async def test_run_opus_analysis_and_file(
         name="test",
         payload="{}",
         out_prefix="ticket",
+        data_dir=tmp_path,
         extra_out={"extra": "data"},
     )
     assert out["enabled"] is True
@@ -415,6 +420,7 @@ async def test_run_opus_analysis_and_file_without_filing(
         name="test",
         payload="{}",
         out_prefix="fleet",
+        data_dir=tmp_path,
     )
     assert out["enabled"] is True
     assert out["proposals"][0]["title"] == "P1"

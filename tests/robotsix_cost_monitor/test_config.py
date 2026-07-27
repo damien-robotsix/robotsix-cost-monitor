@@ -1,5 +1,7 @@
 """Unit tests for config.py I/O helpers and AnalystConfig model."""
 
+# mypy: disable-error-code="arg-type"
+
 from __future__ import annotations
 
 import json
@@ -184,7 +186,7 @@ def test_settings_defaults() -> None:
     assert s.subscription_call_cap == 0
     assert s.log_format == "json"
     assert s.log_level == "INFO"
-    assert s.data_dir == ".data"
+    assert s.data_dir == Path(".data")
     assert isinstance(s.analyst, AnalystConfig)
 
 
@@ -193,10 +195,14 @@ def test_settings_subscription_call_cap() -> None:
     assert s.subscription_call_cap == 5000
 
 
+def test_settings_data_dir_default() -> None:
+    assert Settings().data_dir == Path(".data")
+
+
 # -- load_config --------------------------------------------------------
 
 
-def test_load_config_found() -> None:
+def test_load_config_found(monkeypatch: pytest.MonkeyPatch) -> None:
     """Write a minimal valid config to a temp file and load it."""
     data = {
         "projects": [
@@ -213,7 +219,8 @@ def test_load_config_found() -> None:
         tmp_path = Path(f.name)
 
     try:
-        config = load_config(tmp_path)
+        monkeypatch.setenv("ROBOTSIX_CONFIG_FILE", str(tmp_path))
+        config = load_config()
         assert isinstance(config, Config)
         assert len(config.projects) == 1
         assert config.projects[0].name == "Temp Project"

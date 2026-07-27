@@ -246,8 +246,12 @@
           "title": "Subscription Call Cap",
           "type": "integer"
         },
-        "analyst": {
-          "$ref": "#/$defs/AnalystConfig"
+        "data_dir": {
+          "advanced": true,
+          "default": ".data",
+          "format": "path",
+          "title": "Data Dir",
+          "type": "string"
         },
         "log_format": {
           "advanced": true,
@@ -261,11 +265,8 @@
           "title": "Log Level",
           "type": "string"
         },
-        "data_dir": {
-          "advanced": true,
-          "default": ".data",
-          "title": "Data Dir",
-          "type": "string"
+        "analyst": {
+          "$ref": "#/$defs/AnalystConfig"
         }
       },
       "title": "Settings",

@@ -31,5 +31,5 @@ model_config
 total_cost
 calculated_total_cost
 
-# @classmethod first argument (required by Python, unused in body)
+# @classmethod first parameter (vulture doesn't understand the decorator protocol)
 cls
