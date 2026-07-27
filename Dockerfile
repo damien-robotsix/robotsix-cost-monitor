@@ -60,12 +60,15 @@ ENV VIRTUAL_ENV=/opt/venv \
 # subscription credentials come from a bind-mounted ~/.claude (see the deploy
 # compose). Harmless when the analyst falls back to OpenRouter.
 # hadolint ignore=DL3008
+# Version pinned in sync with package.json devDependencies — Dependabot tracks it there.
+# When Dependabot bumps package.json, grep this Dockerfile for CLAUDE_CODE_VERSION
+# and update the ARG default so the installed version stays in sync.
+ARG CLAUDE_CODE_VERSION=2.1.220
 RUN apt-get update \
     && apt-get install -y --no-install-recommends nodejs npm \
-    && npm install -g @anthropic-ai/claude-code@2.1.199 \
+    && npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
     && claude --version \
     && rm -rf /var/lib/apt/lists/*
-# Version pinned in sync with package.json devDependencies — Dependabot tracks it there.
 
 # Run as a non-root user with a writable home directory. The UID/GID match
 # the deploy host's user (robotsix = 1001) so the bind-mounted ~/.claude (whose

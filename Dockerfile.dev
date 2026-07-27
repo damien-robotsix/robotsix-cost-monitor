@@ -52,12 +52,15 @@ ENV VIRTUAL_ENV=/opt/venv \
 
 # Install Node.js + claude-code (same as the production image) so the analyst
 # extra works if configured.
+# Version pinned in sync with package.json devDependencies — Dependabot tracks it there.
+# When Dependabot bumps package.json, grep this Dockerfile for CLAUDE_CODE_VERSION
+# and update the ARG default so the installed version stays in sync.
+ARG CLAUDE_CODE_VERSION=2.1.220
 RUN apt-get update \
     && apt-get install -y --no-install-recommends nodejs npm \
-    && npm install -g --ignore-scripts @anthropic-ai/claude-code@2.1.158 \
+    && npm install -g --ignore-scripts @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
     && claude --version \
     && rm -rf /var/lib/apt/lists/*
-# Version pinned in sync with package.json devDependencies — Dependabot tracks it there.
 
 ARG APP_UID=1001
 ARG APP_GID=1001
