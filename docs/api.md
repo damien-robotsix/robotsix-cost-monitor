@@ -24,6 +24,9 @@
 .. automodule:: robotsix_cost_monitor.config
    :members:
 
+.. automodule:: robotsix_cost_monitor.exceptions
+   :members:
+
 .. automodule:: robotsix_cost_monitor.reconcile
    :members:
 
