@@ -321,12 +321,14 @@ async def analyst_run_targeted(
     cfg: Config = Depends(get_config),
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
-    """POST /api/analyst/run/{kind} — run a targeted analysis (ticket or stage)."""
+    """POST /api/analyst/run/{kind} — run targeted analysis (ticket, stage, fleet)."""
+    if kind == "fleet":
+        return await run_analyst(cfg, service)
     if kind == "ticket":
         return await run_ticket_analyst(cfg, service)
     if kind == "stage":
         return await run_stage_analyst(cfg, service)
-    raise HTTPException(status_code=404, detail=f"Unknown analyst kind: {kind}")
+    raise HTTPException(status_code=422, detail=f"Unknown analyst kind: {kind}")
 
 
 @router.get("/api/analyst/{kind}")
