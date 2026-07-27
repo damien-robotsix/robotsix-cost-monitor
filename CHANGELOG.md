@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Bump `@anthropic-ai/claude-code` in both Dockerfiles from 2.1.199/2.1.158 to 2.1.220 to match `package.json`. Added `ARG CLAUDE_CODE_VERSION` in each Dockerfile so future bumps only need to update the ARG default.
 - Add `@anthropic-ai/claude-code` to `package.json` devDependencies so
   Dependabot's npm ecosystem tracks version bumps for the globally-installed
   CLI in the Dockerfiles.
