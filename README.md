@@ -58,7 +58,7 @@ uv run robotsix-cost-monitor analyst [--kind fleet|ticket|stage|all]
 | GET | `/api/by-model` | `?project=<slug\|all>&hours=<N>` | Cost breakdown by model |
 | GET | `/api/backend-trend` | `?project=<slug\|all>&hours=<N>&backend=<all\|backend>` | Cost trend per backend |
 | GET | `/api/trend` | `?project=<slug\|all>&hours=<N>&buckets=<1-200>` | Bucketed cost-over-time trend series |
-| GET | `/api/highlights` | `?project=<slug\|all>&hours=<N>` | Cost summaries (total, change, top agents) |
+| GET | `/api/highlights` | `?project=<slug\|all>&hours=<N>&backend=<all\|backend>` | Most expensive trace and session for the window |
 | GET | `/api/reconcile` | `?project=<slug\|all>` | OpenRouter↔Langfuse reconciliation result |
 | GET | `/api/reconcile/last` | — | Most recent full reconciliation snapshot |
 | GET | `/api/analyst/digest` | `?hours=<N>` | Cost-analysis digest from recent trace data |
