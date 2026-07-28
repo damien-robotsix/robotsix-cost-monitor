@@ -155,6 +155,42 @@ class TestLoadTargetedAnalysis:
         result = analyst_mod.load_targeted_analysis(AnalystKind.TICKET)
         assert result == {"generated_at": None}
 
+    def test_no_file_returns_default_stage(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            "robotsix_cost_monitor.analyst.data_dir", lambda settings=None: tmp_path
+        )
+        result = analyst_mod.load_targeted_analysis(AnalystKind.STAGE)
+        assert result == {"generated_at": None}
+
+    def test_valid_json_stage(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            "robotsix_cost_monitor.analyst.data_dir", lambda settings=None: tmp_path
+        )
+        d = tmp_path / "analyst"
+        d.mkdir()
+        (d / "stage.json").write_text(
+            '{"generated_at": "2025-06-01T12:00:00Z", "summary": "stage ok"}'
+        )
+        result = analyst_mod.load_targeted_analysis(AnalystKind.STAGE)
+        assert result["generated_at"] == "2025-06-01T12:00:00Z"
+        assert result["summary"] == "stage ok"
+
+    def test_invalid_json_returns_default_stage(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            "robotsix_cost_monitor.analyst.data_dir", lambda settings=None: tmp_path
+        )
+        d = tmp_path / "analyst"
+        d.mkdir()
+        (d / "stage.json").write_text("not json")
+        result = analyst_mod.load_targeted_analysis(AnalystKind.STAGE)
+        assert result == {"generated_at": None}
+
     def test_fleet_reads_from_proposals(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

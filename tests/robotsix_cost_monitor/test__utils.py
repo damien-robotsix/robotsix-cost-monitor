@@ -102,3 +102,37 @@ def test_load_targeted_analysis_permission_error(
     )
     with pytest.raises(PermissionError):
         analyst_mod.load_targeted_analysis(analyst_mod.AnalystKind.TICKET)
+
+
+def test_load_targeted_analysis_permission_error_stage(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """load_targeted_analysis propagates PermissionError for kind='stage'."""
+    monkeypatch.setattr(
+        "robotsix_cost_monitor.analyst.data_dir", lambda settings=None: tmp_path
+    )
+    d = tmp_path / "analyst"
+    d.mkdir()
+    (d / "stage.json").write_text("{}")
+    monkeypatch.setattr(
+        Path, "exists", lambda self: (_ for _ in ()).throw(PermissionError)
+    )
+    with pytest.raises(PermissionError):
+        analyst_mod.load_targeted_analysis(analyst_mod.AnalystKind.STAGE)
+
+
+def test_load_targeted_analysis_permission_error_fleet(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """load_targeted_analysis propagates PermissionError for kind='fleet'."""
+    monkeypatch.setattr(
+        "robotsix_cost_monitor.analyst.data_dir", lambda settings=None: tmp_path
+    )
+    d = tmp_path / "analyst"
+    d.mkdir()
+    (d / "proposals.json").write_text("{}")
+    monkeypatch.setattr(
+        Path, "exists", lambda self: (_ for _ in ()).throw(PermissionError)
+    )
+    with pytest.raises(PermissionError):
+        analyst_mod.load_targeted_analysis(analyst_mod.AnalystKind.FLEET)
