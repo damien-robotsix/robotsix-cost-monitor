@@ -18,8 +18,8 @@ multiple projects at once.
   OpenAI-compatible LLM pass that proposes high-confidence cost reductions
   (surfaced in the dashboard, not written to any external board).
 
-No `robotsix-llmio` dependency — the Langfuse and OpenRouter clients are
-self-contained (`httpx`).
+Built on `robotsix-llmio` for Langfuse (`AsyncLangfuseReadClient`) and OpenRouter
+(`OpenRouterKeyCostSource`) — no second client instantiation or direct REST API calls.
 
 ## Setup
 
@@ -38,9 +38,10 @@ committed template. Override the path with `ROBOTSIX_CONFIG_FILE`.
 ## CLI
 
 ```bash
-uv run robotsix-cost-monitor serve [--host H --port P]   # run the dashboard
+uv run robotsix-cost-monitor serve [--host H --port P]     # run the dashboard
 uv run robotsix-cost-monitor summary [--project SLUG --hours N]
 uv run robotsix-cost-monitor reconcile [--project SLUG]
+uv run robotsix-cost-monitor analyst [--kind fleet|ticket|stage|all]
 ```
 
 ## API
@@ -67,7 +68,9 @@ uv run robotsix-cost-monitor reconcile [--project SLUG]
 | POST | `/api/analyst/run/ticket` | — | Trigger a ticket-level targeted analysis run |
 | GET | `/api/analyst/stage` | — | Saved stage-level targeted analysis |
 | POST | `/api/analyst/run/stage` | — | Trigger a stage-level targeted analysis run |
-| POST | `/api/analyst/run/{kind}` | — | Run a targeted analyst analysis (ticket or stage) |
+| GET | `/api/analyst/fleet` | — | Saved fleet-level targeted analysis |
+| POST | `/api/analyst/run/fleet` | — | Trigger a fleet-level targeted analysis run |
+| POST | `/api/analyst/run/{kind}` | — | Run a targeted analyst analysis (ticket, stage, or fleet) |
 
 ## Architecture
 
