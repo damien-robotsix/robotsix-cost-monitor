@@ -19,6 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from robotsix_cost_monitor import __version__
 
 from .analyst import (
+    AnalystKind,
     load_proposals,
     load_targeted_analysis,
     run_analyst,
@@ -153,8 +154,8 @@ def _last_analyst_run(settings: Settings | None = None) -> datetime | None:
     """
     stamps = (
         load_proposals(settings).get("generated_at"),
-        load_targeted_analysis("ticket", settings).get("generated_at"),
-        load_targeted_analysis("stage", settings).get("generated_at"),
+        load_targeted_analysis(AnalystKind.TICKET, settings).get("generated_at"),
+        load_targeted_analysis(AnalystKind.STAGE, settings).get("generated_at"),
     )
     runs = [dt for dt in (_parse_iso(s) for s in stamps) if dt is not None]
     return max(runs) if runs else None
@@ -189,9 +190,9 @@ async def _analyst_loop(cfg: Config, service: CostService, hours: float) -> None
     """
     interval = max(1.0, hours) * 3600
     analyses = (
-        ("fleet", run_analyst),
-        ("ticket", run_ticket_analyst),
-        ("stage", run_stage_analyst),
+        (AnalystKind.FLEET, run_analyst),
+        (AnalystKind.TICKET, run_ticket_analyst),
+        (AnalystKind.STAGE, run_stage_analyst),
     )
     delay = _initial_analyst_delay(
         interval, _last_analyst_run(cfg.settings), datetime.now(UTC)

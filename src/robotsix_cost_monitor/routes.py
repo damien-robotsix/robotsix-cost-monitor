@@ -322,11 +322,11 @@ async def analyst_run_targeted(
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
     """POST /api/analyst/run/{kind} — run targeted analysis (ticket, stage, fleet)."""
-    if kind == "fleet":
+    if kind == AnalystKind.FLEET:
         return await run_analyst(cfg, service)
-    if kind == "ticket":
+    if kind == AnalystKind.TICKET:
         return await run_ticket_analyst(cfg, service)
-    if kind == "stage":
+    if kind == AnalystKind.STAGE:
         return await run_stage_analyst(cfg, service)
     raise HTTPException(status_code=422, detail=f"Unknown analyst kind: {kind}")
 
