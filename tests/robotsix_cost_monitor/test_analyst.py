@@ -23,6 +23,7 @@ from robotsix_cost_monitor.analyst import (
     _TICKET_SYSTEM,
     _TRACE_SYSTEM,
     Analysis,
+    AnalystKind,
     Proposal,
     _parse_analysis,
     run_analyst,
@@ -126,7 +127,7 @@ class TestLoadTargetedAnalysis:
         monkeypatch.setattr(
             "robotsix_cost_monitor.analyst.data_dir", lambda settings=None: tmp_path
         )
-        result = analyst_mod.load_targeted_analysis("ticket")
+        result = analyst_mod.load_targeted_analysis(AnalystKind.TICKET)
         assert result == {"generated_at": None}
 
     def test_valid_json(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -138,7 +139,7 @@ class TestLoadTargetedAnalysis:
         (d / "ticket.json").write_text(
             '{"generated_at": "2025-01-01T00:00:00Z", "summary": "ok"}'
         )
-        result = analyst_mod.load_targeted_analysis("ticket")
+        result = analyst_mod.load_targeted_analysis(AnalystKind.TICKET)
         assert result["generated_at"] == "2025-01-01T00:00:00Z"
         assert result["summary"] == "ok"
 
@@ -151,7 +152,7 @@ class TestLoadTargetedAnalysis:
         d = tmp_path / "analyst"
         d.mkdir()
         (d / "ticket.json").write_text("not json")
-        result = analyst_mod.load_targeted_analysis("ticket")
+        result = analyst_mod.load_targeted_analysis(AnalystKind.TICKET)
         assert result == {"generated_at": None}
 
     def test_fleet_reads_from_proposals(
@@ -165,7 +166,7 @@ class TestLoadTargetedAnalysis:
         (d / "proposals.json").write_text(
             '{"generated_at": "2025-06-01T12:00:00Z", "proposals": [{"title": "p1"}]}'
         )
-        result = analyst_mod.load_targeted_analysis("fleet")
+        result = analyst_mod.load_targeted_analysis(AnalystKind.FLEET)
         assert result["generated_at"] == "2025-06-01T12:00:00Z"
         assert result["proposals"] == [{"title": "p1"}]
 
@@ -400,7 +401,7 @@ async def test_run_opus_analysis_and_file(
         system_prompt="test prompt",
         name="test",
         payload="{}",
-        out_prefix="ticket",
+        out_prefix=AnalystKind.TICKET,
         data_dir=tmp_path,
         extra_out={"extra": "data"},
     )
@@ -434,7 +435,7 @@ async def test_run_opus_analysis_and_file_without_filing(
         system_prompt="test prompt",
         name="test",
         payload="{}",
-        out_prefix="fleet",
+        out_prefix=AnalystKind.FLEET,
         data_dir=tmp_path,
     )
     assert out["enabled"] is True

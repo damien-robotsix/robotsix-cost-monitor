@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Convert `AnalystKind` from a `Literal` type alias to a `StrEnum` with members `TICKET`, `STAGE`, `FLEET`. All dispatch sites updated to enum comparisons — adding a fourth kind now only requires an enum member and the type checker flags every incomplete dispatch.
 - Fix `GET /api/analyst/fleet` always returning `{"generated_at": None}` by reading from `proposals.json` (where `run_analyst()` writes) instead of the never-written `fleet.json`.
 - Update `README.md`: correct stale "no robotsix-llmio dependency" claim, add missing `GET /api/analyst/fleet` and `POST /api/analyst/run/fleet` API rows, document `analyst` CLI subcommand.
 - Added `"fleet"` handling to the `POST /api/analyst/run/{kind}` route so the API matches the CLI behavior of running the full fleet analyst.  Changed the fallback status code from 404 to 422 for unknown analyst kinds.

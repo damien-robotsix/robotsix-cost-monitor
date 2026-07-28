@@ -14,8 +14,9 @@ import asyncio
 import contextlib
 import json
 from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -23,8 +24,14 @@ from ._utils import safe_load_json
 from .config import AnalystConfig, Config, Settings, data_dir
 from .service import CostService
 
-#: Pseudo-enum for the three analysis scopes.
-AnalystKind = Literal["ticket", "stage", "fleet"]
+
+class AnalystKind(StrEnum):
+    """Enum for the three analysis scopes."""
+
+    TICKET = "ticket"
+    STAGE = "stage"
+    FLEET = "fleet"
+
 
 #: Cap a single trace's serialized detail handed to the trace agent.
 _TRACE_CHAR_CAP = 24_000
@@ -386,7 +393,7 @@ def load_targeted_analysis(
     kind: AnalystKind, settings: Settings | None = None
 ) -> dict[str, Any]:
     """Last stored ticket/stage/fleet analysis (for the page); empty when none yet."""
-    if kind == "fleet":
+    if kind == AnalystKind.FLEET:
         return safe_load_json(_store_path(settings), {"generated_at": None})
     return safe_load_json(_targeted_store_path(kind, settings), {"generated_at": None})
 
@@ -433,7 +440,7 @@ async def run_ticket_analyst(config: Config, service: CostService) -> dict[str, 
     top = await service.top_ticket("all", a.window_hours)
     if not top:
         return _no_top_early_return(
-            "ticket", "no ticket sessions in the window", config.settings
+            AnalystKind.TICKET, "no ticket sessions in the window", config.settings
         )
 
     board_id, ticket_id = _split_session(top["session_id"])
@@ -456,7 +463,7 @@ async def run_ticket_analyst(config: Config, service: CostService) -> dict[str, 
         system_prompt=_TICKET_SYSTEM,
         name="cost-analyst-ticket",
         payload=payload,
-        out_prefix="ticket",
+        out_prefix=AnalystKind.TICKET,
         data_dir=config.settings.data_dir,
         extra_out={
             "session_id": top["session_id"],
@@ -484,7 +491,9 @@ async def run_stage_analyst(config: Config, service: CostService) -> dict[str, A
 
     top = await service.top_stage("all", a.window_hours, sample=a.max_trace_analyses)
     if not top:
-        return _no_top_early_return("stage", "no traces in the window", config.settings)
+        return _no_top_early_return(
+            AnalystKind.STAGE, "no traces in the window", config.settings
+        )
 
     sampled: list[dict[str, Any]] = []
     for t in top["traces"]:
@@ -507,7 +516,7 @@ async def run_stage_analyst(config: Config, service: CostService) -> dict[str, A
         system_prompt=_STAGE_SYSTEM,
         name="cost-analyst-stage",
         payload=payload,
-        out_prefix="stage",
+        out_prefix=AnalystKind.STAGE,
         data_dir=config.settings.data_dir,
         extra_out={
             "stage": top["stage"],

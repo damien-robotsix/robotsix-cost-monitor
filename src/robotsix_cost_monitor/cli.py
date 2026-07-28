@@ -9,7 +9,7 @@ import sys
 
 import uvicorn
 
-from .analyst import run_analyst, run_stage_analyst, run_ticket_analyst
+from .analyst import AnalystKind, run_analyst, run_stage_analyst, run_ticket_analyst
 from .config import load_config
 from .reconcile import reconcile_project
 from .service import CostService
@@ -35,7 +35,7 @@ def main(argv: list[str] | None = None) -> int:
     analyst.add_argument(
         "--kind",
         default="all",
-        choices=["all", "fleet", "ticket", "stage"],
+        choices=["all"] + [k.value for k in AnalystKind],
         help="analysis kind: fleet, ticket, stage, or all (default)",
     )
 
@@ -75,17 +75,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "analyst":
         svc = CostService(cfg)
         kind = args.kind
-        if kind == "fleet":
+        if kind == AnalystKind.FLEET:
             result = asyncio.run(run_analyst(cfg, svc))
-        elif kind == "ticket":
+        elif kind == AnalystKind.TICKET:
             result = asyncio.run(run_ticket_analyst(cfg, svc))
-        elif kind == "stage":
+        elif kind == AnalystKind.STAGE:
             result = asyncio.run(run_stage_analyst(cfg, svc))
         else:  # all
             result = {
-                "fleet": asyncio.run(run_analyst(cfg, svc)),
-                "ticket": asyncio.run(run_ticket_analyst(cfg, svc)),
-                "stage": asyncio.run(run_stage_analyst(cfg, svc)),
+                AnalystKind.FLEET: asyncio.run(run_analyst(cfg, svc)),
+                AnalystKind.TICKET: asyncio.run(run_ticket_analyst(cfg, svc)),
+                AnalystKind.STAGE: asyncio.run(run_stage_analyst(cfg, svc)),
             }
         print(json.dumps(result, indent=2))
         return 0
