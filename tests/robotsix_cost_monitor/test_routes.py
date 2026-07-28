@@ -550,6 +550,15 @@ def test_analyst_stage_loads() -> None:
         assert r.status_code == 200
 
 
+def test_analyst_fleet_loads() -> None:
+    with patch(
+        "robotsix_cost_monitor.routes.load_targeted_analysis",
+        return_value={"generated_at": None},
+    ):
+        r = _client().get("/api/analyst/fleet")
+        assert r.status_code == 200
+
+
 def test_analyst_run() -> None:
     with patch(
         "robotsix_cost_monitor.routes.run_analyst",

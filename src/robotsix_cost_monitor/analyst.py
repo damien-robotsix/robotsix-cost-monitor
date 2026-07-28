@@ -385,7 +385,9 @@ def _no_top_early_return(
 def load_targeted_analysis(
     kind: AnalystKind, settings: Settings | None = None
 ) -> dict[str, Any]:
-    """Last stored ticket/stage analysis (for the page); empty when none yet."""
+    """Last stored ticket/stage/fleet analysis (for the page); empty when none yet."""
+    if kind == "fleet":
+        return safe_load_json(_store_path(settings), {"generated_at": None})
     return safe_load_json(_targeted_store_path(kind, settings), {"generated_at": None})
 
 

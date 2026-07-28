@@ -154,6 +154,21 @@ class TestLoadTargetedAnalysis:
         result = analyst_mod.load_targeted_analysis("ticket")
         assert result == {"generated_at": None}
 
+    def test_fleet_reads_from_proposals(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            "robotsix_cost_monitor.analyst.data_dir", lambda settings=None: tmp_path
+        )
+        d = tmp_path / "analyst"
+        d.mkdir()
+        (d / "proposals.json").write_text(
+            '{"generated_at": "2025-06-01T12:00:00Z", "proposals": [{"title": "p1"}]}'
+        )
+        result = analyst_mod.load_targeted_analysis("fleet")
+        assert result["generated_at"] == "2025-06-01T12:00:00Z"
+        assert result["proposals"] == [{"title": "p1"}]
+
 
 async def test_disabled_without_key() -> None:
     out = await run_analyst(_config(), _FakeService())  # type: ignore[arg-type]

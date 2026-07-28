@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Fix `GET /api/analyst/fleet` always returning `{"generated_at": None}` by reading from `proposals.json` (where `run_analyst()` writes) instead of the never-written `fleet.json`.
 - Added `"fleet"` handling to the `POST /api/analyst/run/{kind}` route so the API matches the CLI behavior of running the full fleet analyst.  Changed the fallback status code from 404 to 422 for unknown analyst kinds.
 - Document the `auth` settings field and its `AuthConfig` sub-fields in the configuration reference (`docs/reference/configuration.md`).
 - Added `robotsix_cost_monitor.exceptions` module to API docs (`docs/api.md`).
