@@ -216,7 +216,7 @@ export function stageHeader(run) {
 
 /**
  * Wire up a targeted analysis button (ticket or stage).
- * @param {'ticket' | 'stage'} kind
+ * @param {'ticket' | 'stage' | 'fleet'} kind
  * @param {string} btnId - button element id
  * @param {string} containerId - result container element id
  * @param {(run: AnalystRun) => string} headerFn
