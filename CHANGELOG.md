@@ -1,6 +1,10 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Highlights ("most expensive trace" / "most expensive ticket") now respect the
+  backend selector. The `/api/highlights` endpoint accepts a `backend` query
+  parameter (defaults to `all`), and the dashboard passes the currently selected
+  backend so the highlight values stay consistent with the other filtered panels.
 - Convert `AnalystKind` from a `Literal` type alias to a `StrEnum` with members `TICKET`, `STAGE`, `FLEET`. All dispatch sites updated to enum comparisons — adding a fourth kind now only requires an enum member and the type checker flags every incomplete dispatch.
 - Fix `GET /api/analyst/fleet` always returning `{"generated_at": None}` by reading from `proposals.json` (where `run_analyst()` writes) instead of the never-written `fleet.json`.
 - Update `README.md`: correct stale "no robotsix-llmio dependency" claim, add missing `GET /api/analyst/fleet` and `POST /api/analyst/run/fleet` API rows, document `analyst` CLI subcommand.

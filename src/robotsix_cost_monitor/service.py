@@ -482,10 +482,23 @@ class CostService:
         all_traces = [t for _, traces in gathered for t in traces]
         return cost_trend(all_traces, hours, buckets)
 
-    async def highlights(self, slug: str | None, hours: int) -> dict[str, Any]:
-        """Return dashboard highlights: top trace, session, and summary stats."""
+    async def highlights(
+        self, slug: str | None, hours: int, backend: str = "all"
+    ) -> dict[str, Any]:
+        """Return dashboard highlights: top trace, session, and summary stats.
+
+        When *backend* is not ``"all"``, traces are filtered to only those
+        whose name appears in the agent-usage rows for that backend, keeping
+        the highlights consistent with the backend selector.
+        """
         gathered = await self._gather(slug, hours)
         all_traces = [t for _, traces in gathered for t in traces]
+        if backend != "all":
+            agent_rows = await self._gather_list_results(slug, hours, self._agent_usage)
+            backend_names: set[str] = {
+                r["name"] for r in agent_rows if r.get("backend") == backend
+            }
+            all_traces = [t for t in all_traces if t.name in backend_names]
         return {
             "most_expensive_trace": most_expensive_trace(all_traces),
             "most_expensive_session": most_expensive_session(all_traces),

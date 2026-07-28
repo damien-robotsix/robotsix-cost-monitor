@@ -399,7 +399,7 @@ export async function refresh() {
       getJSON(trendPath),
       getJSON(`${API.BY_AGENT_SEG}${qs()}`),
       getJSON(`${API.BY_MODEL}${qs()}`),
-      getJSON(`${API.HIGHLIGHTS}${qs()}`),
+      getJSON(`${API.HIGHLIGHTS}${qs()}&${QS.BACKEND}=${encodeURIComponent(backend)}`),
     ]);
     populateBackends(models);
     const modelRows =

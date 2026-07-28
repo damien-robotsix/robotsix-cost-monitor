@@ -260,11 +260,16 @@ async def trend(
 
 @router.get("/api/highlights")
 async def highlights(
+    backend: str = Query("all"),
     pw: ProjectWindow = Depends(project_window),
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
-    """GET /api/highlights — summaries (total, change, top agents) for the window."""
-    return await service.highlights(pw.project, pw.hours)
+    """GET /api/highlights — most expensive trace and session for the window.
+
+    Accepts an optional ``backend`` query parameter to filter results to
+    a specific backend (e.g. ``openrouter``).  Defaults to ``all``.
+    """
+    return await service.highlights(pw.project, pw.hours, backend)
 
 
 @router.get("/api/reconcile")

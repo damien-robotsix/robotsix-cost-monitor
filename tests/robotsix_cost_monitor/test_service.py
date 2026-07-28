@@ -536,6 +536,82 @@ async def test_cross_project_highlights_finds_best_across_projects() -> None:
     assert result["most_expensive_session"]["session_id"] == "s2"
 
 
+async def test_highlights_backend_all_unchanged() -> None:
+    """backend='all' returns the most expensive trace/session from all traces."""
+    traces = [trace(1.0, "review", session="a"), trace(9.0, "implement", session="b")]
+    svc = _svc(_proj("x"))
+    object.__setattr__(
+        svc._clients["x"], "fetch_traces_window", AsyncMock(return_value=traces)
+    )
+    # fetch_agent_usage_window must NOT be called when backend='all'
+    object.__setattr__(
+        svc._clients["x"], "fetch_agent_usage_window", AsyncMock(return_value=[])
+    )
+
+    result = await svc.highlights("x", 24, backend="all")
+    assert result["most_expensive_trace"]["cost"] == 9.0
+    assert result["most_expensive_session"]["session_id"] == "b"
+    assert svc._clients["x"].fetch_agent_usage_window.call_count == 0  # type: ignore[attr-defined]
+
+
+async def test_highlights_backend_specific_filters() -> None:
+    """With a specific backend, only traces whose name appears in that backend
+    are considered for the highlights."""
+    traces = [
+        trace(1.0, "review", session="a"),
+        trace(9.0, "implement", session="b"),
+        trace(3.0, "audit", session="c"),
+    ]
+    svc = _svc(_proj("x"))
+    object.__setattr__(
+        svc._clients["x"], "fetch_traces_window", AsyncMock(return_value=traces)
+    )
+    object.__setattr__(
+        svc._clients["x"],
+        "fetch_agent_usage_window",
+        AsyncMock(
+            return_value=[
+                {"name": "implement", "backend": "claude-sdk", "cost": 9.0, "count": 1},
+                {"name": "review", "backend": "openrouter", "cost": 1.0, "count": 1},
+            ]
+        ),
+    )
+
+    # Only "implement" is in claude-sdk → the 9.0 trace should be the top
+    result = await svc.highlights("x", 24, backend="claude-sdk")
+    assert result["most_expensive_trace"] is not None
+    assert result["most_expensive_trace"]["cost"] == 9.0
+    assert result["most_expensive_session"]["session_id"] == "b"
+
+    # Only "review" is in openrouter → the 1.0 trace should be the top
+    result = await svc.highlights("x", 24, backend="openrouter")
+    assert result["most_expensive_trace"] is not None
+    assert result["most_expensive_trace"]["cost"] == 1.0
+    assert result["most_expensive_session"]["session_id"] == "a"
+
+
+async def test_highlights_backend_no_match_returns_none() -> None:
+    """When no traces match the requested backend, both highlights are None."""
+    traces = [trace(5.0, "implement", session="a")]
+    svc = _svc(_proj("x"))
+    object.__setattr__(
+        svc._clients["x"], "fetch_traces_window", AsyncMock(return_value=traces)
+    )
+    object.__setattr__(
+        svc._clients["x"],
+        "fetch_agent_usage_window",
+        AsyncMock(
+            return_value=[
+                {"name": "implement", "backend": "openrouter", "cost": 5.0, "count": 1},
+            ]
+        ),
+    )
+
+    result = await svc.highlights("x", 24, backend="claude-sdk")
+    assert result["most_expensive_trace"] is None
+    assert result["most_expensive_session"] is None
+
+
 async def test_cross_project_candidate_traces_merges_and_sorts() -> None:
     svc = _svc(_proj("a"), _proj("b"))
     # Distinct agent names so per-agent selection keeps all three (this test

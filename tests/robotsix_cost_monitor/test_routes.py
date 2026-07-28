@@ -450,7 +450,13 @@ def test_trend_defaults(client: TestClient) -> None:
 def test_highlights_defaults(client: TestClient) -> None:
     r = client.get("/api/highlights?hours=24")
     assert r.status_code == 200
-    client.app.state.service.highlights.assert_called_once_with("all", 24)  # type: ignore[attr-defined]
+    client.app.state.service.highlights.assert_called_once_with("all", 24, "all")  # type: ignore[attr-defined]
+
+
+def test_highlights_with_backend(client: TestClient) -> None:
+    r = client.get("/api/highlights?hours=24&backend=openrouter")
+    assert r.status_code == 200
+    client.app.state.service.highlights.assert_called_once_with("all", 24, "openrouter")  # type: ignore[attr-defined]
 
 
 def test_reconcile_project_not_found_404(client: TestClient) -> None:
