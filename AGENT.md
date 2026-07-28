@@ -70,6 +70,7 @@ Never bypass the Pydantic validation.
 
 ```python
 from robotsix_llmio.logging import setup_logging
+
 setup_logging(loggers=["robotsix_cost_monitor"], fmt="json")
 ```
 
@@ -80,6 +81,7 @@ second logging framework or replace this call.
 
 ```python
 from robotsix_config import load_config
+
 config = load_config(Config, path=path)
 ```
 
@@ -89,6 +91,7 @@ Called in `config.py:load_config()`. Never add a second config loader.
 
 ```python
 from robotsix_llmio.core import AsyncLangfuseReadClient
+
 client = AsyncLangfuseReadClient(public_key=..., secret_key=..., base_url=...)
 ```
 

@@ -101,4 +101,4 @@ def test_load_targeted_analysis_permission_error(
         Path, "exists", lambda self: (_ for _ in ()).throw(PermissionError)
     )
     with pytest.raises(PermissionError):
-        analyst_mod.load_targeted_analysis("ticket")
+        analyst_mod.load_targeted_analysis(analyst_mod.AnalystKind.TICKET)
