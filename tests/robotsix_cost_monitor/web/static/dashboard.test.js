@@ -558,6 +558,25 @@ describe('renderReconcile', () => {
     const el = document.getElementById('reconcile');
     expect(el.innerHTML).toContain('$42.50');
   });
+
+  it('renders low-balance pill when low_balance is true', () => {
+    fixture('<div id="reconcile"></div>');
+    renderReconcile([
+      {
+        project: 'lowproj',
+        configured: true,
+        provider_delta_usd: 5,
+        langfuse_cost_usd: 5,
+        drift_usd: 0,
+        within_tolerance: true,
+        low_balance: true,
+        balance: { remaining: 2.30 },
+      },
+    ]);
+    const el = document.getElementById('reconcile');
+    expect(el.innerHTML).toContain('low bal');
+    expect(el.querySelector('.pill.bad')).not.toBeNull();
+  });
 });
 
 describe('renderHighlights', () => {
@@ -711,9 +730,31 @@ describe('renderReconBanner', () => {
     renderReconBanner(last);
     const el = document.getElementById('recon-banner');
     expect(el.hidden).toBe(false);
-    expect(el.innerHTML).toContain('cost reconciliation drift');
+    expect(el.innerHTML).toContain('cost reconciliation warning');
     expect(el.innerHTML).toContain('myproj');
     expect(el.innerHTML).toContain('$2.00');
+  });
+
+  it('shows banner with low-balance details', () => {
+    fixture('<div id="recon-banner"></div>');
+    const last = {
+      status: 'warning',
+      generated_at: '2025-06-15T12:00:00Z',
+      results: [
+        {
+          project: 'lowproj',
+          low_balance: true,
+          balance: { remaining: 3.50 },
+        },
+      ],
+    };
+    renderReconBanner(last);
+    const el = document.getElementById('recon-banner');
+    expect(el.hidden).toBe(false);
+    expect(el.innerHTML).toContain('cost reconciliation warning');
+    expect(el.innerHTML).toContain('lowproj');
+    expect(el.innerHTML).toContain('low balance');
+    expect(el.innerHTML).toContain('$3.50');
   });
 
   it('shows banner with error details', () => {
@@ -792,7 +833,7 @@ describe('refreshReconMeta', () => {
       const banner = document.getElementById('recon-banner');
       const when = document.getElementById('recon-when');
       expect(banner.hidden).toBe(false);
-      expect(banner.innerHTML).toContain('cost reconciliation drift');
+      expect(banner.innerHTML).toContain('cost reconciliation warning');
       expect(when.textContent).toContain('last checked');
     } finally {
       globalThis.fetch = origFetch;
