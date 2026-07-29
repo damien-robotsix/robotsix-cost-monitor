@@ -570,7 +570,7 @@ describe('renderReconcile', () => {
         drift_usd: 0,
         within_tolerance: true,
         low_balance: true,
-        balance: { remaining: 2.30 },
+        balance: { remaining: 2.3 },
       },
     ]);
     const el = document.getElementById('reconcile');
@@ -744,7 +744,7 @@ describe('renderReconBanner', () => {
         {
           project: 'lowproj',
           low_balance: true,
-          balance: { remaining: 3.50 },
+          balance: { remaining: 3.5 },
         },
       ],
     };

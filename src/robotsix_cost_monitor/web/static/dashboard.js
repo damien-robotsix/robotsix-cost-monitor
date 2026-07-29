@@ -63,6 +63,7 @@ import { $, API, QS, esc, fmt, getJSON, setStatus } from './shared.js';
  * @property {number} [langfuse_total_cost_usd]
  * @property {number} [drift_usd]
  * @property {boolean} [within_tolerance]
+ * @property {boolean} [low_balance]
  * @property {{remaining: number}} [balance]
  */
 
