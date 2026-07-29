@@ -59,6 +59,13 @@ modules:
     paths:
       - src/robotsix_cost_monitor/service.py
       - tests/robotsix_cost_monitor/test_service.py
+      - tests/robotsix_cost_monitor/test_service_by_agent.py
+      - tests/robotsix_cost_monitor/test_service_by_agent_segmented.py
+      - tests/robotsix_cost_monitor/test_service_cache.py
+      - tests/robotsix_cost_monitor/test_service_cross_project.py
+      - tests/robotsix_cost_monitor/test_service_edge_cases.py
+      - tests/robotsix_cost_monitor/test_service_exception_isolation.py
+      - tests/robotsix_cost_monitor/test_service_single_project.py
 
   - id: reconcile
     description: OpenRouter ↔ Langfuse cost reconciliation via snapshots

@@ -28,6 +28,7 @@ from pydantic import SecretStr
 
 from robotsix_cost_monitor.clients.models import LangfuseTrace
 from robotsix_cost_monitor.config import AnalystConfig, Config, ProjectConfig, Settings
+from robotsix_cost_monitor.service import CostService
 
 # ---------------------------------------------------------------------------
 # LangfuseTrace builder
@@ -137,6 +138,42 @@ def _mock_client(**overrides: object) -> Mock:
     for k, v in overrides.items():
         setattr(client, k, v)
     return client
+
+
+# ---------------------------------------------------------------------------
+# CostService factory (file-local to test_service.py — moved here for reuse)
+# ---------------------------------------------------------------------------
+
+
+def _svc(*projects: ProjectConfig, **config_kwargs: Any) -> CostService:
+    """CostService whose LangfuseClient instances are all mocks.
+
+    ``config_kwargs`` are forwarded to ``_config`` (e.g. ``subscription_call_cap``).
+    """
+    cfg = _config(*projects, **config_kwargs)
+    svc = CostService(cfg)
+    for slug in list(svc._clients):
+        svc._clients[slug] = _mock_client()
+    return svc
+
+
+def _model_row(
+    model: str = "opus",
+    cost: float = 1.0,
+    input_tokens: int = 100,
+    output_tokens: int = 50,
+    total_tokens: int = 150,
+    observations: int = 1,
+) -> dict[str, Any]:
+    return {
+        "model": model,
+        "backend": "claude-sdk",
+        "cost": cost,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": total_tokens,
+        "observations": observations,
+    }
 
 
 # ---------------------------------------------------------------------------
