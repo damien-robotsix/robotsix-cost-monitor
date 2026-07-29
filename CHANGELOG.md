@@ -1,6 +1,10 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Split `tests/robotsix_cost_monitor/test_service.py` (1387 lines) into 7 per-section modules
+  (`test_service_edge_cases.py`, `test_service_single_project.py`, `test_service_cache.py`,
+  `test_service_cross_project.py`, `test_service_exception_isolation.py`, `test_service_by_agent.py`,
+  `test_service_by_agent_segmented.py`) and moved `_svc` / `_model_row` helpers into `helpers.py`.
 - Highlights ("most expensive trace" / "most expensive ticket") now respect the
   backend selector. The `/api/highlights` endpoint accepts a `backend` query
   parameter (defaults to `all`), and the dashboard passes the currently selected
