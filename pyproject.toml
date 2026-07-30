@@ -60,6 +60,7 @@ robotsix-modules = { git = "https://github.com/damien-robotsix/robotsix-modules.
 
 [tool.uv]
 constraint-dependencies = ["pydantic-settings>=2.14.2"]
+exclude-newer = "3 days"
 
 [tool.ruff]
 line-length = 88

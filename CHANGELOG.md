@@ -5,6 +5,7 @@
   OpenRouter account remaining balance drops below this threshold during
   reconciliation, a warning is logged and surfaced in the dashboard via a
   "low bal" pill and the reconcile warning banner.
+- Add `exclude-newer = "3 days"` to `[tool.uv]` for supply-chain hardening (cooldown window for newly-published packages).
 - Split `tests/robotsix_cost_monitor/test_service.py` (1387 lines) into 7 per-section modules
   (`test_service_edge_cases.py`, `test_service_single_project.py`, `test_service_cache.py`,
   `test_service_cross_project.py`, `test_service_exception_isolation.py`, `test_service_by_agent.py`,
