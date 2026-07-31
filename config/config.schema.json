@@ -246,6 +246,12 @@
           "title": "Subscription Call Cap",
           "type": "integer"
         },
+        "low_balance_threshold_usd": {
+          "advanced": true,
+          "default": 5.0,
+          "title": "Low Balance Threshold Usd",
+          "type": "number"
+        },
         "data_dir": {
           "advanced": true,
           "default": ".data",

@@ -69,6 +69,8 @@ def test_reconcile_status() -> None:
     assert reconcile_status([{"within_tolerance": False}]) == "warning"
     # an error → warning
     assert reconcile_status([{"error": "boom"}]) == "warning"
+    # low balance → warning
+    assert reconcile_status([{"low_balance": True}]) == "warning"
     # every comparable project still on its first snapshot → pending
     assert reconcile_status([{"detail": "first snapshot recorded"}]) == "pending"
     # within tolerance → ok
@@ -159,7 +161,72 @@ async def test_openrouter_credits_fetch_failure_ignored(
     # Credits failure is suppressed — no error, no balance key
     assert "error" not in result
     assert "balance" not in result
+    assert "low_balance" not in result
     assert "first snapshot recorded" in result["detail"]
+
+
+async def test_low_balance_threshold_triggered(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Balance below threshold sets low_balance flag and logs a warning."""
+    monkeypatch.setattr(
+        "robotsix_cost_monitor.reconcile.data_dir", lambda settings=None: tmp_path
+    )
+
+    proj = _proj("demo")
+    with (
+        patch("robotsix_llmio.openrouter.OpenRouterKeyCostSource") as orc_cls,
+        patch(
+            "robotsix_cost_monitor.reconcile._fetch_credits",
+            AsyncMock(
+                return_value={
+                    "total_credits": 10.0,
+                    "total_usage": 9.5,
+                    "remaining": 0.50,
+                }
+            ),
+        ),
+    ):
+        mock_orc = orc_cls.return_value
+        mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=5.0))
+
+        result = await reconcile_project(proj, _settings(data_dir=tmp_path))
+
+    assert result["low_balance"] is True
+    assert result["balance"]["remaining"] == 0.50
+
+
+async def test_low_balance_threshold_disabled(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Threshold of 0 disables the low-balance check."""
+    monkeypatch.setattr(
+        "robotsix_cost_monitor.reconcile.data_dir", lambda settings=None: tmp_path
+    )
+
+    proj = _proj("demo")
+    settings = _settings(data_dir=tmp_path)
+    settings.low_balance_threshold_usd = 0.0
+
+    with (
+        patch("robotsix_llmio.openrouter.OpenRouterKeyCostSource") as orc_cls,
+        patch(
+            "robotsix_cost_monitor.reconcile._fetch_credits",
+            AsyncMock(
+                return_value={
+                    "total_credits": 10.0,
+                    "total_usage": 9.5,
+                    "remaining": 0.50,
+                }
+            ),
+        ),
+    ):
+        mock_orc = orc_cls.return_value
+        mock_orc.fetch_key_usage = Mock(return_value=KeyUsage(usage=5.0))
+
+        result = await reconcile_project(proj, settings)
+
+    assert "low_balance" not in result
 
 
 async def test_first_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

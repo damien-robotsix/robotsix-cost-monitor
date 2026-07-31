@@ -1,6 +1,10 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Add `low_balance_threshold_usd` config field (default $5.00) — when the
+  OpenRouter account remaining balance drops below this threshold during
+  reconciliation, a warning is logged and surfaced in the dashboard via a
+  "low bal" pill and the reconcile warning banner.
 - Split `tests/robotsix_cost_monitor/test_service.py` (1387 lines) into 7 per-section modules
   (`test_service_edge_cases.py`, `test_service_single_project.py`, `test_service_cache.py`,
   `test_service_cross_project.py`, `test_service_exception_isolation.py`, `test_service_by_agent.py`,

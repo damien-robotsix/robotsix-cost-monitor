@@ -63,6 +63,7 @@ import { $, API, QS, esc, fmt, getJSON, setStatus } from './shared.js';
  * @property {number} [langfuse_total_cost_usd]
  * @property {number} [drift_usd]
  * @property {boolean} [within_tolerance]
+ * @property {boolean} [low_balance]
  * @property {{remaining: number}} [balance]
  */
 
@@ -298,9 +299,11 @@ export function renderReconcile(rows) {
       const bal = r.balance ? `bal ${fmt(r.balance.remaining)}` : '';
       if (r.detail)
         return `<div class="recon-row"><span>${esc(r.project)}</span><span class="muted">${esc(r.detail)}</span><span class="muted">${bal}</span><span></span><span></span></div>`;
-      const pill = r.within_tolerance
-        ? '<span class="pill ok">clean</span>'
-        : '<span class="pill bad">drift</span>';
+      const pill = r.low_balance
+        ? '<span class="pill bad">low bal</span>'
+        : r.within_tolerance
+          ? '<span class="pill ok">clean</span>'
+          : '<span class="pill bad">drift</span>';
       return `<div class="recon-row"><span>${esc(r.project)}</span><span class="muted">provider ${fmt(r.provider_delta_usd)}</span><span class="muted">traced ${fmt(r.langfuse_cost_usd)}${r.langfuse_total_cost_usd !== undefined && r.langfuse_total_cost_usd !== null && Math.abs(r.langfuse_total_cost_usd - (r.langfuse_cost_usd ?? 0)) > 1e-9 ? ` (all ${fmt(r.langfuse_total_cost_usd)})` : ''}</span><span class="${r.within_tolerance ? 'ok' : 'drift'}">Δ ${fmt(r.drift_usd)}</span><span>${pill} <span class="muted">${bal}</span></span></div>`;
     })
     .join('');
@@ -319,16 +322,21 @@ export function renderReconBanner(last) {
     el.hidden = true;
     return;
   }
-  const bad = (last.results || []).filter((r) => r.error || r.within_tolerance === false);
+  const bad = (last.results || []).filter(
+    (r) => r.error || r.within_tolerance === false || r.low_balance,
+  );
   const when = last.generated_at ? new Date(last.generated_at).toLocaleString() : '';
   const items = bad
-    .map((r) =>
-      r.error
-        ? `${esc(r.project)}: ${esc(r.error)}`
-        : `${esc(r.project)}: Δ ${fmt(r.drift_usd)} (provider ${fmt(r.provider_delta_usd)} vs traced ${fmt(r.langfuse_cost_usd)})`,
-    )
+    .map((r) => {
+      if (r.error) return `${esc(r.project)}: ${esc(r.error)}`;
+      if (r.low_balance)
+        return r.balance
+          ? `${esc(r.project)}: low balance — $${fmt(r.balance.remaining)} remaining`
+          : `${esc(r.project)}: low balance`;
+      return `${esc(r.project)}: Δ ${fmt(r.drift_usd)} (provider ${fmt(r.provider_delta_usd)} vs traced ${fmt(r.langfuse_cost_usd)})`;
+    })
     .join(' · ');
-  el.innerHTML = `<b>⚠ cost reconciliation drift</b> — ${items} <span class="banner-when">checked ${when}</span>`;
+  el.innerHTML = `<b>⚠ cost reconciliation warning</b> — ${items} <span class="banner-when">checked ${when}</span>`;
   el.hidden = false;
 }
 

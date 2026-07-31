@@ -120,6 +120,17 @@ async def reconcile_project(
         result["balance"] = await _fetch_credits(
             project.openrouter_key.get_secret_value()
         )
+        if (
+            settings.low_balance_threshold_usd > 0
+            and result["balance"]["remaining"] < settings.low_balance_threshold_usd
+        ):
+            result["low_balance"] = True
+            logger.warning(
+                "project %s: low balance — $%.2f remaining (threshold $%.2f)",
+                project.name,
+                result["balance"]["remaining"],
+                settings.low_balance_threshold_usd,
+            )
 
     prior = _load_snapshot(project.slug, settings)
     _save_snapshot(project.slug, cumulative, now, settings)
@@ -190,7 +201,10 @@ def reconcile_status(results: list[dict[str, Any]]) -> str:
     ``ok`` otherwise. Unconfigured projects are ignored.
     """
     comparable = [r for r in results if r.get("configured", True)]
-    if any(r.get("error") or r.get("within_tolerance") is False for r in comparable):
+    if any(
+        r.get("error") or r.get("within_tolerance") is False or r.get("low_balance")
+        for r in comparable
+    ):
         return "warning"
     if comparable and all("within_tolerance" not in r for r in comparable):
         return "pending"
