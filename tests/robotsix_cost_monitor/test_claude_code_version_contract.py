@@ -23,7 +23,7 @@ DOCKERFILE_DEV = REPO_ROOT / "Dockerfile.dev"
 
 def _extract_claude_code_version_from_package_json(path: Path) -> str:
     """Return the ``@anthropic-ai/claude-code`` version from package.json."""
-    data = json.loads(path.read_text())
+    data: dict[str, dict[str, str]] = json.loads(path.read_text())
     return data["devDependencies"]["@anthropic-ai/claude-code"]
 
 
