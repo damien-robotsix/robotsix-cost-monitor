@@ -11,10 +11,9 @@ hardcoded config).  The :class:`TTLCache` supports stale-while-revalidate (SWR):
 
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, TypeVar
 
 import structlog
 from robotsix_http import (
