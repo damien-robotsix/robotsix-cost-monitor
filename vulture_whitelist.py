@@ -18,8 +18,14 @@ analyst_run_targeted
 analyst_targeted
 index
 analyst_page
+_basic_auth  # FastAPI middleware registered via @app.middleware decorator
+
+# routes.py — FastAPI route handlers (registered via router decorators)
+chat_skill
+refresh_cache
 
 # analyst.py — Pydantic model fields (consumed by pydantic BaseModel)
+title
 rationale
 estimated_saving
 

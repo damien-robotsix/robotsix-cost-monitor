@@ -31,6 +31,21 @@ ENV VIRTUAL_ENV=/opt/venv \
 COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
 
+# robotsix-ui shared CSS — install the npm package and copy the compiled
+# dist/style.css into the static directory so the dashboard can serve it
+# at /static/robotsix-ui/style.css without vendoring the CSS in the repo.
+# Node is already available at this point (the base python:3.14-slim image
+# does not ship npm; we add it here).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends npm \
+    && rm -rf /var/lib/apt/lists/*
+COPY package.json package-lock.json ./
+RUN npm ci --ignore-scripts \
+    && mkdir -p src/robotsix_cost_monitor/web/static/robotsix-ui \
+    && cp node_modules/@robotsix/ui/dist/style.css \
+       src/robotsix_cost_monitor/web/static/robotsix-ui/style.css \
+    && rm -rf node_modules package.json package-lock.json
+
 # Export the EXACT revisions pinned in uv.lock (no fresh resolution), install
 # them, then install the project itself with --no-deps so they are not
 # re-resolved. The `analyst` extra (robotsix-llmio) is included so the optional
