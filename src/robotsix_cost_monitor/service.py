@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, TypeVar
 
@@ -45,7 +46,6 @@ from .exceptions import (
     ProjectConfigError,
 )
 
-_T = TypeVar("_T")
 logger = structlog.get_logger(__name__)
 K = TypeVar("K")
 V = TypeVar("V")
@@ -139,12 +139,36 @@ class TTLCache[K, V]:
             self._pending.discard(key)
 
 
+@dataclass
+class WindowData:
+    """All Langfuse data for a (project, hours) window — fetched as a unit.
+
+    Every dashboard endpoint derives its response from this single snapshot,
+    so any (window, backend) combination is served from cache without a fresh
+    Langfuse round-trip.
+    """
+
+    traces: list[LangfuseTrace] = field(default_factory=list)
+    model_usage: list[dict[str, Any]] = field(default_factory=list)
+    backend_cost: dict[str, dict[str, float]] = field(default_factory=dict)
+    agent_usage: list[dict[str, Any]] = field(default_factory=list)
+    trace_count: int = 0
+
+
+#: Dashboard window presets (hours).  Pre-warmed so every selector option
+#: is a cache hit from the moment the dashboard first loads.
+DASHBOARD_WINDOW_PRESETS: tuple[int, ...] = (1, 6, 24, 168)
+
+
 class CostService:
     """Cross-project cost aggregation service with per-window TTL cache.
 
-    All five internal caches share a single :attr:`last_updated` timestamp
-    (the youngest refresh across *all* caches) so the dashboard can display
-    data freshness.
+    Uses a single unified cache keyed by ``(project_slug, window_hours)``
+    that stores all five data kinds together.  Backend/provider filtering
+    happens locally from the cached data — no extra Langfuse fetch.
+
+    Stale-while-revalidate: fresh entries are served immediately; stale
+    entries are served while a background refresh runs; cold cache blocks.
     """
 
     def __init__(self, config: Config) -> None:
@@ -160,24 +184,12 @@ class CostService:
         }
         ttl = self.config.settings.cache_ttl_seconds
         self._last_updated: datetime | None = None
-        self._caches: list[TTLCache[Any, Any]] = []
         on_refresh = self._touch_last_updated
 
-        def _mk[T](t: type[T]) -> TTLCache[Any, T]:
-            c = TTLCache[Any, T](ttl, on_refresh=on_refresh)
-            self._caches.append(c)
-            return c
-
-        # cache: (slug, hours) -> (traces, monotonic_deadline)
-        self._cache = _mk(list[LangfuseTrace])
-        # cache: (slug, hours) -> (per-model usage rows, monotonic_deadline)
-        self._model_cache = _mk(list[dict[str, Any]])
-        # cache: (slug, hours) -> ({time_bucket -> {backend -> cost}}, deadline)
-        self._backend_cache = _mk(dict[str, dict[str, float]])
-        # cache: (slug, hours) -> (per-(stage, backend) rows, monotonic_deadline)
-        self._agent_usage_cache = _mk(list[dict[str, Any]])
-        # cache: (slug, hours) -> (trace_count, monotonic_deadline)
-        self._trace_count_cache = _mk(int)
+        # Single unified cache: (slug, hours) -> WindowData
+        self._window_cache: TTLCache[tuple[str, int], WindowData] = TTLCache(
+            ttl, on_refresh=on_refresh
+        )
 
     def _touch_last_updated(self) -> None:
         """Record the current wall-clock time as the last cache refresh."""
@@ -190,8 +202,7 @@ class CostService:
 
     def invalidate_all(self) -> None:
         """Clear every internal cache so the next request fetches fresh data."""
-        for c in self._caches:
-            c.invalidate()
+        self._window_cache.invalidate()
         self._last_updated = None
 
     def _projects(self, slug: str | None) -> list[ProjectConfig]:
@@ -219,67 +230,82 @@ class CostService:
             logger.exception("project %s %s failed unexpectedly", project.slug, label)
             return default
 
-    async def _cached_fetch(
-        self,
-        project: ProjectConfig,
-        hours: int,
-        cache: TTLCache[tuple[str, int], _T],
-        fetch_fn: Callable[[int], Awaitable[_T]],
-    ) -> _T:
-        key = (project.slug, hours)
-        return await cache.get_or_fetch(key, lambda: fetch_fn(hours))
+    async def _window_data(self, project: ProjectConfig, hours: int) -> WindowData:
+        """Fetch all Langfuse data for *(project, hours)*, cached as a unit.
 
-    async def _traces(self, project: ProjectConfig, hours: int) -> list[LangfuseTrace]:
-        return await self._cached_fetch(
-            project,
-            hours,
-            self._cache,
-            lambda h: self._clients[project.slug].fetch_traces_window(h),
-        )
-
-    async def _trace_count(self, project: ProjectConfig, hours: int) -> int:
-        """Trace count for the window via a server-side metrics query (cached).
-
-        Avoids paging every raw trace just to ``len()`` them — the headline
-        ``summary`` only needs the count, not the trace bodies.
+        All five data kinds are fetched in parallel via ``asyncio.gather``
+        so that a single cache hit serves every dashboard endpoint for that
+        window — regardless of backend filter.
         """
-        return await self._cached_fetch(
-            project,
-            hours,
-            self._trace_count_cache,
-            lambda h: self._clients[project.slug].fetch_trace_count_window(h),
-        )
+        key = (project.slug, hours)
+        client = self._clients[project.slug]
+
+        async def _fetch_all() -> WindowData:
+            results = await asyncio.gather(
+                client.fetch_traces_window(float(hours)),
+                client.fetch_model_usage_window(hours),
+                client.fetch_backend_cost_window(hours),
+                client.fetch_agent_usage_window(hours),
+                client.fetch_trace_count_window(float(hours)),
+                return_exceptions=True,
+            )
+            traces, model, backend, agent, count = results
+            if isinstance(traces, BaseException):
+                traces = []
+            if isinstance(model, BaseException):
+                model = []
+            if isinstance(backend, BaseException):
+                backend = {}
+            if isinstance(agent, BaseException):
+                agent = []
+            if isinstance(count, BaseException):
+                count = 0
+            return WindowData(
+                traces=traces,
+                model_usage=model,
+                backend_cost=backend,
+                agent_usage=agent,
+                trace_count=count,
+            )
+
+        data = await self._window_cache.get_or_fetch(key, _fetch_all)
+        return data
+
+    async def _gather_window_data(
+        self, slug: str | None, hours: int
+    ) -> list[tuple[ProjectConfig, WindowData]]:
+        """Fetch :class:`WindowData` for every matching project.
+
+        Errors are isolated per project so one failure does not affect the
+        others.
+        """
+        out: list[tuple[ProjectConfig, WindowData]] = []
+        for p in self._projects(slug):
+            data: WindowData = await self._safe_project_fetch(
+                p,
+                lambda: self._window_data(p, hours),  # noqa: B023
+                "fetch window data",
+                WindowData(),
+            )
+            out.append((p, data))
+        return out
 
     async def _gather(
         self, slug: str | None, hours: int
     ) -> list[tuple[ProjectConfig, list[LangfuseTrace]]]:
-        out: list[tuple[ProjectConfig, list[LangfuseTrace]]] = []
-        for p in self._projects(slug):
-            traces: list[LangfuseTrace] = await self._safe_project_fetch(
-                p,
-                lambda: self._traces(p, hours),  # noqa: B023
-                "fetch traces",
-                [],
-            )
-            out.append((p, traces))
-        return out
+        """Return per-project raw traces for the window (uses unified cache)."""
+        gathered = await self._gather_window_data(slug, hours)
+        return [(p, d.traces) for p, d in gathered]
 
     async def _gather_list_results(
         self,
         slug: str | None,
         hours: int,
-        fetch: Callable[[ProjectConfig, int], Awaitable[list[dict[str, Any]]]],
+        field: Callable[[WindowData], list[dict[str, Any]]],
     ) -> list[dict[str, Any]]:
-        parts: list[list[dict[str, Any]]] = []
-        for p in self._projects(slug):
-            result: list[dict[str, Any]] = await self._safe_project_fetch(
-                p,
-                lambda: fetch(p, hours),  # noqa: B023
-                "fetch list results",
-                [],
-            )
-            parts.append(result)
-        return [r for part in parts for r in part]
+        """Return merged list rows from a :class:`WindowData` field across projects."""
+        gathered = await self._gather_window_data(slug, hours)
+        return [r for _, d in gathered for r in field(d)]
 
     async def _build_trace_rows(
         self, slug: str | None, hours: int
@@ -424,32 +450,26 @@ class CostService:
         Cost is observation-based (the same window-accurate metrics source as the
         by-model / by-backend breakdowns), so the headline total, the per-model
         rows, and the per-backend totals all reconcile — a backend can never
-        exceed the total. ``trace_count`` comes from a server-side ``view=traces``
+        exceed the total.  ``trace_count`` comes from a server-side ``view=traces``
         count metric (not by paging every trace), so this stays fast.
         """
         per_project: list[dict[str, Any]] = []
         total = 0.0
         for p in self._projects(slug):
-            models: list[dict[str, Any]] = await self._safe_project_fetch(
+            data: WindowData = await self._safe_project_fetch(
                 p,
-                lambda: self._model_usage(p, hours),  # noqa: B023
-                "model-usage",
-                [],
+                lambda: self._window_data(p, hours),  # noqa: B023
+                "window data",
+                WindowData(),
             )
-            trace_count: int = await self._safe_project_fetch(
-                p,
-                lambda: self._trace_count(p, hours),  # noqa: B023
-                "trace-count",
-                0,
-            )
-            cost = round(sum(m["cost"] for m in models), 6)
+            cost = round(sum(m["cost"] for m in data.model_usage), 6)
             total += cost
             per_project.append(
                 {
                     "name": p.name,
                     "slug": p.slug,
                     "cost": cost,
-                    "trace_count": trace_count,
+                    "trace_count": data.trace_count,
                 }
             )
         total = round(total, 6)
@@ -468,15 +488,16 @@ class CostService:
         (``aggregate_by_name``) — unchanged from the original behavior.
 
         When a specific backend is selected, uses per-(stage, backend)
-        observation-metrics so that each stage's cost is attributed to the
-        backend(s) it actually used.
+        observation-metrics from the unified cache so that each stage's cost
+        is attributed to the backend(s) it actually used.  No extra Langfuse
+        fetch — the data is already cached alongside the traces.
         """
         if backend == "all":
             gathered = await self._gather(slug, hours)
             all_traces = [t for _, traces in gathered for t in traces]
             return aggregate_by_name(all_traces)
 
-        all_rows = await self._gather_list_results(slug, hours, self._agent_usage)
+        all_rows = await self._gather_list_results(slug, hours, lambda d: d.agent_usage)
         return aggregate_by_name_backend(all_rows, backend)
 
     async def by_agent_segmented(self, slug: str | None, hours: int) -> dict[str, Any]:
@@ -497,7 +518,7 @@ class CostService:
         is ``subscription_count_total / subscription_cap`` when the cap > 0,
         otherwise ``None``.
         """
-        all_rows = await self._gather_list_results(slug, hours, self._agent_usage)
+        all_rows = await self._gather_list_results(slug, hours, lambda d: d.agent_usage)
         rows = aggregate_by_name_split(all_rows)
         openrouter_marginal_total = sum(r["openrouter_cost"] for r in rows)
         subscription_estimate_total = sum(r["subscription_cost"] for r in rows)
@@ -515,43 +536,13 @@ class CostService:
             ),
         }
 
-    async def _model_usage(
-        self, project: ProjectConfig, hours: int
-    ) -> list[dict[str, Any]]:
-        return await self._cached_fetch(
-            project,
-            hours,
-            self._model_cache,
-            lambda h: self._clients[project.slug].fetch_model_usage_window(h),
-        )
-
     async def by_model(self, slug: str | None, hours: int) -> list[dict[str, Any]]:
         """Cost + token usage by model, merged across selected projects.
 
         Window-accurate (see :meth:`LangfuseClient.fetch_model_usage_window`).
         """
-        all_rows = await self._gather_list_results(slug, hours, self._model_usage)
+        all_rows = await self._gather_list_results(slug, hours, lambda d: d.model_usage)
         return merge_model_costs([all_rows])
-
-    async def _backend_cost(
-        self, project: ProjectConfig, hours: int
-    ) -> dict[str, dict[str, float]]:
-        return await self._cached_fetch(
-            project,
-            hours,
-            self._backend_cache,
-            lambda h: self._clients[project.slug].fetch_backend_cost_window(h),
-        )
-
-    async def _agent_usage(
-        self, project: ProjectConfig, hours: int
-    ) -> list[dict[str, Any]]:
-        return await self._cached_fetch(
-            project,
-            hours,
-            self._agent_usage_cache,
-            lambda h: self._clients[project.slug].fetch_agent_usage_window(h),
-        )
 
     async def backend_trend(
         self, slug: str | None, hours: int, backend: BackendKind
@@ -560,15 +551,8 @@ class CostService:
 
         Window-accurate; time-bucket granularity scales with the window.
         """
-        parts: list[dict[str, dict[str, float]]] = []
-        for p in self._projects(slug):
-            cost: dict[str, dict[str, float]] = await self._safe_project_fetch(
-                p,
-                lambda: self._backend_cost(p, hours),  # noqa: B023
-                "backend-cost",
-                {},
-            )
-            parts.append(cost)
+        gathered = await self._gather_window_data(slug, hours)
+        parts = [d.backend_cost for _, d in gathered]
         return backend_cost_series(parts, backend)
 
     async def trend(
@@ -586,12 +570,15 @@ class CostService:
 
         When *backend* is not ``"all"``, traces are filtered to only those
         whose name appears in the agent-usage rows for that backend, keeping
-        the highlights consistent with the backend selector.
+        the highlights consistent with the backend selector.  Both data kinds
+        come from the unified cache — no extra Langfuse fetch.
         """
         gathered = await self._gather(slug, hours)
         all_traces = [t for _, traces in gathered for t in traces]
         if backend != "all":
-            agent_rows = await self._gather_list_results(slug, hours, self._agent_usage)
+            agent_rows = await self._gather_list_results(
+                slug, hours, lambda d: d.agent_usage
+            )
             backend_names: set[str] = {
                 r["name"] for r in agent_rows if r.get("backend") == backend
             }
