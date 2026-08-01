@@ -22,5 +22,7 @@ site/
 # CycloneDX SBOM — generated at CI / build time, never committed.
 sbom.cyclonedx.json
 node_modules/
+# robotsix-ui shared CSS — copied by Dockerfile, never committed.
+src/robotsix_cost_monitor/web/static/robotsix-ui/
 /coverage
 config/projects.yaml

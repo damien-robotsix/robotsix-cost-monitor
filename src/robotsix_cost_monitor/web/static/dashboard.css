@@ -1,23 +1,38 @@
+/* --- robotsix-ui shared-base overrides ---------------------------------- */
+/* Dark-theme hue tint — matches the dashboard's navy palette (hue 226).   */
+/* Saturation 41 % produces the same bg / panel / border shades as the     */
+/* original hand-rolled tokens.                                            */
 :root {
-  --bg: #0f1424;
-  --panel: #16213e;
-  --border: #2a2a4a;
-  --text: #e6e8f0;
-  --muted: #9aa3c0;
-  --accent: #5b8cff;
-  --good: #36c98e;
-  --warn: #e8b08a;
-  --bad: #ff6b6b;
+  --rsu-dark-hue: 226;
+  --rsu-dark-saturation: 41%;
+
+  /* Semantic colour overrides — map the shared tokens to the dashboard's   */
+  /* existing palette so charts, summaries and highlights keep their look.  */
+  --rsu-color-primary: #5b8cff;
+  --rsu-color-primary-hover: #4a7ae6;
+  --rsu-color-success: #36c98e;
+  --rsu-color-warning: #e8b08a;
+  --rsu-color-error: #ff6b6b;
+  --rsu-color-text-muted: #9aa3c0;
 }
-* {
-  box-sizing: border-box;
+
+/* --- dashboard-specific component styles -------------------------------- */
+
+/* Convenience aliases — kept so the existing component rules below work    */
+/* without a sweeping class-by-class rewrite.                              */
+:root,
+[data-theme="dark"] {
+  --bg: var(--rsu-color-bg);
+  --panel: var(--rsu-color-bg-secondary);
+  --border: var(--rsu-color-border);
+  --text: var(--rsu-color-text);
+  --muted: var(--rsu-color-text-muted);
+  --accent: var(--rsu-color-primary);
+  --good: var(--rsu-color-success);
+  --warn: var(--rsu-color-warning);
+  --bad: var(--rsu-color-error);
 }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font: 14px / 1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-}
+
 header {
   display: flex;
   align-items: center;

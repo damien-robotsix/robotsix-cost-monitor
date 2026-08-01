@@ -418,4 +418,13 @@ def create_app(config: Config | None = None) -> FastAPI:
     if (_WEB / "static").is_dir():
         app.mount("/static", StaticFiles(directory=_WEB / "static"), name="static")
 
+    # robotsix-ui shared base CSS (compiled dist/style.css from @robotsix/ui)
+    _ui_dist = Path("node_modules/@robotsix/ui/dist")
+    if _ui_dist.is_dir():
+        app.mount(
+            "/static/robotsix-ui",
+            StaticFiles(directory=_ui_dist),
+            name="robotsix-ui",
+        )
+
     return app
