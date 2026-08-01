@@ -276,8 +276,10 @@ async def test_by_agent_segmented_cache_expiry() -> None:
         r2 = await svc.by_agent_segmented("demo", 24)
         assert r2["rows"][0]["openrouter_cost"] == 1.0  # stale served immediately
 
-        # Let the background refresh run
-        await asyncio.sleep(0)
+        # Let the background refresh run (unified cache's asyncio.gather needs
+        # multiple event-loop iterations to complete).
+        for _ in range(8):
+            await asyncio.sleep(0)
         assert client.fetch_agent_usage_window.call_count == 2  # type: ignore[attr-defined]
 
         r3 = await svc.by_agent_segmented("demo", 24)

@@ -32,11 +32,10 @@ async def test_by_agent_backend_all_unchanged() -> None:
     )
 
     rows = await svc.by_agent("a", 24, backend="all")
-    # Should match the trace-level aggregation exactly
+    # Should match the trace-level aggregation exactly — agent_usage is
+    # fetched by the unified cache but ignored for the 'all' path.
     assert rows[0] == {"name": "implement", "cost": 5.0, "count": 2}
     assert rows[1] == {"name": "review", "cost": 1.0, "count": 1}
-    # fetch_agent_usage_window must NOT have been called
-    assert svc._clients["a"].fetch_agent_usage_window.call_count == 0  # type: ignore[attr-defined]
 
 
 async def test_by_agent_backend_specific_filters() -> None:
@@ -190,8 +189,10 @@ async def test_by_agent_backend_agent_usage_cache_expiry() -> None:
         r2 = await svc.by_agent("demo", 24, backend="claude-sdk")
         assert r2[0]["cost"] == 1.0  # stale served immediately
 
-        # Let the background refresh run
-        await asyncio.sleep(0)
+        # Let the background refresh run (unified cache's asyncio.gather needs
+        # multiple event-loop iterations to complete).
+        for _ in range(8):
+            await asyncio.sleep(0)
         assert client.fetch_agent_usage_window.call_count == 2  # type: ignore[attr-defined]
 
         r3 = await svc.by_agent("demo", 24, backend="claude-sdk")

@@ -69,6 +69,9 @@
    `(project_slug, window_hours)`. A fresh entry returns immediately; a stale
    entry is still served while a **background refresh** is triggered
    (stale-while-revalidate); a cold miss fetches fresh data from Langfuse.
+   Each cache entry stores all five data kinds (traces, model usage, backend
+   costs, agent usage, trace counts) as a single `WindowData` snapshot, so any
+   (window, backend) combination is served without an extra Langfuse fetch.
 3. **Langfuse fetch** — `LangfuseClient` calls the Langfuse public REST API
    (`/api/public/traces`, `/api/public/metrics/*`) via `httpx`. Each project
    gets its own client (keyed by `public_key`/`secret_key`/`base_url`).
@@ -107,7 +110,7 @@ manager in `create_app()`) and cancelled on shutdown:
 | --- | --- | --- | --- |
 | `_reconcile_loop` | `settings.reconcile_schedule_hours` | 24 h | Runs `reconcile_all()` for every project; stores result in `.data/reconcile/last.json` (powers the warning banner) |
 | `_analyst_loop` | `settings.analyst.schedule_hours` | 24 h | Runs all three analyses (fleet, most-costly ticket, most-costly stage); persists results under `.data/analyst/` |
-| `_cache_refresh_loop` | `settings.dashboard_refresh_interval_seconds` | 120 s | Periodically re-fetches dashboard aggregates so the cache stays warm; a one-shot `_warm_cache` also runs at startup for a fast first page load |
+| `_cache_refresh_loop` | `settings.dashboard_refresh_interval_seconds` | 120 s | Periodically re-fetches dashboard aggregates so the cache stays warm; a one-shot `_warm_cache` also runs at startup, pre-fetching all dashboard window presets (1 h, 6 h, 1 d, 1 w) so window switches are cache hits from the first page load |
 
 - The analyst loop computes its **first delay** from the last persisted run
   timestamp (`_last_analyst_run()`), so frequent redeploys (Watchtower) don't
@@ -150,7 +153,10 @@ CLI commands work without it. It requires two packages installed via the
   cache keys on `(project_slug, window_hours)` with a configurable TTL
   (`cache_ttl_seconds`, default 60 s) and **stale-while-revalidate**
   semantics: stale values are served immediately while a background refresh
-  fetches new data. `POST /api/refresh` invalidates all caches on demand.
+  fetches new data. Each entry is a unified `WindowData` snapshot holding all
+  five data kinds, and every dashboard window preset (1 h, 6 h, 1 d, 1 w) is
+  pre-warmed at startup and on the refresh cadence. `POST /api/refresh`
+  invalidates all caches on demand.
 - **Configuration flows through Pydantic.** `Config` →
   `Config.model_validate()` is the only path. Never bypass the models.
 - **Runtime state lives under the configured data directory**

@@ -142,7 +142,8 @@ async def test_highlights_backend_all_unchanged() -> None:
     object.__setattr__(
         svc._clients["x"], "fetch_traces_window", AsyncMock(return_value=traces)
     )
-    # fetch_agent_usage_window must NOT be called when backend='all'
+    # fetch_agent_usage_window IS called by the unified cache even for the
+    # 'all' path, but its result is ignored.
     object.__setattr__(
         svc._clients["x"], "fetch_agent_usage_window", AsyncMock(return_value=[])
     )
@@ -150,7 +151,6 @@ async def test_highlights_backend_all_unchanged() -> None:
     result = await svc.highlights("x", 24, backend="all")
     assert result["most_expensive_trace"]["cost"] == 9.0
     assert result["most_expensive_session"]["session_id"] == "b"
-    assert svc._clients["x"].fetch_agent_usage_window.call_count == 0  # type: ignore[attr-defined]
 
 
 async def test_highlights_backend_specific_filters() -> None:

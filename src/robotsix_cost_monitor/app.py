@@ -226,31 +226,31 @@ async def _reconcile_loop(cfg: Config, hours: float) -> None:
 
 
 async def _warm_cache(cfg: Config, service: CostService) -> None:
-    """Pre-fetch default-window aggregates on startup for fast first load.
+    """Pre-fetch aggregates for all dashboard window presets on startup.
 
-    Best-effort — failures are logged and discarded; a cold cache is a
-    performance problem, not a correctness one.
+    Every window-selector option is warmed so window switches are near-instant
+    from the first page load.  Best-effort — failures are logged and discarded.
     """
     if not cfg.projects:
         return
-    hours = cfg.settings.default_window_hours
+    from .service import DASHBOARD_WINDOW_PRESETS
+
     logger.info(
-        "warming dashboard cache (window=%sh, %d projects)",
-        hours,
+        "warming dashboard cache (%d projects, %d windows)",
         len(cfg.projects),
+        len(DASHBOARD_WINDOW_PRESETS),
     )
-    try:
-        # summary() touches _model_usage + _trace_count caches per project
-        await service.summary("all", hours)
-        # by_agent_segmented() touches _agent_usage_cache per project
-        await service.by_agent_segmented("all", hours)
-        # by_model() touches _model_cache per project
-        await service.by_model("all", hours)
-        # trend() touches _cache (traces) per project
-        await service.trend("all", hours)
-        logger.info("dashboard cache warm complete")
-    except Exception:
-        logger.exception("dashboard cache warm-up failed — cold start on first request")
+    for h in DASHBOARD_WINDOW_PRESETS:
+        try:
+            # summary() touches model_usage + trace_count per project
+            await service.summary("all", h)
+            # by_model() touches model_usage per project
+            await service.by_model("all", h)
+            # trend() touches traces per project
+            await service.trend("all", h)
+        except Exception:
+            logger.exception("dashboard cache warm-up failed for window=%sh", h)
+    logger.info("dashboard cache warm complete")
 
 
 async def _cache_refresh_loop(

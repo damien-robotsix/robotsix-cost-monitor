@@ -63,8 +63,10 @@ async def test_traces_cache_expiry() -> None:
         result2 = await svc.by_agent("demo", 24)
         assert result2[0]["name"] == "old"  # stale served immediately
 
-        # Let the background refresh run
-        await asyncio.sleep(0)
+        # Let the background refresh run (unified cache's asyncio.gather needs
+        # multiple event-loop iterations to complete).
+        for _ in range(8):
+            await asyncio.sleep(0)
         assert client.fetch_traces_window.call_count == 2  # type: ignore[attr-defined]
 
         # Third call — now fresh from background refresh
@@ -106,8 +108,10 @@ async def test_model_usage_cache_expiry() -> None:
         r2 = await svc.by_model("demo", 24)
         assert r2[0]["cost"] == 1.0  # stale served immediately
 
-        # Let the background refresh run
-        await asyncio.sleep(0)
+        # Let the background refresh run (unified cache's asyncio.gather needs
+        # multiple event-loop iterations to complete).
+        for _ in range(8):
+            await asyncio.sleep(0)
         assert client.fetch_model_usage_window.call_count == 2  # type: ignore[attr-defined]
 
         r3 = await svc.by_model("demo", 24)
@@ -145,8 +149,10 @@ async def test_backend_cost_cache_expiry() -> None:
         r2 = await svc.backend_trend("demo", 24, "claude-sdk")
         assert r2[0]["cost"] == 1.0  # stale served immediately
 
-        # Let the background refresh run
-        await asyncio.sleep(0)
+        # Let the background refresh run (unified cache's asyncio.gather needs
+        # multiple event-loop iterations to complete).
+        for _ in range(8):
+            await asyncio.sleep(0)
         assert client.fetch_backend_cost_window.call_count == 2  # type: ignore[attr-defined]
 
         r3 = await svc.backend_trend("demo", 24, "claude-sdk")
