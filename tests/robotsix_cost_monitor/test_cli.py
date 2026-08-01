@@ -16,14 +16,12 @@ from robotsix_cost_monitor.cli import main
 
 
 def _cfg(
-    projects: list[MagicMock] | None = None,
     default_window_hours: int = 168,
 ) -> MagicMock:
-    """Return a mock config with the given projects and settings."""
+    """Return a mock config with the given settings."""
     cfg = MagicMock()
     cfg.settings = MagicMock()
     cfg.settings.default_window_hours = default_window_hours
-    cfg.projects = projects or []
     return cfg
 
 
@@ -197,37 +195,36 @@ def test_summary_prints_json(capsys: CaptureFixture[str]) -> None:
 
 
 def test_reconcile_project_all() -> None:
-    """``reconcile --project all`` calls reconcile_project for every project."""
-    proj_a = MagicMock(slug="a")
-    proj_b = MagicMock(slug="b")
-    cfg = _cfg(projects=[proj_a, proj_b])
+    """``reconcile --project all`` calls reconcile_all."""
+    cfg = _cfg()
+    cfg.settings.registry_base_url = ""  # skip refresh_projects
 
-    mock_rp = AsyncMock(return_value={"status": "ok"})
+    mock_ra = AsyncMock(return_value={"status": "ok", "results": []})
 
     with (
         patch("robotsix_cost_monitor.cli.load_config", return_value=cfg),
-        patch("robotsix_cost_monitor.cli.reconcile_project", mock_rp),
+        patch("robotsix_cost_monitor.cli.reconcile_all", mock_ra),
     ):
         exit_code = main(["reconcile", "--project", "all"])
 
     assert exit_code == 0
-    assert mock_rp.call_count == 2
-    # First call: project a
-    assert mock_rp.call_args_list[0][0][0].slug == "a"
-    # Second call: project b
-    assert mock_rp.call_args_list[1][0][0].slug == "b"
+    mock_ra.assert_called_once()
 
 
 def test_reconcile_project_specific_slug() -> None:
-    """``reconcile --project <slug>`` filters to matching project."""
-    proj_x = MagicMock(slug="x")
-    proj_y = MagicMock(slug="y")
-    cfg = _cfg(projects=[proj_x, proj_y])
+    """``reconcile --project <slug>`` calls reconcile_project for matching project."""
+    cfg = _cfg()
+    cfg.settings.registry_base_url = ""  # skip refresh_projects
+
+    mock_svc = MagicMock()
+    mock_svc._project_map = {"y": MagicMock(slug="y", name="yproj")}
+    mock_svc.refresh_projects = AsyncMock()
 
     mock_rp = AsyncMock(return_value={"status": "ok"})
 
     with (
         patch("robotsix_cost_monitor.cli.load_config", return_value=cfg),
+        patch("robotsix_cost_monitor.cli.CostService", return_value=mock_svc),
         patch("robotsix_cost_monitor.cli.reconcile_project", mock_rp),
     ):
         exit_code = main(["reconcile", "--project", "y"])
@@ -238,140 +235,25 @@ def test_reconcile_project_specific_slug() -> None:
 
 
 def test_reconcile_prints_json(capsys: CaptureFixture[str]) -> None:
-    """``reconcile`` prints JSON array of per-project results."""
-    proj = MagicMock(slug="demo")
-    cfg = _cfg(projects=[proj])
+    """``reconcile`` prints JSON result."""
+    cfg = _cfg()
+    cfg.settings.registry_base_url = ""
+
+    mock_svc = MagicMock()
+    mock_svc._project_map = {"demo": MagicMock(slug="demo", name="demo")}
+    mock_svc.refresh_projects = AsyncMock()
 
     expected = {"project": "demo", "status": "reconciled"}
     mock_rp = AsyncMock(return_value=expected)
 
     with (
         patch("robotsix_cost_monitor.cli.load_config", return_value=cfg),
+        patch("robotsix_cost_monitor.cli.CostService", return_value=mock_svc),
         patch("robotsix_cost_monitor.cli.reconcile_project", mock_rp),
     ):
-        exit_code = main(["reconcile"])
+        exit_code = main(["reconcile", "--project", "demo"])
 
     assert exit_code == 0
     stdout = capsys.readouterr().out
     parsed = json.loads(stdout)
     assert parsed == [expected]
-
-
-# ---------------------------------------------------------------------------
-# analyst
-# ---------------------------------------------------------------------------
-
-
-def test_analyst_kind_all_calls_all_three() -> None:
-    """``analyst --kind all`` (default) calls all three run_*_analyst functions."""
-    cfg = _cfg()
-    mock_svc = MagicMock()
-
-    mock_fleet = AsyncMock(return_value={"enabled": True, "fleet": 1})
-    mock_ticket = AsyncMock(return_value={"enabled": True, "ticket": 2})
-    mock_stage = AsyncMock(return_value={"enabled": True, "stage": 3})
-
-    with (
-        patch("robotsix_cost_monitor.cli.load_config", return_value=cfg),
-        patch("robotsix_cost_monitor.cli.CostService", return_value=mock_svc),
-        patch("robotsix_cost_monitor.cli.run_analyst", mock_fleet),
-        patch("robotsix_cost_monitor.cli.run_ticket_analyst", mock_ticket),
-        patch("robotsix_cost_monitor.cli.run_stage_analyst", mock_stage),
-    ):
-        exit_code = main(["analyst"])
-
-    assert exit_code == 0
-    mock_fleet.assert_called_once_with(cfg, mock_svc)
-    mock_ticket.assert_called_once_with(cfg, mock_svc)
-    mock_stage.assert_called_once_with(cfg, mock_svc)
-
-
-def test_analyst_kind_fleet() -> None:
-    """``analyst --kind fleet`` calls only run_analyst."""
-    cfg = _cfg()
-    mock_svc = MagicMock()
-
-    mock_fleet = AsyncMock(return_value={"enabled": True})
-    mock_ticket = AsyncMock(return_value={"enabled": True})
-    mock_stage = AsyncMock(return_value={"enabled": True})
-
-    with (
-        patch("robotsix_cost_monitor.cli.load_config", return_value=cfg),
-        patch("robotsix_cost_monitor.cli.CostService", return_value=mock_svc),
-        patch("robotsix_cost_monitor.cli.run_analyst", mock_fleet),
-        patch("robotsix_cost_monitor.cli.run_ticket_analyst", mock_ticket),
-        patch("robotsix_cost_monitor.cli.run_stage_analyst", mock_stage),
-    ):
-        exit_code = main(["analyst", "--kind", "fleet"])
-
-    assert exit_code == 0
-    mock_fleet.assert_called_once_with(cfg, mock_svc)
-    mock_ticket.assert_not_called()
-    mock_stage.assert_not_called()
-
-
-def test_analyst_kind_ticket() -> None:
-    """``analyst --kind ticket`` calls only run_ticket_analyst."""
-    cfg = _cfg()
-    mock_svc = MagicMock()
-
-    mock_fleet = AsyncMock(return_value={"enabled": True})
-    mock_ticket = AsyncMock(return_value={"enabled": True})
-    mock_stage = AsyncMock(return_value={"enabled": True})
-
-    with (
-        patch("robotsix_cost_monitor.cli.load_config", return_value=cfg),
-        patch("robotsix_cost_monitor.cli.CostService", return_value=mock_svc),
-        patch("robotsix_cost_monitor.cli.run_analyst", mock_fleet),
-        patch("robotsix_cost_monitor.cli.run_ticket_analyst", mock_ticket),
-        patch("robotsix_cost_monitor.cli.run_stage_analyst", mock_stage),
-    ):
-        exit_code = main(["analyst", "--kind", "ticket"])
-
-    assert exit_code == 0
-    mock_fleet.assert_not_called()
-    mock_ticket.assert_called_once_with(cfg, mock_svc)
-    mock_stage.assert_not_called()
-
-
-def test_analyst_kind_stage() -> None:
-    """``analyst --kind stage`` calls only run_stage_analyst."""
-    cfg = _cfg()
-    mock_svc = MagicMock()
-
-    mock_fleet = AsyncMock(return_value={"enabled": True})
-    mock_ticket = AsyncMock(return_value={"enabled": True})
-    mock_stage = AsyncMock(return_value={"enabled": True})
-
-    with (
-        patch("robotsix_cost_monitor.cli.load_config", return_value=cfg),
-        patch("robotsix_cost_monitor.cli.CostService", return_value=mock_svc),
-        patch("robotsix_cost_monitor.cli.run_analyst", mock_fleet),
-        patch("robotsix_cost_monitor.cli.run_ticket_analyst", mock_ticket),
-        patch("robotsix_cost_monitor.cli.run_stage_analyst", mock_stage),
-    ):
-        exit_code = main(["analyst", "--kind", "stage"])
-
-    assert exit_code == 0
-    mock_fleet.assert_not_called()
-    mock_ticket.assert_not_called()
-    mock_stage.assert_called_once_with(cfg, mock_svc)
-
-
-def test_analyst_prints_json(capsys: CaptureFixture[str]) -> None:
-    """``analyst --kind fleet`` prints the JSON output returned by the analyst."""
-    expected = {"enabled": True, "fleet": "result"}
-    cfg = _cfg()
-    mock_svc = MagicMock()
-    mock_fleet = AsyncMock(return_value=expected)
-
-    with (
-        patch("robotsix_cost_monitor.cli.load_config", return_value=cfg),
-        patch("robotsix_cost_monitor.cli.CostService", return_value=mock_svc),
-        patch("robotsix_cost_monitor.cli.run_analyst", mock_fleet),
-    ):
-        exit_code = main(["analyst", "--kind", "fleet"])
-
-    assert exit_code == 0
-    stdout = capsys.readouterr().out
-    assert json.loads(stdout) == expected

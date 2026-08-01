@@ -7,8 +7,8 @@ accessible via direct import):
 Data-builder / factory functions that test files import directly (rather than
 fixtures auto-discovered by pytest):
   - ``trace`` — build a LangfuseTrace for tests
-  - ``_proj(name, *, openrouter_key)`` — a ProjectConfig with dummy credentials
-  - ``_config(*projects, ttl, **analyst_kwargs)`` — a Config from projects + settings
+  - ``_proj(name, *, openrouter_key)`` — a RegistryProject with dummy credentials
+  - ``_config(ttl, **settings_kwargs)`` — a Config with settings
   - ``_mock_client(**overrides)`` — a Mock whose async LangfuseClient fetch
     methods return empty results
 """
@@ -24,10 +24,10 @@ from typing import Any
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from pydantic import SecretStr
 
-from robotsix_cost_monitor.clients.models import LangfuseTrace
-from robotsix_cost_monitor.config import AnalystConfig, Config, ProjectConfig, Settings
+from robotsix_cost_monitor.clients.models import LangfuseTrace, RegistryProject
+from robotsix_cost_monitor.clients.registry import RegistryClient
+from robotsix_cost_monitor.config import Config, Settings
 from robotsix_cost_monitor.service import CostService
 
 # ---------------------------------------------------------------------------
@@ -69,20 +69,21 @@ def trace(
 
 
 # ---------------------------------------------------------------------------
-# ProjectConfig factory
+# RegistryProject factory
 # ---------------------------------------------------------------------------
 
 
 def _proj(
     name: str = "demo", *, openrouter_key: str | None = "sk-demo"
-) -> ProjectConfig:
-    """A ProjectConfig with dummy credentials (``base_url`` never called)."""
-    return ProjectConfig(
+) -> RegistryProject:
+    """A RegistryProject with dummy credentials."""
+    return RegistryProject(
         name=name,
-        public_key=SecretStr(f"pk-lf-{name}"),
-        secret_key=SecretStr(f"sk-lf-{name}"),
-        base_url="http://localhost",
-        openrouter_key=SecretStr(openrouter_key) if openrouter_key else None,
+        slug=name.strip().lower().replace(" ", "-"),
+        langfuse_public_key=f"pk-lf-{name}",
+        langfuse_secret_key=f"sk-lf-{name}",
+        langfuse_base_url="http://localhost",
+        openrouter_key=openrouter_key,
     )
 
 
@@ -92,26 +93,22 @@ def _proj(
 
 
 def _config(
-    *projects: ProjectConfig,
     ttl: int = 10,
     subscription_call_cap: int = 0,
     data_dir: Path | None = None,
-    **analyst_kwargs: Any,
+    registry_base_url: str = "",
+    **settings_kwargs: Any,
 ) -> Config:
-    """Build a ``Config`` from projects and optional Settings overrides.
-
-    ``analyst_kwargs`` are forwarded to ``AnalystConfig`` (only when at least
-    one kwarg is given).
-    """
-    settings_kwargs: dict[str, Any] = {
+    """Build a ``Config`` with optional Settings overrides."""
+    merged: dict[str, Any] = {
         "cache_ttl_seconds": ttl,
         "subscription_call_cap": subscription_call_cap,
+        "registry_base_url": registry_base_url,
     }
     if data_dir is not None:
-        settings_kwargs["data_dir"] = data_dir
-    if analyst_kwargs:
-        settings_kwargs["analyst"] = AnalystConfig(**analyst_kwargs)
-    return Config(projects=list(projects), settings=Settings(**settings_kwargs))
+        merged["data_dir"] = data_dir
+    merged.update(settings_kwargs)
+    return Config(settings=Settings(**merged))
 
 
 # ---------------------------------------------------------------------------
@@ -136,6 +133,7 @@ def _mock_client(**overrides: object) -> Mock:
     object.__setattr__(client, "fetch_agent_usage_window", AsyncMock(return_value=[]))
     object.__setattr__(client, "fetch_trace_count_window", AsyncMock(return_value=0))
     object.__setattr__(client, "fetch_trace_detail", AsyncMock(return_value={}))
+    object.__setattr__(client, "fetch_trace_count_window", AsyncMock(return_value=0))
     for k, v in overrides.items():
         setattr(client, k, v)
     return client
@@ -146,15 +144,23 @@ def _mock_client(**overrides: object) -> Mock:
 # ---------------------------------------------------------------------------
 
 
-def _svc(*projects: ProjectConfig, **config_kwargs: Any) -> CostService:
+def _svc(*projects: RegistryProject, **config_kwargs: Any) -> CostService:
     """CostService whose LangfuseClient instances are all mocks.
 
     ``config_kwargs`` are forwarded to ``_config`` (e.g. ``subscription_call_cap``).
     """
-    cfg = _config(*projects, **config_kwargs)
-    svc = CostService(cfg)
-    for slug in list(svc._clients):
-        svc._clients[slug] = _mock_client()
+    cfg = _config(**config_kwargs)
+    registry = Mock(spec=RegistryClient)
+    object.__setattr__(
+        registry,
+        "fetch_projects",
+        AsyncMock(return_value=list(projects)),
+    )
+    svc = CostService(cfg, registry)
+    # Populate the service from the registry mock
+    for p in projects:
+        svc._project_map[p.slug] = p
+        svc._clients[p.slug] = _mock_client()
     return svc
 
 

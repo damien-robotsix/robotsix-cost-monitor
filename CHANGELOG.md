@@ -8,6 +8,11 @@
   reset, body typography) are removed from the local `dashboard.css`; only
   cost-monitor-specific component classes remain.
 - Extract `TTLCache` into its own module (`src/robotsix_cost_monitor/cache.py`) — the generic stale-while-revalidate cache is now independently importable and testable.
+- **Removed** the hardcoded per-project Langfuse credential list from config.  Cost-monitor now discovers projects at runtime from the central-deploy registry (`registry_base_url` + `registry_api_key` settings), so newly-deployed Langfuse-enabled components appear automatically without touching cost-monitor config.
+- **Removed** the LLM cost-analyst subsystem entirely — analyst endpoints (`/api/analyst/*`), background analyst scheduler, LLM agent code, chat-skill analyst section, and the `[analyst]` extra dependency.
+- **Added** `RegistryClient` in `clients/registry.py` for querying the central-deploy component registry.
+- **Changed** `CostService` to accept a `RegistryClient` and populate its project map dynamically via `refresh_projects()`.
+- **Changed** config model: `ProjectConfig` and `AnalystConfig` classes removed; `Settings` gains `registry_base_url`, `registry_api_key`, and `registry_poll_interval_seconds`.
 - Dashboard cache now covers both window and backend dimensions: all five data kinds (traces, models, backend costs, agent usage, trace counts) are fetched as a unit and cached together, so switching the backend filter never triggers a fresh Langfuse round-trip.  Startup cache warming now pre-fetches all dashboard window presets (1 h, 6 h, 1 d, 1 w) instead of only the default window.
 - Added `GET /chat-skill` endpoint returning a Markdown skill document
   describing the HTTP API surface for the robotsix-chat agent (base URL,

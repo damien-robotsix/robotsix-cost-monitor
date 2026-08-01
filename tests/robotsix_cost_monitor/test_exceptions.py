@@ -18,7 +18,6 @@ from robotsix_cost_monitor.exceptions import (
     ExternalAuthError,
     ExternalRateLimitError,
     ExternalServiceError,
-    ProjectConfigError,
     ProjectNotFoundError,
 )
 
@@ -67,13 +66,6 @@ class TestExternalRateLimitError:
         assert err.error_code == "RATE_LIMITED"
 
 
-class TestProjectConfigError:
-    def test_defaults(self) -> None:
-        err = ProjectConfigError("missing key")
-        assert err.status_code == 422
-        assert err.error_code == "PROJECT_CONFIG_ERROR"
-
-
 class TestProjectNotFoundError:
     def test_defaults(self) -> None:
         err = ProjectNotFoundError("no such project")
@@ -111,10 +103,5 @@ class TestMRO:
 
     def test_cache_is_cost_monitor_not_service(self) -> None:
         err = CacheError("x")
-        assert isinstance(err, CostMonitorError)
-        assert not isinstance(err, ExternalServiceError)
-
-    def test_config_is_cost_monitor_not_service(self) -> None:
-        err = ProjectConfigError("x")
         assert isinstance(err, CostMonitorError)
         assert not isinstance(err, ExternalServiceError)

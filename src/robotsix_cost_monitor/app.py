@@ -7,7 +7,6 @@ import contextlib
 import logging
 import logging.config
 from collections.abc import AsyncIterator
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -18,15 +17,8 @@ from fastapi.staticfiles import StaticFiles
 
 from robotsix_cost_monitor import __version__
 
-from .analyst import (
-    AnalystKind,
-    load_proposals,
-    load_targeted_analysis,
-    run_analyst,
-    run_stage_analyst,
-    run_ticket_analyst,
-)
-from .config import Config, Settings, load_config
+from .clients.registry import RegistryClient
+from .config import Config, load_config
 from .metrics import cache_warm_failure, cache_warm_success
 from .reconcile import reconcile_all
 from .routes import register_exception_handlers, router
@@ -126,92 +118,7 @@ def _configure_logging(log_format: str = "json", log_level: str = "INFO") -> Non
 logger = structlog.get_logger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Scheduler helpers (tested directly — keep in this module)
-# ---------------------------------------------------------------------------
-
-
-def _parse_iso(value: Any) -> datetime | None:
-    """Parse a stored ISO ``generated_at`` to an aware UTC datetime, or None."""
-    if not isinstance(value, str) or not value:
-        return None
-    try:
-        dt = datetime.fromisoformat(value)
-    except ValueError:
-        return None
-    return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
-
-
-def _last_analyst_run(settings: Settings | None = None) -> datetime | None:
-    """Return the most recent analyst run timestamp.
-
-    The most recent ``generated_at`` across the persisted fleet/ticket/stage
-    analyses, or ``None`` when none has run yet.
-
-    Used to resume the analyst cadence across process restarts: the dashboard's
-    scheduler lives in-process and is redeployed often (Watchtower), so a timer
-    that simply sleeps a full interval on every start would keep resetting and
-    the daily analysis would rarely fire.
-    """
-    stamps = (
-        load_proposals(settings).get("generated_at"),
-        load_targeted_analysis(AnalystKind.TICKET, settings).get("generated_at"),
-        load_targeted_analysis(AnalystKind.STAGE, settings).get("generated_at"),
-    )
-    runs = [dt for dt in (_parse_iso(s) for s in stamps) if dt is not None]
-    return max(runs) if runs else None
-
-
-def _initial_analyst_delay(
-    interval: float, last_run: datetime | None, now: datetime
-) -> float:
-    """Calculate seconds to wait before the first scheduled analysis.
-
-    ``0`` when a full *interval* has already elapsed since *last_run* (or nothing
-    has ever run), else only the remaining time — so the ~daily cadence is stable
-    regardless of how often the container restarts. A *last_run* in the future
-    (clock skew) falls back to a full interval rather than running immediately.
-    """
-    if last_run is None:
-        return 0.0
-    elapsed = (now - last_run).total_seconds()
-    if elapsed < 0:
-        return interval
-    return max(0.0, interval - elapsed)
-
-
-async def _analyst_loop(cfg: Config, service: CostService, hours: float) -> None:
-    """Run all analyses on a schedule until cancelled.
-
-    Analyses: fleet + most-costly ticket + most-costly stage, every *hours*
-    hours. The first delay is derived from the last persisted run (not a fresh
-    full sleep) so frequent redeploys don't starve the schedule: if a full
-    interval has already elapsed it runs at once, otherwise it waits only the
-    remainder.
-    """
-    interval = max(1.0, hours) * 3600
-    analyses = (
-        (AnalystKind.FLEET, run_analyst),
-        (AnalystKind.TICKET, run_ticket_analyst),
-        (AnalystKind.STAGE, run_stage_analyst),
-    )
-    delay = _initial_analyst_delay(
-        interval, _last_analyst_run(cfg.settings), datetime.now(UTC)
-    )
-    logger.info(
-        "analyst scheduler: first run in %.0fs (interval %.0fs)", delay, interval
-    )
-    while True:
-        await asyncio.sleep(delay)
-        for label, fn in analyses:
-            try:
-                await fn(cfg, service)
-            except Exception:
-                logger.exception("scheduled %s analysis failed", label)
-        delay = interval
-
-
-async def _reconcile_loop(cfg: Config, hours: float) -> None:
+async def _reconcile_loop(cfg: Config, service: CostService, hours: float) -> None:
     """Reconcile all projects on a schedule until cancelled.
 
     Runs every *hours* hours (with an initial run so the banner has data
@@ -220,7 +127,7 @@ async def _reconcile_loop(cfg: Config, hours: float) -> None:
     interval = max(1.0, hours) * 3600
     while True:
         try:
-            await reconcile_all(cfg)
+            await reconcile_all(cfg, service)
         except Exception:
             logger.exception("scheduled reconcile failed")
         await asyncio.sleep(interval)
@@ -232,13 +139,13 @@ async def _warm_cache(cfg: Config, service: CostService) -> None:
     Every window-selector option is warmed so window switches are near-instant
     from the first page load.  Best-effort — failures are logged and discarded.
     """
-    if not cfg.projects:
+    if not service._project_map:
         return
     from .service import DASHBOARD_WINDOW_PRESETS
 
     logger.info(
         "warming dashboard cache (%d projects, %d windows)",
-        len(cfg.projects),
+        len(service._project_map),
         len(DASHBOARD_WINDOW_PRESETS),
     )
     failed = False
@@ -283,35 +190,43 @@ def create_app(config: Config | None = None) -> FastAPI:
     Loads the project :class:`~robotsix_cost_monitor.config.Config` (when *config*
     is ``None``, reads from the path given by ``ROBOTSIX_CONFIG_FILE``), builds a
     :class:`~robotsix_cost_monitor.service.CostService`, wires the lifespan
-    (analyst and reconciliation background loops), mounts the route handlers from
+    (reconciliation background loop), mounts the route handlers from
     :mod:`robotsix_cost_monitor.routes`, registers exception handlers, and serves
     the static web assets.
     """
     cfg = config or load_config()
     _configure_logging(cfg.settings.log_format, cfg.settings.log_level)
-    service = CostService(cfg)
+    registry = RegistryClient(
+        base_url=cfg.settings.registry_base_url,
+        api_key=cfg.settings.registry_api_key.get_secret_value(),
+    )
+    service = CostService(cfg, registry)
 
     @contextlib.asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         """ASGI lifespan: set up / tear down application state."""
+        await service.refresh_projects()
         tasks: list[asyncio.Task[None]] = []
-        a = cfg.settings.analyst
-        if a.enabled and a.schedule_hours > 0:
-            logger.info("starting analyst scheduler (every %sh)", a.schedule_hours)
-            tasks.append(
-                asyncio.create_task(_analyst_loop(cfg, service, a.schedule_hours))
-            )
         rh = cfg.settings.reconcile_schedule_hours
-        if rh > 0 and cfg.projects:
+        if rh > 0 and service._project_map:
             logger.info("starting reconcile scheduler (every %sh)", rh)
-            tasks.append(asyncio.create_task(_reconcile_loop(cfg, rh)))
+            tasks.append(asyncio.create_task(_reconcile_loop(cfg, service, rh)))
         # Periodic dashboard cache warming (keeps aggregates precomputed).
         di = cfg.settings.dashboard_refresh_interval_seconds
-        if di > 0 and cfg.projects:
+        if di > 0 and service._project_map:
             logger.info("starting dashboard cache-refresh loop (every %ss)", di)
             tasks.append(asyncio.create_task(_cache_refresh_loop(cfg, service, di)))
         # One-shot startup cache warm so the first page load is fast.
         tasks.append(asyncio.create_task(_warm_cache(cfg, service)))
+        rpi = cfg.settings.registry_poll_interval_seconds
+        if rpi > 0:
+
+            async def _registry_poll_loop() -> None:
+                while True:
+                    await asyncio.sleep(rpi)
+                    await service.refresh_projects()
+
+            tasks.append(asyncio.create_task(_registry_poll_loop()))
         try:
             yield
         finally:

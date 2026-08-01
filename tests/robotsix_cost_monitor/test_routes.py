@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import sys
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 from fastapi import FastAPI, HTTPException, Request
@@ -44,9 +44,7 @@ sys.modules["robotsix_llmio.core"] = _llmio_core
 sys.modules["robotsix_llmio.core.langfuse_async_client"] = _llmio_core_langfuse
 
 from robotsix_cost_monitor.config import Config  # noqa: E402
-from robotsix_cost_monitor.exceptions import ProjectNotFoundError  # noqa: E402
 from robotsix_cost_monitor.routes import (  # noqa: E402
-    _require_project,
     _window,
     get_config,
     get_service,
@@ -134,39 +132,6 @@ def test_get_service_returns_app_state_service() -> None:
     app.state.service = svc = object()
     req = _make_request(app)
     assert get_service(req) is svc
-
-
-# ---------------------------------------------------------------------------
-# _require_project
-# ---------------------------------------------------------------------------
-
-
-def test_require_project_all_always_passes() -> None:
-    """``project="all"`` never raises — even with zero projects."""
-    _require_project("all", _config())  # no exception
-
-
-def test_require_project_valid_slug_passes() -> None:
-    cfg = _config(_proj("Demo Project"))
-    _require_project("demo-project", cfg)  # no exception
-
-
-def test_require_project_unknown_slug_raises_404() -> None:
-    cfg = _config(_proj("Demo"))
-    with pytest.raises(ProjectNotFoundError) as exc:
-        _require_project("nope", cfg)
-    assert exc.value.status_code == 404
-    assert "nope" in exc.value.detail
-
-
-def test_require_project_case_sensitive_slug() -> None:
-    """The slug derived from the name is lowercase; an uppercase variant must
-    fail because Config.project does an exact slug match.
-    """
-    cfg = _config(_proj("Demo"))
-    with pytest.raises(ProjectNotFoundError) as exc:
-        _require_project("Demo", cfg)
-    assert exc.value.status_code == 404
 
 
 # ---------------------------------------------------------------------------
@@ -347,10 +312,12 @@ def test_register_exception_handlers_wires_all_five() -> None:
 @pytest.fixture
 def client() -> TestClient:
     """A TestClient against an app with one demo project and a mock service."""
-    cfg = _config(_proj("Demo"))
+    demo = _proj("Demo")
+    cfg = _config()
     svc = Mock()
     svc.last_updated = None
     svc.invalidate_all = Mock()
+    svc._project_map = {demo.slug: demo}
     # Default async methods return empty results so routes don't crash.
     svc.summary = AsyncMock(
         return_value={
@@ -381,7 +348,7 @@ def client() -> TestClient:
 def test_health_includes_project_names(client: TestClient) -> None:
     r = client.get("/health")
     assert r.status_code == 200
-    assert r.json()["projects"] == ["Demo"]
+    assert r.json()["projects"] == []
 
 
 def test_chat_skill_returns_200_with_markdown(client: TestClient) -> None:
@@ -410,18 +377,11 @@ def test_chat_skill_returns_200_with_markdown(client: TestClient) -> None:
         "GET /api/highlights",
         "GET /api/reconcile",
         "GET /api/reconcile/last",
-        "GET /api/analyst/digest",
-        "GET /api/analyst/proposals",
-        "GET /api/analyst/{kind}",
         "GET /health",
     ):
         assert ep in body, f"Missing endpoint: {ep}"
     # Mutating endpoints are listed in the Safety section.
-    for ep in (
-        "POST /api/refresh",
-        "POST /api/analyst/run",
-        "POST /api/analyst/run/{kind}",
-    ):
+    for ep in ("POST /api/refresh",):
         assert ep in body, f"Missing mutating endpoint: {ep}"
     # No credentials are embedded.
     assert "sk-lf-" not in body
@@ -517,20 +477,15 @@ def test_highlights_with_backend(client: TestClient) -> None:
     client.app.state.service.highlights.assert_called_once_with("all", 24, "openrouter")  # type: ignore[attr-defined]
 
 
-def test_reconcile_project_not_found_404(client: TestClient) -> None:
+def test_reconcile_project_not_found_returns_empty(client: TestClient) -> None:
+    """Unknown project slug returns an empty list (no 404 — registry-driven)."""
     r = client.get("/api/reconcile?project=nonexistent")
-    assert r.status_code == 404
-    assert r.json()["error"]["code"] == "PROJECT_NOT_FOUND"
+    assert r.status_code == 200
+    assert r.json() == []
 
 
 def test_index_returns_html() -> None:
     r = _client().get("/")
-    assert r.status_code == 200
-    assert r.headers["content-type"].startswith("text/html")
-
-
-def test_analyst_page_returns_html() -> None:
-    r = _client().get("/analyst")
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/html")
 
@@ -551,121 +506,22 @@ def test_invalid_query_param_type_validation_envelope() -> None:
     assert any("hours" in f for f in fields)
 
 
-def test_not_found_uses_http_error_envelope(client: TestClient) -> None:
+def test_unknown_project_returns_empty_summary(client: TestClient) -> None:
+    """Unknown project slug returns empty summary (no 404 — registry-driven)."""
     r = client.get("/api/summary?project=nonexistent")
-    assert r.status_code == 404
+    assert r.status_code == 200
     body = r.json()
-    assert body["error"]["code"] == "PROJECT_NOT_FOUND"
-    assert body["error"]["detail"] == "Unknown project slug: nonexistent"
+    assert body["total_cost"] == 0.0
 
 
 def test_internal_error_returns_sanitized_envelope() -> None:
     """Force a 500 via a mock service that raises an unhandled exception."""
     svc = Mock()
     svc.summary = AsyncMock(side_effect=RuntimeError("crash"))
-    r = _client(_config(_proj("Demo")), svc, raise_server_exceptions=False).get(
+    r = _client(_config(), svc, raise_server_exceptions=False).get(
         "/api/summary?hours=24"
     )
     assert r.status_code == 500
     body = r.json()
     assert body["error"]["code"] == "INTERNAL_ERROR"
     assert body["error"]["detail"] == "Internal Server Error"
-
-
-def test_analyst_digest_default_window() -> None:
-    """When ``hours=0``, the digest route falls back to analyst.window_hours."""
-    svc = Mock()
-    svc.highlights = AsyncMock(return_value={})
-    cfg = _config(_proj("Demo"))
-    # The build_digest function is patched to avoid real analyst logic.
-    with patch("robotsix_cost_monitor.routes.build_digest") as mock_digest:
-        mock_digest.return_value = {"digest": "ok"}
-        r = _client(cfg, svc).get("/api/analyst/digest?hours=0")
-        assert r.status_code == 200
-        # build_digest should receive the config's analyst.window_hours (24 by default)
-        mock_digest.assert_called_once_with(svc, 24, cfg)
-
-
-def test_analyst_proposals_loads() -> None:
-    """The route returns whatever load_proposals produces."""
-    with patch(
-        "robotsix_cost_monitor.routes.load_proposals",
-        return_value={"generated_at": None},
-    ):
-        r = _client().get("/api/analyst/proposals")
-        assert r.status_code == 200
-
-
-def test_analyst_ticket_loads() -> None:
-    with patch(
-        "robotsix_cost_monitor.routes.load_targeted_analysis",
-        return_value={"generated_at": None},
-    ):
-        r = _client().get("/api/analyst/ticket")
-        assert r.status_code == 200
-
-
-def test_analyst_stage_loads() -> None:
-    with patch(
-        "robotsix_cost_monitor.routes.load_targeted_analysis",
-        return_value={"generated_at": None},
-    ):
-        r = _client().get("/api/analyst/stage")
-        assert r.status_code == 200
-
-
-def test_analyst_fleet_loads() -> None:
-    with patch(
-        "robotsix_cost_monitor.routes.load_targeted_analysis",
-        return_value={"generated_at": None},
-    ):
-        r = _client().get("/api/analyst/fleet")
-        assert r.status_code == 200
-
-
-def test_analyst_run() -> None:
-    with patch(
-        "robotsix_cost_monitor.routes.run_analyst",
-        new_callable=AsyncMock,
-        return_value={"status": "ok"},
-    ) as mock_run:
-        r = _client().post("/api/analyst/run")
-        assert r.status_code == 200
-        assert r.json() == {"status": "ok"}
-        mock_run.assert_called_once()
-
-
-def test_analyst_ticket_run() -> None:
-    with patch(
-        "robotsix_cost_monitor.routes.run_ticket_analyst",
-        new_callable=AsyncMock,
-        return_value={"status": "ok"},
-    ) as mock_run:
-        r = _client().post("/api/analyst/run/ticket")
-        assert r.status_code == 200
-        assert r.json() == {"status": "ok"}
-        mock_run.assert_called_once()
-
-
-def test_analyst_stage_run() -> None:
-    with patch(
-        "robotsix_cost_monitor.routes.run_stage_analyst",
-        new_callable=AsyncMock,
-        return_value={"status": "ok"},
-    ) as mock_run:
-        r = _client().post("/api/analyst/run/stage")
-        assert r.status_code == 200
-        assert r.json() == {"status": "ok"}
-        mock_run.assert_called_once()
-
-
-def test_analyst_fleet_run() -> None:
-    with patch(
-        "robotsix_cost_monitor.routes.run_analyst",
-        new_callable=AsyncMock,
-        return_value={"status": "ok"},
-    ) as mock_run:
-        r = _client().post("/api/analyst/run/fleet")
-        assert r.status_code == 200
-        assert r.json() == {"status": "ok"}
-        mock_run.assert_called_once()
