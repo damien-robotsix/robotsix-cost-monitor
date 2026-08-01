@@ -225,6 +225,46 @@ async def _reconcile_loop(cfg: Config, hours: float) -> None:
         await asyncio.sleep(interval)
 
 
+async def _warm_cache(cfg: Config, service: CostService) -> None:
+    """Pre-fetch default-window aggregates on startup for fast first load.
+
+    Best-effort — failures are logged and discarded; a cold cache is a
+    performance problem, not a correctness one.
+    """
+    if not cfg.projects:
+        return
+    hours = cfg.settings.default_window_hours
+    logger.info(
+        "warming dashboard cache (window=%sh, %d projects)",
+        hours,
+        len(cfg.projects),
+    )
+    try:
+        # summary() touches _model_usage + _trace_count caches per project
+        await service.summary("all", hours)
+        # by_agent_segmented() touches _agent_usage_cache per project
+        await service.by_agent_segmented("all", hours)
+        # by_model() touches _model_cache per project
+        await service.by_model("all", hours)
+        # trend() touches _cache (traces) per project
+        await service.trend("all", hours)
+        logger.info("dashboard cache warm complete")
+    except Exception:
+        logger.exception("dashboard cache warm-up failed — cold start on first request")
+
+
+async def _cache_refresh_loop(
+    cfg: Config, service: CostService, interval_s: int
+) -> None:
+    """Periodically re-fetch dashboard aggregates so the cache stays warm.
+
+    Runs forever until cancelled; sleeps *interval_s* between refreshes.
+    """
+    while True:
+        await asyncio.sleep(interval_s)
+        await _warm_cache(cfg, service)
+
+
 # ---------------------------------------------------------------------------
 # App factory
 # ---------------------------------------------------------------------------
@@ -258,6 +298,13 @@ def create_app(config: Config | None = None) -> FastAPI:
         if rh > 0 and cfg.projects:
             logger.info("starting reconcile scheduler (every %sh)", rh)
             tasks.append(asyncio.create_task(_reconcile_loop(cfg, rh)))
+        # Periodic dashboard cache warming (keeps aggregates precomputed).
+        di = cfg.settings.dashboard_refresh_interval_seconds
+        if di > 0 and cfg.projects:
+            logger.info("starting dashboard cache-refresh loop (every %ss)", di)
+            tasks.append(asyncio.create_task(_cache_refresh_loop(cfg, service, di)))
+        # One-shot startup cache warm so the first page load is fast.
+        tasks.append(asyncio.create_task(_warm_cache(cfg, service)))
         try:
             yield
         finally:

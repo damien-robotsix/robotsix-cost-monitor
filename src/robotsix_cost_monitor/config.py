@@ -144,6 +144,11 @@ class Settings(BaseModel):
     server_port: int = Field(default=8080, json_schema_extra={"advanced": True})
     default_window_hours: int = Field(default=168, json_schema_extra={"advanced": True})
     cache_ttl_seconds: int = Field(default=60, json_schema_extra={"advanced": True})
+    # Background cache-refresh interval — keeps dashboard aggregates precomputed
+    # so the frontend never blocks on a live Langfuse fetch.  0 disables.
+    dashboard_refresh_interval_seconds: int = Field(
+        default=120, json_schema_extra={"advanced": True}
+    )
     reconcile_tolerance_usd: float = Field(
         default=1.0, json_schema_extra={"advanced": True}
     )
