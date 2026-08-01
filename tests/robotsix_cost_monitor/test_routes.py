@@ -384,6 +384,62 @@ def test_health_includes_project_names(client: TestClient) -> None:
     assert r.json()["projects"] == ["Demo"]
 
 
+def test_chat_skill_returns_200_with_markdown(client: TestClient) -> None:
+    """GET /chat-skill returns a Markdown skill document."""
+    r = client.get("/chat-skill")
+    assert r.status_code == 200
+    body = r.text
+    # Must be a substantial Markdown document (not a trivial one-liner).
+    assert len(body) > 300
+    # Key sections from the skill doc.
+    assert "# robotsix-cost-monitor — Chat Agent Skill" in body
+    assert "## Base URL" in body
+    assert "http://cost-monitor:8080" in body
+    assert "## Authentication" in body
+    assert "## Read endpoints" in body
+    assert "## Safety" in body
+    # All major read endpoints are documented.
+    for ep in (
+        "GET /api/summary",
+        "GET /api/projects",
+        "GET /api/by-agent",
+        "GET /api/by-agent-segmented",
+        "GET /api/by-model",
+        "GET /api/trend",
+        "GET /api/backend-trend",
+        "GET /api/highlights",
+        "GET /api/reconcile",
+        "GET /api/reconcile/last",
+        "GET /api/analyst/digest",
+        "GET /api/analyst/proposals",
+        "GET /api/analyst/{kind}",
+        "GET /health",
+    ):
+        assert ep in body, f"Missing endpoint: {ep}"
+    # Mutating endpoints are listed in the Safety section.
+    for ep in (
+        "POST /api/refresh",
+        "POST /api/analyst/run",
+        "POST /api/analyst/run/{kind}",
+    ):
+        assert ep in body, f"Missing mutating endpoint: {ep}"
+    # No credentials are embedded.
+    assert "sk-lf-" not in body
+    assert "pk-lf-" not in body
+    assert "secret" not in body.lower()
+
+
+def test_chat_skill_no_credentials_leaked(client: TestClient) -> None:
+    """The chat-skill doc must not embed any config secrets."""
+    r = client.get("/chat-skill")
+    body = r.text
+    # No Langfuse key patterns.
+    assert "sk-lf-" not in body
+    assert "pk-lf-" not in body
+    # No OpenRouter key patterns.
+    assert "sk-or-" not in body
+
+
 def test_projects_returns_slug(client: TestClient) -> None:
     r = client.get("/api/projects")
     assert r.status_code == 200
