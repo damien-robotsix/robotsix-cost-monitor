@@ -482,14 +482,14 @@ class CostService:
                     "cost": 0.0,
                     "count": 0,
                     "by_stage": {},
-                }  # type: ignore[assignment]
+                }
             cost = t.total_cost or 0.0
             sessions[sid]["cost"] += cost
             sessions[sid]["count"] += 1
             stage = t.name or "unknown"
             sessions[sid]["by_stage"][stage] = (
                 sessions[sid]["by_stage"].get(stage, 0.0) + cost
-            )  # type: ignore[index]
+            )
 
         if not sessions:
             return None

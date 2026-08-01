@@ -68,7 +68,7 @@ def test_settings_data_dir_default() -> None:
 
 def test_load_config_found(monkeypatch: pytest.MonkeyPatch) -> None:
     """Write a minimal valid config to a temp file and load it."""
-    data = {
+    data: dict[str, object] = {
         "settings": {},
     }
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
