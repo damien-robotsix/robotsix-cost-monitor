@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Document `docs/modules.yaml` file-registration requirement in AGENT.md Testing conventions, so agents register every new source or test file under an appropriate module.
 - Add `low_balance_threshold_usd` config field (default $5.00) — when the
   OpenRouter account remaining balance drops below this threshold during
   reconciliation, a warning is logged and surfaced in the dashboard via a

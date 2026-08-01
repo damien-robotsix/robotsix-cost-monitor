@@ -5,6 +5,13 @@ This repo follows the [robotsix stack standards](https://github.com/damien-robot
 ## Testing conventions
 
 - Tests live under `tests/` and run with `pytest`.
+- **Rule:** Every new source or test file MUST be registered under an
+  appropriate module in `docs/modules.yaml` (CI's module-taxonomy
+  validation runs `uv run robotsix-modules-validate docs/modules.yaml`
+  in the `ci` workflow and fails otherwise). Add any new test to the
+  module owning its path, e.g. a new test under `tests/` typically
+  belongs to `project-root` unless a more specific source module
+  covers it.
 - **No network / no live LLM in tests.** The suite is fully offline:
   - `robotsix_llmio.core.AsyncLangfuseReadClient` is mocked via
     `unittest.mock.patch.object` on the composed `LangfuseClient._lf` instance
