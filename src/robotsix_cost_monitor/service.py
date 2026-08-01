@@ -163,23 +163,21 @@ class CostService:
         self._caches: list[TTLCache[Any, Any]] = []
         on_refresh = self._touch_last_updated
 
-        def _mk[T](
-            cache_type: type[TTLCache[Any, Any]], t: type[T]
-        ) -> TTLCache[Any, T]:
+        def _mk[T](t: type[T]) -> TTLCache[Any, T]:
             c = TTLCache[Any, T](ttl, on_refresh=on_refresh)
             self._caches.append(c)
             return c
 
         # cache: (slug, hours) -> (traces, monotonic_deadline)
-        self._cache = _mk(TTLCache, list[LangfuseTrace])
+        self._cache = _mk(list[LangfuseTrace])
         # cache: (slug, hours) -> (per-model usage rows, monotonic_deadline)
-        self._model_cache = _mk(TTLCache, list[dict[str, Any]])
+        self._model_cache = _mk(list[dict[str, Any]])
         # cache: (slug, hours) -> ({time_bucket -> {backend -> cost}}, deadline)
-        self._backend_cache = _mk(TTLCache, dict[str, dict[str, float]])
+        self._backend_cache = _mk(dict[str, dict[str, float]])
         # cache: (slug, hours) -> (per-(stage, backend) rows, monotonic_deadline)
-        self._agent_usage_cache = _mk(TTLCache, list[dict[str, Any]])
+        self._agent_usage_cache = _mk(list[dict[str, Any]])
         # cache: (slug, hours) -> (trace_count, monotonic_deadline)
-        self._trace_count_cache = _mk(TTLCache, int)
+        self._trace_count_cache = _mk(int)
 
     def _touch_last_updated(self) -> None:
         """Record the current wall-clock time as the last cache refresh."""
