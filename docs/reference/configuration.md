@@ -40,6 +40,7 @@ Each entry in the `projects` list connects to one Langfuse project.
 | `server_port` | `int` | `8080` | TCP port the dashboard web server listens on. Overridable via `serve --port`. |
 | `default_window_hours` | `int` | `168` | Default time window (in hours) for dashboard cost aggregations (7 days). |
 | `cache_ttl_seconds` | `int` | `60` | How long per-trace cost results are cached before re-fetching from Langfuse. |
+| `dashboard_refresh_interval_seconds` | `int` | `120` | Interval (seconds) between background dashboard cache-refresh runs that keep cost aggregates precomputed so the frontend never blocks on a live Langfuse fetch. Set to `0` to disable the periodic refresh loop. |
 | `reconcile_tolerance_usd` | `float` | `1.0` | Maximum allowed drift (USD) between OpenRouter and Langfuse costs before reconciliation is flagged. |
 | `reconcile_schedule_hours` | `float` | `24.0` | Interval in hours between automatic reconciliation runs. Set to `0` to disable scheduled reconciliation. |
 | `subscription_call_cap` | `int` | `0` | Per-day cap on subscription-triggered calls. Set to `0` to disable the cap. |

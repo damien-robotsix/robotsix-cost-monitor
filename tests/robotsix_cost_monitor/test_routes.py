@@ -349,6 +349,8 @@ def client() -> TestClient:
     """A TestClient against an app with one demo project and a mock service."""
     cfg = _config(_proj("Demo"))
     svc = Mock()
+    svc.last_updated = None
+    svc.invalidate_all = Mock()
     # Default async methods return empty results so routes don't crash.
     svc.summary = AsyncMock(
         return_value={

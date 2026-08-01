@@ -3,12 +3,20 @@
 Wraps the per-project :class:`LangfuseClient`s, caches each ``(project, window)``
 trace fetch for ``cache_ttl_seconds``, and exposes the aggregations the
 dashboard needs — per-project and aggregated across all projects.
+
+The :class:`TTLCache` supports stale-while-revalidate (SWR) semantics:
+- Entries are *fresh* for ``ttl`` seconds and served immediately.
+- After ``ttl`` seconds the entry is *stale* — still served, but a background
+  refresh is triggered so the next request gets fresh data.
+- On cold cache (no entry at all) the fetch blocks the caller.
 """
 
 from __future__ import annotations
 
+import asyncio
 import time
 from collections.abc import Awaitable, Callable
+from datetime import UTC, datetime
 from typing import Any, TypeVar
 
 import structlog
@@ -44,29 +52,100 @@ V = TypeVar("V")
 
 
 class TTLCache[K, V]:
-    """Generic TTL cache keyed by ``K``, storing values of type ``V``.
+    """Generic TTL cache with stale-while-revalidate (SWR) semantics.
 
-    Each value is paired with a monotonic deadline; ``get_or_fetch`` returns
-    the cached value while it is fresh and falls back to ``fetch_fn`` otherwise.
+    Each value is paired with a freshness deadline and a last-updated
+    monotonic timestamp.  ``get_or_fetch`` returns the cached value while
+    fresh; when stale it still returns the cached value but triggers a
+    background refresh (non-blocking).  On a cold miss it blocks on the
+    fetch.
+
+    The ``on_refresh`` callback (if set) is called after each successful
+    background refresh so the owning service can update its global
+    ``last_updated`` timestamp.
     """
 
-    def __init__(self, ttl: float) -> None:
-        """Create a cache where every entry lives for *ttl* seconds."""
+    def __init__(
+        self,
+        ttl: float,
+        *,
+        on_refresh: Callable[[], None] | None = None,
+    ) -> None:
+        """Create a cache where every entry is fresh for *ttl* seconds.
+
+        After *ttl* seconds the entry becomes stale but is still served;
+        a background refresh is scheduled when the first caller hits the
+        stale entry.
+        """
         self._ttl = ttl
-        self._store: dict[K, tuple[V, float]] = {}
+        self._on_refresh = on_refresh
+        # (value, freshness_deadline, last_updated_monotonic)
+        self._store: dict[K, tuple[V, float, float]] = {}
+        self._pending: set[K] = set()
+
+    @property
+    def last_updated(self) -> float | None:
+        """Most recent ``time.monotonic()`` when any entry was refreshed.
+
+        ``None`` when the cache has never been populated.
+        """
+        if not self._store:
+            return None
+        return max(entry[2] for entry in self._store.values())
 
     async def get_or_fetch(self, key: K, fetch_fn: Callable[[], Awaitable[V]]) -> V:
-        """Return the cached value for *key* if fresh, otherwise fetch + cache."""
+        """Fresh → serve, stale → serve + bg refresh, cold → block."""
+        now = time.monotonic()
         hit = self._store.get(key)
-        if hit is not None and hit[1] > time.monotonic():
-            return hit[0]
+        if hit is not None:
+            _value, deadline, _updated = hit
+            if deadline > now:
+                return _value  # fresh — serve immediately
+            # Stale — serve immediately, refresh in background
+            if key not in self._pending:
+                self._pending.add(key)
+                asyncio.create_task(self._background_refresh(key, fetch_fn))
+            return _value
+        # Cold miss — block on fetch
         result = await fetch_fn()
-        self._store[key] = (result, time.monotonic() + self._ttl)
+        now = time.monotonic()
+        self._store[key] = (result, now + self._ttl, now)
+        if self._on_refresh is not None:
+            self._on_refresh()
         return result
+
+    async def _background_refresh(
+        self, key: K, fetch_fn: Callable[[], Awaitable[V]]
+    ) -> None:
+        """Fetch a fresh value for *key* in the background, updating the store."""
+        try:
+            result = await fetch_fn()
+            now = time.monotonic()
+            self._store[key] = (result, now + self._ttl, now)
+            if self._on_refresh is not None:
+                self._on_refresh()
+        except Exception:
+            logger.debug("background refresh failed for key %s", key, exc_info=True)
+        finally:
+            self._pending.discard(key)
+
+    def invalidate(self, key: K | None = None) -> None:
+        """Remove *key* from the cache; when *key* is ``None`` clear all entries."""
+        if key is None:
+            self._store.clear()
+            self._pending.clear()
+        else:
+            self._store.pop(key, None)
+            self._pending.discard(key)
 
 
 class CostService:
-    """Cross-project cost aggregation service with per-window TTL cache."""
+    """Cross-project cost aggregation service with per-window TTL cache.
+
+    All five internal caches share a single :attr:`last_updated` timestamp
+    (the youngest refresh across *all* caches) so the dashboard can display
+    data freshness.
+    """
 
     def __init__(self, config: Config) -> None:
         """Initialise the service with a validated config and per-project clients."""
@@ -80,22 +159,40 @@ class CostService:
             for p in config.projects
         }
         ttl = self.config.settings.cache_ttl_seconds
+        self._last_updated: datetime | None = None
+        self._caches: list[TTLCache[Any, Any]] = []
+        on_refresh = self._touch_last_updated
+
+        def _mk[T](t: type[T]) -> TTLCache[Any, T]:
+            c = TTLCache[Any, T](ttl, on_refresh=on_refresh)
+            self._caches.append(c)
+            return c
+
         # cache: (slug, hours) -> (traces, monotonic_deadline)
-        self._cache: TTLCache[tuple[str, int], list[LangfuseTrace]] = TTLCache(ttl)
+        self._cache = _mk(list[LangfuseTrace])
         # cache: (slug, hours) -> (per-model usage rows, monotonic_deadline)
-        self._model_cache: TTLCache[tuple[str, int], list[dict[str, Any]]] = TTLCache(
-            ttl
-        )
+        self._model_cache = _mk(list[dict[str, Any]])
         # cache: (slug, hours) -> ({time_bucket -> {backend -> cost}}, deadline)
-        self._backend_cache: TTLCache[tuple[str, int], dict[str, dict[str, float]]] = (
-            TTLCache(ttl)
-        )
+        self._backend_cache = _mk(dict[str, dict[str, float]])
         # cache: (slug, hours) -> (per-(stage, backend) rows, monotonic_deadline)
-        self._agent_usage_cache: TTLCache[tuple[str, int], list[dict[str, Any]]] = (
-            TTLCache(ttl)
-        )
+        self._agent_usage_cache = _mk(list[dict[str, Any]])
         # cache: (slug, hours) -> (trace_count, monotonic_deadline)
-        self._trace_count_cache: TTLCache[tuple[str, int], int] = TTLCache(ttl)
+        self._trace_count_cache = _mk(int)
+
+    def _touch_last_updated(self) -> None:
+        """Record the current wall-clock time as the last cache refresh."""
+        self._last_updated = datetime.now(UTC)
+
+    @property
+    def last_updated(self) -> datetime | None:
+        """UTC datetime of the most recent cache refresh, or ``None`` when cold."""
+        return self._last_updated
+
+    def invalidate_all(self) -> None:
+        """Clear every internal cache so the next request fetches fresh data."""
+        for c in self._caches:
+            c.invalidate()
+        self._last_updated = None
 
     def _projects(self, slug: str | None) -> list[ProjectConfig]:
         if slug and slug != "all":

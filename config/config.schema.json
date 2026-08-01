@@ -228,6 +228,12 @@
           "title": "Cache Ttl Seconds",
           "type": "integer"
         },
+        "dashboard_refresh_interval_seconds": {
+          "advanced": true,
+          "default": 120,
+          "title": "Dashboard Refresh Interval Seconds",
+          "type": "integer"
+        },
         "reconcile_tolerance_usd": {
           "advanced": true,
           "default": 1.0,

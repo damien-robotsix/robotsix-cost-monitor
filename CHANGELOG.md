@@ -2,6 +2,14 @@
 ## 0.0.0 (unreleased)
 
 - Document `docs/modules.yaml` file-registration requirement in AGENT.md Testing conventions, so agents register every new source or test file under an appropriate module.
+- **Dashboard caching with stale-while-revalidate:** the ``CostService``
+  now serves cached cost aggregates immediately while refreshing from
+  Langfuse in the background when data is stale.  A periodic cache-warming
+  loop (``dashboard_refresh_interval_seconds``, default 120s) keeps
+  dashboard aggregates precomputed so the frontend never blocks on a live
+  API fetch.  The ``/api/summary`` response includes ``last_updated`` for
+  data-freshness visibility, and ``POST /api/refresh`` provides on-demand
+  cache invalidation.
 - Add `low_balance_threshold_usd` config field (default $5.00) — when the
   OpenRouter account remaining balance drops below this threshold during
   reconciliation, a warning is logged and surfaced in the dashboard via a

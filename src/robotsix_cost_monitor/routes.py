@@ -207,7 +207,28 @@ async def summary(
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
     """GET /api/summary — total cost and per-project totals for the window."""
-    return await service.summary(pw.project, pw.hours)
+    result = await service.summary(pw.project, pw.hours)
+    lu = service.last_updated
+    if lu is not None:
+        result["last_updated"] = lu.isoformat()
+    return result
+
+
+@router.post("/api/refresh")
+async def refresh_cache(
+    service: CostService = Depends(get_service),
+) -> dict[str, Any]:
+    """POST /api/refresh — invalidate all caches and force a fresh fetch.
+
+    The next dashboard request will block on a fresh Langfuse fetch (cold
+    start), then subsequent requests within the TTL will be served from
+    cache with stale-while-revalidate background refresh.
+    """
+    service.invalidate_all()
+    return {
+        "status": "ok",
+        "message": "Cache invalidated — next request will fetch fresh data.",
+    }
 
 
 @router.get("/api/by-agent")

@@ -13,7 +13,7 @@
 │   ├── routes.py               #   Route handlers, exception handlers, dependency providers
 │   ├── cli.py                  #   CLI entrypoint (serve / summary / reconcile)
 │   ├── config.py               #   Pydantic settings models + JSON config loader (robotsix-config)
-│   ├── service.py              #   Cross-project cost aggregation layer + TTL cache
+│   ├── service.py              #   Cross-project cost aggregation layer + SWR TTL cache
 │   ├── reconcile.py            #   OpenRouter ↔ Langfuse reconciliation engine
 │   ├── analyst.py              #   Optional LLM cost-analyst (robotsix-llmio)
 │   ├── aggregations.py         #   Pure cost-aggregation functions (no I/O)
@@ -55,6 +55,9 @@
           │    cumulative usage on a configurable interval  │
           │  • analyst_loop: runs all 3 analyses (fleet /   │
           │    ticket / stage) on a configurable interval   │
+          │  • cache_refresh_loop: keeps dashboard cost     │
+          │    aggregates precomputed; a one-shot warm-up   │
+          │    runs at startup                              │
           └────────────────────────────────────────────────┘
 ```
 
@@ -63,8 +66,9 @@
 1. **Ingress** — The browser (or a CLI `summary`/`reconcile` invocation) hits
    the FastAPI app.
 2. **Cache check** — `CostService` looks up the in-memory TTL cache keyed by
-   `(project_slug, window_hours)`. A cache hit returns immediately; a miss
-   fetches fresh data from Langfuse.
+   `(project_slug, window_hours)`. A fresh entry returns immediately; a stale
+   entry is still served while a **background refresh** is triggered
+   (stale-while-revalidate); a cold miss fetches fresh data from Langfuse.
 3. **Langfuse fetch** — `LangfuseClient` calls the Langfuse public REST API
    (`/api/public/traces`, `/api/public/metrics/*`) via `httpx`. Each project
    gets its own client (keyed by `public_key`/`secret_key`/`base_url`).
@@ -103,12 +107,16 @@ manager in `create_app()`) and cancelled on shutdown:
 | --- | --- | --- | --- |
 | `_reconcile_loop` | `settings.reconcile_schedule_hours` | 24 h | Runs `reconcile_all()` for every project; stores result in `.data/reconcile/last.json` (powers the warning banner) |
 | `_analyst_loop` | `settings.analyst.schedule_hours` | 24 h | Runs all three analyses (fleet, most-costly ticket, most-costly stage); persists results under `.data/analyst/` |
+| `_cache_refresh_loop` | `settings.dashboard_refresh_interval_seconds` | 120 s | Periodically re-fetches dashboard aggregates so the cache stays warm; a one-shot `_warm_cache` also runs at startup for a fast first page load |
 
 - The analyst loop computes its **first delay** from the last persisted run
   timestamp (`_last_analyst_run()`), so frequent redeploys (Watchtower) don't
   starve the schedule — if a full interval has elapsed it runs immediately.
+- The cache-warm loop (**best-effort**) logs and discards failures — a cold
+  cache is a performance problem, not a correctness one; the stale-while-
+  revalidate SWR path still keeps the dashboard responsive.
 - A failed run logs the exception and **does not kill the loop**.
-- Both loops are **asyncio tasks**; the app's lifespan cancels them on
+- All loops are **asyncio tasks**; the app's lifespan cancels them on
   shutdown.
 
 ## Optional `analyst` extra
@@ -140,7 +148,9 @@ CLI commands work without it. It requires two packages installed via the
   lose an OpenRouter reading.
 - **The TTL cache is process-local.** Restarting the app clears it. The
   cache keys on `(project_slug, window_hours)` with a configurable TTL
-  (`cache_ttl_seconds`, default 60 s).
+  (`cache_ttl_seconds`, default 60 s) and **stale-while-revalidate**
+  semantics: stale values are served immediately while a background refresh
+  fetches new data. `POST /api/refresh` invalidates all caches on demand.
 - **Configuration flows through Pydantic.** `Config` →
   `Config.model_validate()` is the only path. Never bypass the models.
 - **Runtime state lives under the configured data directory**

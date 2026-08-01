@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, patch
 
 from tests.robotsix_cost_monitor.helpers import _proj, _svc
@@ -250,7 +251,8 @@ async def test_by_agent_segmented_cache_hit() -> None:
 
 
 async def test_by_agent_segmented_cache_expiry() -> None:
-    """After TTL expires, a fresh agent usage fetch is made."""
+    """After TTL expires, the stale value is served while a background refresh
+    is scheduled; a subsequent call gets the new value."""
     rows_v1 = [
         {"name": "implement", "backend": "openrouter", "cost": 1.0, "count": 1},
     ]
@@ -272,8 +274,14 @@ async def test_by_agent_segmented_cache_expiry() -> None:
 
         mono.return_value = 1020.0
         r2 = await svc.by_agent_segmented("demo", 24)
-        assert r2["rows"][0]["openrouter_cost"] == 2.0
+        assert r2["rows"][0]["openrouter_cost"] == 1.0  # stale served immediately
+
+        # Let the background refresh run
+        await asyncio.sleep(0)
         assert client.fetch_agent_usage_window.call_count == 2  # type: ignore[attr-defined]
+
+        r3 = await svc.by_agent_segmented("demo", 24)
+        assert r3["rows"][0]["openrouter_cost"] == 2.0
 
 
 async def test_by_agent_segmented_null_cost() -> None:

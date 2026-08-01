@@ -52,7 +52,8 @@ uv run robotsix-cost-monitor analyst [--kind fleet|ticket|stage|all]
 | GET | `/` | — | Dashboard HTML page |
 | GET | `/analyst` | — | Analyst dashboard HTML page |
 | GET | `/api/projects` | — | List of configured projects (`name`, `slug`) |
-| GET | `/api/summary` | `?project=<slug\|all>&hours=<N>` | Total cost and per-project totals |
+| GET | `/api/summary` | `?project=<slug\|all>&hours=<N>` | Total cost and per-project totals (includes ISO-8601 `last_updated` when cached data is available) |
+| POST | `/api/refresh` | — | Invalidate all caches and force a fresh Langfuse fetch on the next dashboard request |
 | GET | `/api/by-agent` | `?project=<slug\|all>&hours=<N>&backend=<all\|backend>` | Cost breakdown by agent name |
 | GET | `/api/by-agent-segmented` | `?project=<slug\|all>&hours=<N>` | Agent costs segmented by model and backend |
 | GET | `/api/by-model` | `?project=<slug\|all>&hours=<N>` | Cost breakdown by model |
