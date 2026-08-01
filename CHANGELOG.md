@@ -1,6 +1,10 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Added `GET /chat-skill` endpoint returning a Markdown skill document
+  describing the HTTP API surface for the robotsix-chat agent (base URL,
+  all read endpoints with query parameters, authentication requirements,
+  and a safety section marking mutating endpoints as confirmation-gated).
 - Document `docs/modules.yaml` file-registration requirement in AGENT.md Testing conventions, so agents register every new source or test file under an appropriate module.
 - **Dashboard caching with stale-while-revalidate:** the ``CostService``
   now serves cached cost aggregates immediately while refreshing from

@@ -13,7 +13,7 @@ from typing import Any, NamedTuple, cast
 import structlog
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from robotsix_http import ExternalHTTPError
 
 from .aggregations import BackendKind
@@ -193,6 +193,96 @@ def register_exception_handlers(app: FastAPI) -> None:
 def health(cfg: Config = Depends(get_config)) -> dict[str, Any]:
     """GET /health — health check returning status and project names."""
     return {"status": "ok", "projects": [p.name for p in cfg.projects]}
+
+
+# ---------------------------------------------------------------------------
+# Chat skill (robotsix-chat agent access point)
+# ---------------------------------------------------------------------------
+
+_CHAT_SKILL = """\
+# robotsix-cost-monitor — Chat Agent Skill
+
+## Base URL
+
+```
+http://cost-monitor:8080
+```
+
+## Authentication
+
+HTTP Basic auth **may** be required (configured at deploy time — ask the
+operator for credentials).  All endpoints return 401 when auth is enabled
+and no valid credentials are supplied.  `/health` is always exempt.
+
+## Read endpoints
+
+All read endpoints accept an optional `?project=<slug>` query parameter
+(default `all`) and an optional `?hours=<n>` window (default 168 h).
+
+### Cost summaries
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/summary` | Total cost and per-project totals for the window. |
+| `GET /api/projects` | List all configured projects (name + slug). |
+
+### Per-agent / per-model breakdowns
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/by-agent` | Cost breakdown by agent name. Optional `?backend=`. |
+| `GET /api/by-agent-segmented` | Agent costs segmented by model and backend. |
+| `GET /api/by-model` | Cost breakdown by model. |
+
+### Trends
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/trend` | Cost trend series bucketed by time. Optional `?buckets=`. |
+| `GET /api/backend-trend` | Cost trend per backend. Optional `?backend=`. |
+
+### Highlights & reconciliation
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/highlights` | Most expensive trace and session for the window. |
+| `GET /api/reconcile` | Reconcile OpenRouter usage against Langfuse traced costs. |
+| `GET /api/reconcile/last` | Most recent reconciliation result. |
+
+### Analyst (cost-reduction proposals)
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/analyst/digest` | Cost-analysis digest from recent trace data. |
+| `GET /api/analyst/proposals` | Saved cost-reduction proposals. |
+| `GET /api/analyst/{kind}` | Saved targeted analysis (kind: `ticket` or `stage`). |
+
+### Health
+
+| Endpoint | Description |
+|---|---|
+| `GET /health` | Health check (status + project names). Always unauthenticated. |
+
+## Safety
+
+**Mutating endpoints** — these change server state (invalidate caches,
+trigger cost-analyst runs).  The chat agent MUST ask for explicit
+operator confirmation before calling any of them:
+
+| Endpoint | What it does |
+|---|---|
+| `POST /api/refresh` | Invalidate all caches; next request fetches fresh data. |
+| `POST /api/analyst/run` | Trigger a full cost-analyst analysis (fleet-wide). |
+| `POST /api/analyst/run/{kind}` | Targeted analysis (`ticket`, `stage`, `fleet`). |
+
+All read endpoints (`GET`) are safe and require no confirmation.
+"""
+
+
+@router.get("/chat-skill", response_class=PlainTextResponse)
+def chat_skill(cfg: Config = Depends(get_config)) -> str:
+    """GET /chat-skill — robotsix-chat agent skill document (Markdown)."""
+    return _CHAT_SKILL
 
 
 @router.get("/api/projects")
