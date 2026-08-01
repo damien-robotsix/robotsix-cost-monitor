@@ -1,4 +1,4 @@
-"""Unit tests for CostService — cache hit / miss behaviour."""
+"""Unit tests for TTLCache — cache hit / miss behaviour through CostService."""
 
 from __future__ import annotations
 
@@ -52,7 +52,7 @@ async def test_traces_cache_expiry() -> None:
         client, "fetch_traces_window", AsyncMock(side_effect=[traces_v1, traces_v2])
     )
 
-    with patch("robotsix_cost_monitor.service.time.monotonic") as mono:
+    with patch("robotsix_cost_monitor.cache.time.monotonic") as mono:
         mono.return_value = 1000.0
         result1 = await svc.by_agent("demo", 24)
         assert result1[0]["name"] == "old"
@@ -99,7 +99,7 @@ async def test_model_usage_cache_expiry() -> None:
         AsyncMock(side_effect=[models_v1, models_v2]),
     )
 
-    with patch("robotsix_cost_monitor.service.time.monotonic") as mono:
+    with patch("robotsix_cost_monitor.cache.time.monotonic") as mono:
         mono.return_value = 1000.0
         r1 = await svc.by_model("demo", 24)
         assert r1[0]["cost"] == 1.0
@@ -140,7 +140,7 @@ async def test_backend_cost_cache_expiry() -> None:
         client, "fetch_backend_cost_window", AsyncMock(side_effect=[data1, data2])
     )
 
-    with patch("robotsix_cost_monitor.service.time.monotonic") as mono:
+    with patch("robotsix_cost_monitor.cache.time.monotonic") as mono:
         mono.return_value = 1000.0
         r1 = await svc.backend_trend("demo", 24, "claude-sdk")
         assert r1[0]["cost"] == 1.0

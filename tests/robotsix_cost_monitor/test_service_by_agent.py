@@ -180,7 +180,7 @@ async def test_by_agent_backend_agent_usage_cache_expiry() -> None:
         AsyncMock(side_effect=[rows_v1, rows_v2]),
     )
 
-    with patch("robotsix_cost_monitor.service.time.monotonic") as mono:
+    with patch("robotsix_cost_monitor.cache.time.monotonic") as mono:
         mono.return_value = 1000.0
         r1 = await svc.by_agent("demo", 24, backend="claude-sdk")
         assert r1[0]["cost"] == 1.0

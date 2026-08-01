@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Extract `TTLCache` into its own module (`src/robotsix_cost_monitor/cache.py`) — the generic stale-while-revalidate cache is now independently importable and testable.
 - Dashboard cache now covers both window and backend dimensions: all five data kinds (traces, models, backend costs, agent usage, trace counts) are fetched as a unit and cached together, so switching the backend filter never triggers a fresh Langfuse round-trip.  Startup cache warming now pre-fetches all dashboard window presets (1 h, 6 h, 1 d, 1 w) instead of only the default window.
 - Added `GET /chat-skill` endpoint returning a Markdown skill document
   describing the HTTP API surface for the robotsix-chat agent (base URL,
