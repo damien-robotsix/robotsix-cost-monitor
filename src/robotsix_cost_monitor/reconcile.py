@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,7 @@ from ._utils import safe_load_json
 from .clients.langfuse import LangfuseClient
 from .config import Config, ProjectConfig, Settings, data_dir
 from .exceptions import ExternalServiceError
+from .metrics import reconcile_duration, reconcile_runs
 
 logger = structlog.get_logger(__name__)
 
@@ -217,7 +219,10 @@ async def reconcile_all(config: Config) -> dict[str, Any]:
     The stored ``last.json`` powers the dashboard's warning banner and the
     ``/api/reconcile/last`` endpoint.
     """
+    reconcile_runs.inc()
+    t0 = time.monotonic()
     results = [await reconcile_project(p, config.settings) for p in config.projects]
+    reconcile_duration.set(time.monotonic() - t0)
     out: dict[str, Any] = {
         "generated_at": datetime.now(UTC).isoformat(),
         "status": reconcile_status(results),

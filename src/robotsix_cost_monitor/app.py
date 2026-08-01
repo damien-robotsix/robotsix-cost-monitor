@@ -27,6 +27,7 @@ from .analyst import (
     run_ticket_analyst,
 )
 from .config import Config, Settings, load_config
+from .metrics import cache_warm_failure, cache_warm_success
 from .reconcile import reconcile_all
 from .routes import register_exception_handlers, router
 from .service import CostService
@@ -240,6 +241,7 @@ async def _warm_cache(cfg: Config, service: CostService) -> None:
         len(cfg.projects),
         len(DASHBOARD_WINDOW_PRESETS),
     )
+    failed = False
     for h in DASHBOARD_WINDOW_PRESETS:
         try:
             # summary() touches model_usage + trace_count per project
@@ -250,6 +252,11 @@ async def _warm_cache(cfg: Config, service: CostService) -> None:
             await service.trend("all", h)
         except Exception:
             logger.exception("dashboard cache warm-up failed for window=%sh", h)
+            failed = True
+    if failed:
+        cache_warm_failure.inc()
+    else:
+        cache_warm_success.inc()
     logger.info("dashboard cache warm complete")
 
 
@@ -318,6 +325,12 @@ def create_app(config: Config | None = None) -> FastAPI:
     app.state.config = cfg
     app.state.service = service
 
+    from prometheus_fastapi_instrumentator import Instrumentator
+
+    Instrumentator().instrument(app).expose(
+        app, endpoint="/metrics", include_in_schema=False
+    )
+
     from asgi_correlation_id import CorrelationIdMiddleware
 
     app.add_middleware(CorrelationIdMiddleware)
@@ -375,7 +388,7 @@ def create_app(config: Config | None = None) -> FastAPI:
 
         @app.middleware("http")
         async def _basic_auth(request: Request, call_next: Any) -> Any:
-            if request.url.path == "/health":
+            if request.url.path in ("/health", "/metrics"):
                 return await call_next(request)
             header = request.headers.get("authorization", "")
             if header.startswith("Basic "):
