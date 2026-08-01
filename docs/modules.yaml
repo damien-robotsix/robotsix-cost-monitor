@@ -72,6 +72,11 @@ modules:
       - tests/robotsix_cost_monitor/test_service_exception_isolation.py
       - tests/robotsix_cost_monitor/test_service_single_project.py
 
+  - id: metrics
+    description: Custom Prometheus metrics for background-loop self-observability
+    paths:
+      - src/robotsix_cost_monitor/metrics.py
+
   - id: reconcile
     description: OpenRouter ↔ Langfuse cost reconciliation via snapshots
     paths:
