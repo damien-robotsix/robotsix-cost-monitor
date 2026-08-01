@@ -39,7 +39,7 @@ jobs:
           python-version: "3.14"
       - run: uv sync --locked
       - name: Generate CycloneDX SBOM
-        run: uv export --format cyclonedx1.5 --frozen --extra analyst --preview-features sbom-export > sbom.cyclonedx.json
+        run: uv export --format cyclonedx1.5 --frozen --preview-features sbom-export > sbom.cyclonedx.json
       - if: inputs.attest
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:

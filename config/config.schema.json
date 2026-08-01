@@ -1,136 +1,5 @@
 {
   "$defs": {
-    "AnalystConfig": {
-      "description": "LLM cost-analyst settings (optional \u2014 disabled without an OpenRouter key).\n\nThe analyst runs a level-2 (llmio tier-2) agent over the deterministic cost\ndigest, with a level-3 sub-agent that drills into the most expensive traces,\nproducing and storing cost-reduction proposals under ``.data/analyst/``.",
-      "properties": {
-        "openrouter_key": {
-          "anyOf": [
-            {
-              "format": "password",
-              "type": "string",
-              "writeOnly": true
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Openrouter Key"
-        },
-        "global_model": {
-          "advanced": true,
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Global Model"
-        },
-        "trace_model": {
-          "advanced": true,
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Trace Model"
-        },
-        "window_hours": {
-          "advanced": true,
-          "default": 24,
-          "title": "Window Hours",
-          "type": "integer"
-        },
-        "top_stages": {
-          "advanced": true,
-          "default": 8,
-          "title": "Top Stages",
-          "type": "integer"
-        },
-        "traces_per_agent": {
-          "advanced": true,
-          "default": 1,
-          "title": "Traces Per Agent",
-          "type": "integer"
-        },
-        "max_trace_analyses": {
-          "advanced": true,
-          "default": 12,
-          "title": "Max Trace Analyses",
-          "type": "integer"
-        },
-        "schedule_hours": {
-          "advanced": true,
-          "default": 24.0,
-          "title": "Schedule Hours",
-          "type": "number"
-        },
-        "langfuse_public_key": {
-          "anyOf": [
-            {
-              "format": "password",
-              "type": "string",
-              "writeOnly": true
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Langfuse Public Key"
-        },
-        "langfuse_secret_key": {
-          "anyOf": [
-            {
-              "format": "password",
-              "type": "string",
-              "writeOnly": true
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Langfuse Secret Key"
-        },
-        "langfuse_base_url": {
-          "advanced": true,
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Langfuse Base Url"
-        },
-        "langfuse_project_id": {
-          "advanced": true,
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Langfuse Project Id"
-        }
-      },
-      "title": "AnalystConfig",
-      "type": "object"
-    },
     "AuthConfig": {
       "description": "HTTP Basic auth for the dashboard.\n\nThe dashboard has no other access control, so when it is exposed through\nthe central-deploy gateway (an unauthenticated reverse proxy) this MUST\nbe set \u2014 otherwise the cost data is public. When either field is empty\nthe dashboard is served open (local dev / SSH-tunnel only). ``/health``\nis always exempt so the container healthcheck works.",
       "properties": {
@@ -150,56 +19,8 @@
       "title": "AuthConfig",
       "type": "object"
     },
-    "ProjectConfig": {
-      "description": "One Langfuse project to monitor.",
-      "properties": {
-        "name": {
-          "title": "Name",
-          "type": "string"
-        },
-        "public_key": {
-          "format": "password",
-          "title": "Public Key",
-          "type": "string",
-          "writeOnly": true
-        },
-        "secret_key": {
-          "format": "password",
-          "title": "Secret Key",
-          "type": "string",
-          "writeOnly": true
-        },
-        "base_url": {
-          "advanced": true,
-          "default": "https://cloud.langfuse.com",
-          "title": "Base Url",
-          "type": "string"
-        },
-        "openrouter_key": {
-          "anyOf": [
-            {
-              "format": "password",
-              "type": "string",
-              "writeOnly": true
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Openrouter Key"
-        }
-      },
-      "required": [
-        "name",
-        "public_key",
-        "secret_key"
-      ],
-      "title": "ProjectConfig",
-      "type": "object"
-    },
     "Settings": {
-      "description": "Global dashboard settings.",
+      "description": "Global dashboard settings \u2014 no per-project config (registry-driven).",
       "properties": {
         "auth": {
           "$ref": "#/$defs/AuthConfig"
@@ -214,6 +35,24 @@
           "advanced": true,
           "default": 8080,
           "title": "Server Port",
+          "type": "integer"
+        },
+        "registry_base_url": {
+          "default": "",
+          "title": "Registry Base Url",
+          "type": "string"
+        },
+        "registry_api_key": {
+          "default": "",
+          "format": "password",
+          "title": "Registry Api Key",
+          "type": "string",
+          "writeOnly": true
+        },
+        "registry_poll_interval_seconds": {
+          "advanced": true,
+          "default": 300,
+          "title": "Registry Poll Interval Seconds",
           "type": "integer"
         },
         "default_window_hours": {
@@ -276,24 +115,14 @@
           "default": "INFO",
           "title": "Log Level",
           "type": "string"
-        },
-        "analyst": {
-          "$ref": "#/$defs/AnalystConfig"
         }
       },
       "title": "Settings",
       "type": "object"
     }
   },
-  "description": "Top-level config: the projects to monitor + global settings.",
+  "description": "Top-level config: registry-driven project discovery + global settings.\n\nProject credentials are discovered at runtime from the central-deploy\nregistry \u2014 there is no hardcoded project list.",
   "properties": {
-    "projects": {
-      "items": {
-        "$ref": "#/$defs/ProjectConfig"
-      },
-      "title": "Projects",
-      "type": "array"
-    },
     "settings": {
       "$ref": "#/$defs/Settings"
     }

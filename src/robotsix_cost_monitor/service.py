@@ -441,15 +441,17 @@ class CostService:
         result: list[dict[str, Any]] = []
         for i, (slug, t) in enumerate(selected, 1):
             cost = round(t.total_cost or 0.0, 6)
-            result.append({
-                "trace_id": t.id,
-                "cost": cost,
-                "name": t.name,
-                "project": slug,
-                "rank": i,
-                "pct_of_traced": round(cost / total_cost * 100, 1),
-                "selection_reason": f"agent '{t.name}'",
-            })
+            result.append(
+                {
+                    "trace_id": t.id,
+                    "cost": cost,
+                    "name": t.name,
+                    "project": slug,
+                    "rank": i,
+                    "pct_of_traced": round(cost / total_cost * 100, 1),
+                    "selection_reason": f"agent '{t.name}'",
+                }
+            )
         return result
 
     async def trace_detail(self, slug: str, trace_id: str) -> dict[str, Any]:
@@ -464,9 +466,7 @@ class CostService:
             logger.exception("trace_detail failed for %s/%s", slug, trace_id)
             return {}
 
-    async def top_ticket(
-        self, slug: str | None, hours: int
-    ) -> dict[str, Any] | None:
+    async def top_ticket(self, slug: str | None, hours: int) -> dict[str, Any] | None:
         """Return the priciest session (ticket) in the window, or None."""
         gathered = await self._gather(slug, hours)
         all_traces = [t for _, traces in gathered for t in traces]
@@ -478,7 +478,10 @@ class CostService:
                 continue
             if sid not in sessions:
                 sessions[sid] = {
-                    "session_id": sid, "cost": 0.0, "count": 0, "by_stage": {}
+                    "session_id": sid,
+                    "cost": 0.0,
+                    "count": 0,
+                    "by_stage": {},
                 }  # type: ignore[assignment]
             cost = t.total_cost or 0.0
             sessions[sid]["cost"] += cost
@@ -495,10 +498,7 @@ class CostService:
         top = sessions[top_sid]
         top["cost"] = round(top["cost"], 6)
         top["by_stage"] = sorted(
-            (
-                {"name": k, "cost": round(v, 6)}
-                for k, v in top["by_stage"].items()
-            ),
+            ({"name": k, "cost": round(v, 6)} for k, v in top["by_stage"].items()),
             key=lambda x: x["cost"],
             reverse=True,
         )
