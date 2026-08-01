@@ -49,6 +49,7 @@ uv run robotsix-cost-monitor analyst [--kind fleet|ticket|stage|all]
 | Method | Path | Query Parameters | Response |
 | -------- | ------ | ------------------ | ---------- |
 | GET | `/health` | — | `{"status":"ok","projects":["…"]}` |
+| GET | `/chat-skill` | — | Markdown skill document for the robotsix-chat agent (base URL, read endpoints, auth, safety) |
 | GET | `/` | — | Dashboard HTML page |
 | GET | `/analyst` | — | Analyst dashboard HTML page |
 | GET | `/api/projects` | — | List of configured projects (`name`, `slug`) |
