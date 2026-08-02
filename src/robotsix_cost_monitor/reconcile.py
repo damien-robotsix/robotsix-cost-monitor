@@ -68,10 +68,15 @@ async def _fetch_credits(api_key: str) -> dict[str, float]:
         client = RetryClient(http_client)
         resp = await client.get(url, headers=headers)
     data = resp.json().get("data") or {}
+    total_credits = float(data.get("total_credits", 0) or 0)
+    total_usage = float(data.get("total_usage", 0) or 0)
+    # OpenRouter's /credits payload carries only the two totals — there is no
+    # `remaining` field, so reading one yielded 0.0 for every account and
+    # tripped the low-balance warning on every project, every run.
     return {
-        "total_credits": float(data.get("total_credits", 0) or 0),
-        "total_usage": float(data.get("total_usage", 0) or 0),
-        "remaining": float(data.get("remaining", 0) or 0),
+        "total_credits": total_credits,
+        "total_usage": total_usage,
+        "remaining": total_credits - total_usage,
     }
 
 
