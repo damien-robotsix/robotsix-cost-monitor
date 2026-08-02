@@ -3,7 +3,7 @@
 The optional ``robotsix-llmio`` package is mocked via an autouse fixture
 that injects stub modules into ``sys.modules`` for the duration of each
 test, so ``patch("robotsix_llmio.openrouter.OpenRouterKeyCostSource")``
-works even without the ``analyst`` extra.  The mock is torn down after each
+works even when ``robotsix-llmio`` is not installed.  The mock is torn down after each
 test so it cannot leak into other test modules (e.g. ``test_routes.py``).
 """
 
