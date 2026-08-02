@@ -60,7 +60,8 @@ class RegistryClient:
 
         projects: list[RegistryProject] = []
         for comp in raw_components:
-            langfuse_host = comp.get("langfuse_host", "https://cloud.langfuse.com")
+            langfuse_host = comp.get("langfuse_host") or "https://cloud.langfuse.com"
+            component_id = comp.get("component_id") or comp.get("name") or ""
             for proj in comp.get("projects", []):
                 try:
                     alias = proj["alias"]
@@ -68,10 +69,13 @@ class RegistryClient:
                         RegistryProject(
                             name=alias,
                             slug=alias,
+                            component_id=str(component_id),
                             langfuse_public_key=proj["public_key"],
                             langfuse_secret_key=proj["secret_key"],
                             langfuse_base_url=langfuse_host,
-                            openrouter_key=None,
+                            # Present when the fleet knows which provider key
+                            # paid for this LLM function; enables reconciliation.
+                            openrouter_key=proj.get("openrouter_key") or None,
                         )
                     )
                 except KeyError, TypeError:  # PEP 758 (py3.14): KeyError OR TypeError

@@ -337,6 +337,8 @@ def client() -> TestClient:
     svc.last_updated = None
     svc.invalidate_all = Mock()
     svc._project_map = {demo.slug: demo}
+    svc.projects = Mock(return_value=[demo])
+    svc.components = Mock(return_value={demo.component_id or demo.slug: [demo]})
     # Default async methods return empty results so routes don't crash.
     svc.summary = AsyncMock(
         return_value={
@@ -422,7 +424,7 @@ def test_chat_skill_no_credentials_leaked(client: TestClient) -> None:
 def test_projects_returns_slug(client: TestClient) -> None:
     r = client.get("/api/projects")
     assert r.status_code == 200
-    assert r.json() == [{"name": "Demo", "slug": "demo"}]
+    assert r.json() == [{"name": "Demo", "slug": "demo", "component": ""}]
 
 
 def test_summary_window_defaults_to_config_default(client: TestClient) -> None:

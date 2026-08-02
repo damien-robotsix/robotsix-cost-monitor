@@ -51,6 +51,7 @@ export const setStatus = (msg) => {
 /** API endpoint path constants. */
 export const API = {
   PROJECTS: '/api/projects',
+  COMPONENTS: '/api/components',
   SUMMARY: '/api/summary',
   TREND: '/api/trend',
   BACKEND_TREND: '/api/backend-trend',

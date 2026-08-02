@@ -74,12 +74,16 @@ def trace(
 
 
 def _proj(
-    name: str = "demo", *, openrouter_key: str | None = "sk-demo"
+    name: str = "demo",
+    *,
+    openrouter_key: str | None = "sk-demo",
+    component: str = "",
 ) -> RegistryProject:
     """A RegistryProject with dummy credentials."""
     return RegistryProject(
         name=name,
         slug=name.strip().lower().replace(" ", "-"),
+        component_id=component,
         langfuse_public_key=f"pk-lf-{name}",
         langfuse_secret_key=f"sk-lf-{name}",
         langfuse_base_url="http://localhost",

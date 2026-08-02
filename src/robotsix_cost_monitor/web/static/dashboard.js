@@ -4,6 +4,14 @@ import { $, API, QS, esc, fmt, getJSON, setStatus } from './shared.js';
  * @typedef {object} ProjectInfo
  * @property {string} slug
  * @property {string} name
+ * @property {boolean} [reconcilable]
+ */
+
+/**
+ * A component and the Langfuse projects (LLM functions) it owns.
+ * @typedef {object} ComponentInfo
+ * @property {string} component
+ * @property {ProjectInfo[]} projects
  */
 
 /**
@@ -11,13 +19,24 @@ import { $, API, QS, esc, fmt, getJSON, setStatus } from './shared.js';
  * @property {number} total_cost
  * @property {number} window_hours
  * @property {ProjectCost[]} projects
+ * @property {ComponentCost[]} [components]
  */
 
 /**
  * @typedef {object} ProjectCost
  * @property {string} name
+ * @property {string} [slug]
+ * @property {string} [component]
  * @property {number} cost
  * @property {number} trace_count
+ */
+
+/**
+ * @typedef {object} ComponentCost
+ * @property {string} component
+ * @property {number} cost
+ * @property {number} trace_count
+ * @property {ProjectCost[]} projects
  */
 
 /**
@@ -78,17 +97,39 @@ const qs = () =>
   `?${QS.PROJECT}=${/** @type {HTMLSelectElement} */ ($('project')).value}&${QS.HOURS}=${/** @type {HTMLInputElement | HTMLSelectElement} */ ($('window')).value}`;
 
 /**
- * Load the project list and populate the dropdown.
+ * Populate the scope selector from discovered components.
+ *
+ * Components are top-level options; a component's projects are nested beneath
+ * it when it owns more than one, since a lone project would just repeat its
+ * component. The backend resolves either level, so this stays purely a display
+ * concern — a newly onboarded component appears here with no code change.
+ *
  * @returns {Promise<void>}
  */
 export async function loadProjects() {
-  const projects = await getJSON(API.PROJECTS);
+  const components = await getJSON(API.COMPONENTS);
   const sel = $('project');
-  for (const p of projects) {
-    const opt = document.createElement('option');
-    opt.value = p.slug;
-    opt.textContent = p.name;
-    sel.appendChild(opt);
+  for (const c of components) {
+    if (c.projects.length > 1) {
+      const group = document.createElement('optgroup');
+      group.label = c.component;
+      const all = document.createElement('option');
+      all.value = c.component;
+      all.textContent = `${c.component} (all)`;
+      group.appendChild(all);
+      for (const p of c.projects) {
+        const opt = document.createElement('option');
+        opt.value = p.slug;
+        opt.textContent = p.name;
+        group.appendChild(opt);
+      }
+      sel.appendChild(group);
+    } else {
+      const opt = document.createElement('option');
+      opt.value = c.component;
+      opt.textContent = c.component;
+      sel.appendChild(opt);
+    }
   }
 }
 
@@ -116,16 +157,26 @@ export function populateBackends(modelRows) {
  */
 export function renderSummary(s, backend, modelRows) {
   const total = modelRows.reduce((a, r) => a + (Number(r.cost) || 0), 0);
+  // Lead with components; break a component out into its projects only when it
+  // owns more than one, so a single-project component isn't shown twice.
+  const scopeCards = (s.components ?? []).flatMap((c) =>
+    c.projects.length > 1
+      ? [
+          { label: c.component, value: fmt(c.cost), sub: `${c.trace_count} traces` },
+          ...c.projects.map((p) => ({
+            label: `↳ ${p.name}`,
+            value: fmt(p.cost),
+            sub: `${p.trace_count} traces`,
+          })),
+        ]
+      : [{ label: c.component, value: fmt(c.cost), sub: `${c.trace_count} traces` }],
+  );
   const cards =
     backend && backend !== 'all'
       ? [{ label: `total · ${backend}`, value: fmt(total), sub: `${s.window_hours}h window` }]
       : [
           { label: 'total cost', value: fmt(s.total_cost), sub: `${s.window_hours}h window` },
-          ...s.projects.map((p) => ({
-            label: p.name,
-            value: fmt(p.cost),
-            sub: `${p.trace_count} traces`,
-          })),
+          ...scopeCards,
         ];
   $('summary-cards').innerHTML = cards
     .map(
