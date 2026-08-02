@@ -101,13 +101,6 @@ class ExternalRateLimitError(ExternalServiceError, _ExternalRateLimitError):  # 
     error_code = "RATE_LIMITED"
 
 
-class ProjectConfigError(CostMonitorError):
-    """A project is misconfigured (missing keys, bad URL). NOT retriable."""
-
-    status_code = 422
-    error_code = "PROJECT_CONFIG_ERROR"
-
-
 class ProjectNotFoundError(CostMonitorError):
     """A project slug does not match any configured project."""
 

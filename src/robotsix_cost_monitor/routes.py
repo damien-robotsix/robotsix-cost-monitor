@@ -177,7 +177,7 @@ def register_exception_handlers(app: FastAPI) -> None:
 @router.get("/health")
 def health() -> dict[str, Any]:
     """GET /health — health check returning status."""
-    return {"status": "ok", "projects": []}
+    return {"status": "ok"}
 
 
 # ---------------------------------------------------------------------------
