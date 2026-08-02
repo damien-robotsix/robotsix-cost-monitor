@@ -2,7 +2,7 @@
 
 A standalone cost-monitoring service for LLM agent fleets. It connects to several
 Langfuse projects and shows their costs in one convenient dashboard, plus
-OpenRouter ↔ Langfuse reconciliation and an optional LLM cost-analyst.
+OpenRouter ↔ Langfuse reconciliation.
 
 Extracted from `robotsix-mill` so cost tracking lives in one place and can watch
 multiple projects at once.

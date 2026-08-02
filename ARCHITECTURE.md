@@ -5,7 +5,7 @@
 ```text
 .
 ├── config/                     # Operational JSON config (gitignored, template committed)
-│   └── config.example.json     #   Template listing Langfuse projects + OpenRouter keys
+│   └── config.example.json     #   Template with registry + global settings
 ├── deploy/                     # Production deployment stack (docker-compose + env)
 ├── docs/                       # MkDocs documentation source
 ├── src/robotsix_cost_monitor/  # Python package (the application)
@@ -13,11 +13,15 @@
 │   ├── routes.py               #   Route handlers, exception handlers, dependency providers
 │   ├── cli.py                  #   CLI entrypoint (serve / summary / reconcile)
 │   ├── config.py               #   Pydantic settings models + JSON config loader (robotsix-config)
-│   ├── service.py              #   Cross-project cost aggregation layer + SWR TTL cache
+│   ├── cache.py                #   Generic TTL cache with stale-while-revalidate (SWR) semantics
+│   ├── metrics.py              #   Custom Prometheus counters/gauges for background loops
+│   ├── service.py              #   Cross-project cost aggregation layer
 │   ├── reconcile.py            #   OpenRouter ↔ Langfuse reconciliation engine
 │   ├── aggregations.py         #   Pure cost-aggregation functions (no I/O)
 │   ├── clients/
-│   │   └── langfuse.py         #   Self-contained async Langfuse REST client (httpx)
+│   │   ├── langfuse.py         #   Self-contained async Langfuse REST client (httpx)
+│   │   ├── registry.py         #   Central-deploy registry client for project discovery
+│   │   └── models.py           #   Shared client models (RegistryProject, etc.)
 │   └── web/                    #   Server-rendered dashboard UI
 │       ├── index.html          #     Main dashboard page
 │       └── static/             #     JS + CSS assets
@@ -37,15 +41,18 @@
 └──────────────┘                  └──────┬────────┘
                                          │ trace dicts
                                   ┌──────▼────────┐
-┌──────────────┐   REST (httpx)   │  CostService   │──► TTL cache (in-memory)
-│  OpenRouter   │ ◄────────────── │                │──► aggregations.py
-│  (per key)    │                 └──────┬────────┘    (pure functions)
-└──────────────┘                        │
+┌──────────────────┐  REST (httpx)│  CostService   │──► 5 independent
+│  Central-deploy   │◄─────────── │                │    per-window TTL
+│  Registry         │             │                │    caches (traces,
+│  (GET /fleet/     │             │                │    models, backends,
+│   langfuse)       │             │                │    agent usage,
+└──────────────────┘             └──────┬────────┘    trace counts)
+                                        │
        ▲                         ┌──────▼────────┐
        │  snapshot diff          │  FastAPI app   │──► /api/* JSON endpoints
        │                         │  (app.py)      │──► HTML dashboard
-       └─────────────────────────┤                │
-           reconcile.py          └──────┬────────┘
+       └─────────────────────────┤                │──► GET /metrics
+           reconcile.py          └──────┬────────┘    (Prometheus)
                                         │
           ┌─────────────────────────────▼──────────────────┐
           │  Background loops (FastAPI lifespan)            │
@@ -54,6 +61,9 @@
           │  • cache_refresh_loop: keeps dashboard cost     │
           │    aggregates precomputed; a one-shot warm-up   │
           │    runs at startup                              │
+          │  • registry_poll_loop: re-queries the central-  │
+          │    deploy registry to discover new/removed       │
+          │    projects at runtime                          │
           └────────────────────────────────────────────────┘
 ```
 
@@ -65,9 +75,9 @@
    `(project_slug, window_hours)`. A fresh entry returns immediately; a stale
    entry is still served while a **background refresh** is triggered
    (stale-while-revalidate); a cold miss fetches fresh data from Langfuse.
-   Each cache entry stores all five data kinds (traces, model usage, backend
-   costs, agent usage, trace counts) as a single `WindowData` snapshot, so any
-   (window, backend) combination is served without an extra Langfuse fetch.
+   Five independent caches hold traces, model usage, backend costs, agent
+   usage, and trace counts separately, so any (window, backend) combination
+   is served without an extra Langfuse fetch.
 3. **Langfuse fetch** — `LangfuseClient` calls the Langfuse public REST API
    (`/api/public/traces`, `/api/public/metrics/*`) via `httpx`. Each project
    gets its own client (keyed by `public_key`/`secret_key`/`base_url`).
@@ -106,6 +116,7 @@ manager in `create_app()`) and cancelled on shutdown:
 | --- | --- | --- | --- |
 | `_reconcile_loop` | `settings.reconcile_schedule_hours` | 24 h | Runs `reconcile_all()` for every project; stores result in `.data/reconcile/last.json` (powers the warning banner) |
 | `_cache_refresh_loop` | `settings.dashboard_refresh_interval_seconds` | 120 s | Periodically re-fetches dashboard aggregates so the cache stays warm; a one-shot `_warm_cache` also runs at startup, pre-fetching all dashboard window presets (1 h, 6 h, 1 d, 1 w) so window switches are cache hits from the first page load |
+| `_registry_poll_loop` | `settings.registry_poll_interval_seconds` | 300 s | Re-queries the central-deploy registry (`GET /fleet/langfuse`) to discover new or removed Langfuse projects without restarting the service; started only when `registry_poll_interval_seconds > 0` |
 
 - The cache-warm loop (**best-effort**) logs and discards failures — a cold
   cache is a performance problem, not a correctness one; the stale-while-
@@ -123,14 +134,19 @@ manager in `create_app()`) and cancelled on shutdown:
   `within_tolerance: true`.
 - **Snapshots are saved before comparison.** A failed Langfuse query cannot
   lose an OpenRouter reading.
-- **The TTL cache is process-local.** Restarting the app clears it. The
-  cache keys on `(project_slug, window_hours)` with a configurable TTL
+- **Five independent per-window caches.** `CostService` maintains separate
+  TTL caches for traces, model usage, backend costs, agent usage, and trace
+  counts — each keyed on `(project_slug, window_hours)` with a configurable TTL
   (`cache_ttl_seconds`, default 60 s) and **stale-while-revalidate**
   semantics: stale values are served immediately while a background refresh
-  fetches new data. Each entry is a unified `WindowData` snapshot holding all
-  five data kinds, and every dashboard window preset (1 h, 6 h, 1 d, 1 w) is
+  fetches new data. Every dashboard window preset (1 h, 6 h, 1 d, 1 w) is
   pre-warmed at startup and on the refresh cadence. `POST /api/refresh`
   invalidates all caches on demand.
+- **Project discovery is registry-driven.** Project credentials are fetched at
+  runtime from the central-deploy registry (`GET /fleet/langfuse`) rather than
+  hardcoded in the config file. The `_registry_poll_loop` re-discovers projects
+  periodically so the service can pick up new or removed Langfuse projects
+  without a restart.
 - **Configuration flows through Pydantic.** `Config` →
   `Config.model_validate()` is the only path. Never bypass the models.
 - **Runtime state lives under the configured data directory**

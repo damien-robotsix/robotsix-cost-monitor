@@ -1,11 +1,15 @@
 # Configuration Reference
 
 The project is configured through a single JSON file (default: `config/config.json`,
-overridable via `ROBOTSIX_CONFIG_FILE`). The schema is defined by four Pydantic models
-in `robotsix_cost_monitor.config`: `Config`, `ProjectConfig`, `Settings`, and
-`AnalystConfig`.
+overridable via `ROBOTSIX_CONFIG_FILE`). The schema is defined by two Pydantic models
+in `robotsix_cost_monitor.config`: `Config` (top-level container) and `Settings`
+(global dashboard and automation settings).
 
 A complete example is available at [`config/config.example.json`](https://github.com/damien-robotsix/robotsix-cost-monitor/blob/main/config/config.example.json).
+
+Project credentials (Langfuse keys, OpenRouter keys) are **discovered at runtime**
+from the central-deploy registry (see `clients/registry.py`) — there is no hardcoded
+project list in the config file.
 
 ---
 
@@ -13,22 +17,7 @@ A complete example is available at [`config/config.example.json`](https://github
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
-| `projects` | `list[ProjectConfig]` | `[]` | Langfuse projects to monitor. |
 | `settings` | `Settings` | `{}` | Global dashboard and automation settings. |
-
----
-
-## `projects[]` — Project entries (`ProjectConfig`)
-
-Each entry in the `projects` list connects to one Langfuse project.
-
-| Key | Type | Required | Default | Description |
-| --- | --- | --- | --- | --- |
-| `name` | `str` | yes | — | Display label shown in the dashboard UI. |
-| `public_key` | `str` | yes | — | Langfuse public API key. |
-| `secret_key` | `SecretStr` | yes | — | Langfuse secret API key (stored as a Pydantic `SecretStr`). |
-| `base_url` | `str` | no | `https://cloud.langfuse.com` | Base URL of the Langfuse instance (self-hosted or Cloud). |
-| `openrouter_key` | `SecretStr` or `null` | no | `null` | OpenRouter API key for this project's cost reconciliation (stored as a Pydantic `SecretStr`). When `null`, reconciliation is skipped for this project. |
 
 ---
 
@@ -38,6 +27,9 @@ Each entry in the `projects` list connects to one Langfuse project.
 | --- | --- | --- | --- |
 | `server_host` | `str` | `"0.0.0.0"` | Host address the dashboard web server binds to. Overridable via `serve --host`. |
 | `server_port` | `int` | `8080` | TCP port the dashboard web server listens on. Overridable via `serve --port`. |
+| `registry_base_url` | `str` | `""` | Base URL of the central-deploy registry API. Required for project discovery. |
+| `registry_api_key` | `SecretStr` | `""` | API key for authenticating to the central-deploy registry. |
+| `registry_poll_interval_seconds` | `int` | `300` | Seconds between registry re-polls for project discovery. Set to `0` to only fetch at startup and on manual refresh. |
 | `default_window_hours` | `int` | `168` | Default time window (in hours) for dashboard cost aggregations (7 days). |
 | `cache_ttl_seconds` | `int` | `60` | How long per-trace cost results are cached before re-fetching from Langfuse. |
 | `dashboard_refresh_interval_seconds` | `int` | `120` | Interval (seconds) between background dashboard cache-refresh runs that keep cost aggregates precomputed so the frontend never blocks on a live Langfuse fetch. Set to `0` to disable the periodic refresh loop. |
@@ -47,9 +39,8 @@ Each entry in the `projects` list connects to one Langfuse project.
 | `low_balance_threshold_usd` | `float` | `5.0` | OpenRouter account remaining-balance threshold in USD. When the remaining balance drops below this value during reconciliation, a warning is logged and a "low bal" pill is shown in the dashboard. Set to `0` to disable the low-balance check. |
 | `log_format` | `str` | `"json"` | Structured log output format. `"json"` for production ingestion; `"console"` for coloured human-readable output. |
 | `log_level` | `str` | `"INFO"` | Minimum log level for all loggers. Set to `"DEBUG"` for verbose diagnostics. |
-| `data_dir` | `str` | `".data"` | Directory for persistent runtime state (reconciliation snapshots, analyst proposals). |
+| `data_dir` | `str` | `".data"` | Directory for persistent runtime state (reconciliation snapshots). |
 | `auth` | `AuthConfig` | `{}` (empty = disabled) | HTTP Basic authentication credentials for the dashboard. When `username` and `password` are set, all endpoints except `/health` require HTTP Basic auth. When either is empty, the dashboard is served with no access control. |
-| `analyst` | `AnalystConfig` | `{}` | Nested configuration for the optional LLM cost-analyst (see below). |
 
 ---
 
@@ -59,29 +50,6 @@ Each entry in the `projects` list connects to one Langfuse project.
 | --- | --- | --- | --- |
 | `username` | `str` | `""` | HTTP Basic auth username. When empty, auth is disabled. |
 | `password` | `SecretStr` | `""` | HTTP Basic auth password. Stored as a Pydantic `SecretStr`. |
-
----
-
-## `settings.analyst` — LLM cost-analyst (`AnalystConfig`)
-
-The analyst is an optional feature that uses an LLM to review high-cost traces and
-suggest optimisations. It is **enabled** when `settings.analyst.openrouter_key` is set
-to a non-null value.
-
-| Key | Type | Default | Description |
-| --- | --- | --- | --- |
-| `openrouter_key` | `SecretStr` or `null` | `null` | OpenRouter API key for the analyst's own LLM calls (stored as a Pydantic `SecretStr`). `null` disables the analyst entirely. |
-| `global_model` | `str` or `null` | `null` | L3 orchestrator model. Blank or `null` uses the tier-3 default. |
-| `trace_model` | `str` or `null` | `null` | L2 per-trace analysis model. Blank or `null` uses the tier-2 default. |
-| `window_hours` | `int` | `24` | Look-back window (hours) for selecting traces to analyse. |
-| `top_stages` | `int` | `8` | Number of top-cost stages to surface per agent. |
-| `traces_per_agent` | `int` | `1` | Top-N traces per unique agent before the overall cap is applied. |
-| `max_trace_analyses` | `int` | `12` | Hard cap on the number of traces the analyst examines in a single run. |
-| `schedule_hours` | `float` | `24.0` | Interval between automatic analyst runs. `0` means manual-only. |
-| `langfuse_public_key` | `str` or `null` | `null` | Public key for the analyst's own Langfuse tracing project. |
-| `langfuse_secret_key` | `SecretStr` or `null` | `null` | Secret key for the analyst's own Langfuse tracing project (stored as a Pydantic `SecretStr`). |
-| `langfuse_base_url` | `str` or `null` | `null` | Base URL for the analyst's Langfuse instance. |
-| `langfuse_project_id` | `str` or `null` | `null` | Project ID for the analyst's Langfuse tracing. |
 
 ---
 
