@@ -312,10 +312,14 @@ async def test_by_agent_segmented_null_cost() -> None:
 
 
 async def test_by_agent_segmented_unknown_slug() -> None:
-    """A slug not matching any project returns empty rows."""
+    """A slug not matching any project raises ProjectNotFoundError."""
+    import pytest
+
+    from robotsix_cost_monitor.exceptions import ProjectNotFoundError
+
     svc = _svc(_proj("demo"))
-    result = await svc.by_agent_segmented("ghost", 24)
-    assert result["rows"] == []
+    with pytest.raises(ProjectNotFoundError, match="ghost"):
+        await svc.by_agent_segmented("ghost", 24)
 
 
 async def test_by_agent_segmented_slug_all() -> None:

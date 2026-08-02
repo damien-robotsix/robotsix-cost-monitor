@@ -421,7 +421,7 @@ async def reconcile(
     if project == "all":
         out = await reconcile_all(cfg, service)
         return cast("list[dict[str, Any]]", out["results"])
-    targets = [p for _, p in service._project_map.items() if p.slug == project]
+    targets = service._projects(project)
     return [await reconcile_project(p, cfg.settings) for p in targets]
 
 

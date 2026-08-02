@@ -102,13 +102,12 @@ def test_summary_empty_is_zero() -> None:
     assert body["window_hours"] == 24
 
 
-def test_summary_unknown_project_returns_empty() -> None:
-    """An unknown project slug returns 200 with zero totals (no validation)."""
+def test_summary_unknown_project_returns_404() -> None:
+    """An unknown project slug returns 404 with PROJECT_NOT_FOUND."""
     r = _empty_app().get("/api/summary?project=nonexistent")
-    assert r.status_code == 200
+    assert r.status_code == 404
     body = r.json()
-    assert body["total_cost"] == 0.0
-    assert body["projects"] == []
+    assert body["error"]["code"] == "PROJECT_NOT_FOUND"
 
 
 def test_summary_project_all_returns_200_when_no_projects() -> None:
@@ -118,7 +117,7 @@ def test_summary_project_all_returns_200_when_no_projects() -> None:
 
 
 def test_unknown_project_across_endpoints() -> None:
-    """Every project-scoped endpoint returns 200 with empty data for an unknown slug."""
+    """Every project-scoped endpoint returns 404 with PROJECT_NOT_FOUND for an unknown slug."""
     c = _empty_app()
     endpoints = [
         "/api/summary?project=nope",
@@ -131,7 +130,9 @@ def test_unknown_project_across_endpoints() -> None:
     ]
     for ep in endpoints:
         r = c.get(ep)
-        assert r.status_code == 200, f"{ep} returned {r.status_code}"
+        assert r.status_code == 404, f"{ep} returned {r.status_code}"
+        body = r.json()
+        assert body["error"]["code"] == "PROJECT_NOT_FOUND", f"{ep} code mismatch"
 
 
 def test_by_agent_and_trend_empty() -> None:

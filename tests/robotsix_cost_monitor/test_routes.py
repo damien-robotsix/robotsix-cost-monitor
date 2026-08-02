@@ -498,11 +498,18 @@ def test_highlights_with_backend(client: TestClient) -> None:
     client.app.state.service.highlights.assert_called_once_with("all", 24, "openrouter")  # type: ignore[attr-defined]
 
 
-def test_reconcile_project_not_found_returns_empty(client: TestClient) -> None:
-    """Unknown project slug returns an empty list (no 404 — registry-driven)."""
-    r = client.get("/api/reconcile?project=nonexistent")
-    assert r.status_code == 200
-    assert r.json() == []
+def test_reconcile_unknown_project_returns_404() -> None:
+    """Unknown project slug returns 404 with PROJECT_NOT_FOUND."""
+    from robotsix_cost_monitor.exceptions import ProjectNotFoundError
+
+    svc = Mock()
+    svc._projects = Mock(
+        side_effect=ProjectNotFoundError("Project 'nonexistent' not found")
+    )
+    r = _client(service=svc).get("/api/reconcile?project=nonexistent")
+    assert r.status_code == 404
+    body = r.json()
+    assert body["error"]["code"] == "PROJECT_NOT_FOUND"
 
 
 def test_index_returns_html() -> None:
@@ -527,12 +534,18 @@ def test_invalid_query_param_type_validation_envelope() -> None:
     assert any("hours" in f for f in fields)
 
 
-def test_unknown_project_returns_empty_summary(client: TestClient) -> None:
-    """Unknown project slug returns empty summary (no 404 — registry-driven)."""
-    r = client.get("/api/summary?project=nonexistent")
-    assert r.status_code == 200
+def test_unknown_project_returns_404() -> None:
+    """Unknown project slug returns 404 with PROJECT_NOT_FOUND."""
+    from robotsix_cost_monitor.exceptions import ProjectNotFoundError
+
+    svc = Mock()
+    svc.summary = AsyncMock(
+        side_effect=ProjectNotFoundError("Project 'nonexistent' not found")
+    )
+    r = _client(service=svc).get("/api/summary?project=nonexistent")
+    assert r.status_code == 404
     body = r.json()
-    assert body["total_cost"] == 0.0
+    assert body["error"]["code"] == "PROJECT_NOT_FOUND"
 
 
 def test_internal_error_returns_sanitized_envelope() -> None:

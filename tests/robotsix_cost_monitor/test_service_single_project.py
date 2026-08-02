@@ -88,12 +88,12 @@ async def test_slug_all_returns_same_as_none() -> None:
     assert await svc.summary("all", 24) == await svc.summary(None, 24)
 
 
-async def test_unknown_slug_returns_empty() -> None:
-    """A slug that doesn't match any project returns empty results."""
+async def test_unknown_slug_raises_project_not_found() -> None:
+    """A slug that doesn't match any project raises ProjectNotFoundError."""
+    import pytest
+
+    from robotsix_cost_monitor.exceptions import ProjectNotFoundError
+
     svc = _svc(_proj("demo"))
-    assert await svc.summary("ghost", 24) == {
-        "window_hours": 24,
-        "total_cost": 0.0,
-        "projects": [],
-        "components": [],
-    }
+    with pytest.raises(ProjectNotFoundError, match="ghost"):
+        await svc.summary("ghost", 24)
