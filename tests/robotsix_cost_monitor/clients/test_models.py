@@ -253,21 +253,38 @@ class TestLangfuseTrace:
 
     # -- extra fields -------------------------------------------------------
 
-    def test_extra_fields_are_preserved(self) -> None:
-        """extra='allow' preserves unknown keys (observations) in model_dump()."""
+    def test_extra_fields_are_dropped(self) -> None:
+        """extra='ignore' drops unknown keys instead of retaining them.
+
+        This is load-bearing for memory, not a stylistic choice: cached trace
+        lists span up to a 168 h window across the whole fleet, and Langfuse
+        returns each trace with its full ``input``/``output``/``metadata``
+        payload attached.  Retaining those (``extra='allow'``) held ~777 MB of
+        raw JSON live and pegged the container's 2 GB limit.
+        """
         trace = LangfuseTrace.model_validate(
             {
                 "id": "tr-extra",
                 "totalCost": 5.0,
                 "metadata": {"key": "value"},
                 "observations": [1, 2, 3],
+                "input": "a very large prompt payload",
+                "output": "a very large completion payload",
             }
         )
         assert trace.id == "tr-extra"
         assert trace.total_cost == 5.0
         dumped = trace.model_dump()
-        assert dumped.get("observations") == [1, 2, 3]
-        assert dumped.get("metadata") == {"key": "value"}
+        assert set(dumped) == {
+            "id",
+            "name",
+            "session_id",
+            "timestamp",
+            "total_cost",
+            "calculated_total_cost",
+            "cost",
+        }
+        assert trace.model_extra in (None, {})
 
     # -- edge cases ---------------------------------------------------------
 

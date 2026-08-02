@@ -54,8 +54,16 @@ class ProjectWindow(NamedTuple):
     hours: int
 
 
+#: Hard ceiling on a requested window.  Every extra hour is more traces fetched
+#: from Langfuse and held in the per-window cache, and ``hours`` is client
+#: supplied — so it is clamped rather than trusted.  Matches the largest
+#: dashboard preset (one week).
+MAX_WINDOW_HOURS = 168
+
+
 def _window(hours: int, config: Config) -> int:
-    return hours or config.settings.default_window_hours
+    """Resolve the effective window: fall back to the default, clamp to the max."""
+    return min(hours or config.settings.default_window_hours, MAX_WINDOW_HOURS)
 
 
 def resolve_project(
@@ -66,9 +74,9 @@ def resolve_project(
 
 
 def resolve_hours(
-    hours: int = Query(0, ge=0), cfg: Config = Depends(get_config)
+    hours: int = Query(0, ge=0, le=MAX_WINDOW_HOURS), cfg: Config = Depends(get_config)
 ) -> int:
-    """Return *hours* or the config default if zero."""
+    """Return *hours* (clamped to :data:`MAX_WINDOW_HOURS`), or the config default."""
     return _window(hours, cfg)
 
 

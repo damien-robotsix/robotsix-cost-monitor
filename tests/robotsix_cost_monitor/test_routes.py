@@ -45,6 +45,7 @@ sys.modules["robotsix_llmio.core.langfuse_async_client"] = _llmio_core_langfuse
 
 from robotsix_cost_monitor.config import Config  # noqa: E402
 from robotsix_cost_monitor.routes import (  # noqa: E402
+    MAX_WINDOW_HOURS,
     _window,
     get_config,
     get_service,
@@ -145,12 +146,30 @@ def test_get_service_returns_app_state_service() -> None:
         (24, 24),  # nonzero → supplied hours
         (0, 168),  # zero → config default
         (None, 168),  # None → config default
+        (169, 168),  # above the ceiling → clamped
+        (10**9, 168),  # absurd request → clamped, not honoured
     ],
-    ids=["nonzero", "zero_falls_back", "none_falls_back"],
+    ids=[
+        "nonzero",
+        "zero_falls_back",
+        "none_falls_back",
+        "above_max_clamped",
+        "absurd_clamped",
+    ],
 )
 def test_window(hours: int | None, expected: int) -> None:
     cfg = _config(default_window_hours=168)
     assert _window(hours, cfg) == expected  # type: ignore[arg-type]
+
+
+def test_window_clamps_oversized_config_default() -> None:
+    """A misconfigured default is clamped too — the ceiling is not bypassable.
+
+    Every extra hour is more traces fetched and cached, so the bound has to
+    hold regardless of where the value came from.
+    """
+    cfg = _config(default_window_hours=10_000)
+    assert _window(0, cfg) == MAX_WINDOW_HOURS
 
 
 # ---------------------------------------------------------------------------

@@ -121,17 +121,19 @@ async def test_fetch_traces_window_passes_hours() -> None:
 
 
 async def test_fetch_trace_detail_delegates() -> None:
-    """fetch_trace_detail delegates to _LangfuseRESTClient.fetch_trace_detail
-    and returns a LangfuseTrace model.
+    """fetch_trace_detail delegates and returns the raw payload.
+
+    It returns the raw dict rather than a :class:`LangfuseTrace` because that
+    model drops every undeclared field — which is exactly the observation
+    detail this call exists to return.
     """
     c = _client()
-    detail = {"id": "tr-99", "name": "implement", "observations": []}
+    detail = {"id": "tr-99", "name": "implement", "observations": [{"id": "obs-1"}]}
     mock = AsyncMock(return_value=detail)
     with patch.object(c._lf, "fetch_trace_detail", mock):
         result = await c.fetch_trace_detail("tr-99")
-    assert isinstance(result, LangfuseTrace)
-    assert result.id == "tr-99"
-    assert result.name == "implement"
+    assert result == detail
+    assert result["observations"] == [{"id": "obs-1"}]
     mock.assert_called_once_with("tr-99")
 
 

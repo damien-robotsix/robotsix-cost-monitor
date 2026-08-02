@@ -42,6 +42,15 @@ class LangfuseTrace(BaseModel):
 
     Handles both ``sessionId`` (canonical Langfuse API key) and
     ``session_id`` (observed in some responses) via ``populate_by_name``.
+
+    ``extra`` is ``"ignore"`` — and must stay that way.  Cached trace lists are
+    the dominant memory consumer in this process: a 168 h window across the
+    fleet is ~21 k traces, and Langfuse returns each one with its full ``input``
+    / ``output`` / ``metadata`` payload.  Under ``extra="allow"`` Pydantic
+    retained all of it in ``__pydantic_extra__`` — ~777 MB of raw JSON held
+    live, which pegged the 2 GB container limit.  Nothing here reads those
+    fields (aggregation only needs the seven declared ones), so they are
+    dropped at the validation boundary rather than cached forever.
     """
 
     id: str | None = None
@@ -54,7 +63,7 @@ class LangfuseTrace(BaseModel):
     )
     cost: float | None = None
 
-    model_config = {"populate_by_name": True, "extra": "allow"}
+    model_config = {"populate_by_name": True, "extra": "ignore"}
 
 
 class RegistryProject(BaseModel):
