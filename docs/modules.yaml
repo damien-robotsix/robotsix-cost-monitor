@@ -99,6 +99,7 @@ modules:
       - tests/robotsix_cost_monitor/clients/test_http.py
       - tests/robotsix_cost_monitor/clients/test_langfuse.py
       - tests/robotsix_cost_monitor/clients/test_models.py
+      - tests/robotsix_cost_monitor/clients/test_registry.py
 
   - id: web-shared
     description: Shared JS helpers for cost-monitor UI pages (getJSON, fmt, esc, $)

@@ -242,15 +242,13 @@ All read endpoints accept an optional `?project=<slug>` query parameter
 
 ## Safety
 
-**Mutating endpoints** — these change server state (invalidate caches,
-trigger cost-analyst runs).  The chat agent MUST ask for explicit
-operator confirmation before calling any of them:
+**Mutating endpoints** — these change server state (invalidate caches).
+The chat agent MUST ask for explicit operator confirmation before
+calling any of them:
 
 | Endpoint | What it does |
 |---|---|
 | `POST /api/refresh` | Invalidate all caches; next request fetches fresh data. |
-| `POST /api/analyst/run` | Trigger a full cost-analyst analysis (fleet-wide). |
-| `POST /api/analyst/run/{kind}` | Targeted analysis (`ticket`, `stage`, `fleet`). |
 
 All read endpoints (`GET`) are safe and require no confirmation.
 """

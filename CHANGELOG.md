@@ -1,6 +1,9 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Rewrite `RegistryClient` to match the 7af1 central-deploy schema: `GET /fleet/langfuse`
+  with `X-API-Key` auth, parsing `langfuse_host` + `projects[]` (`alias`, `public_key`,
+  `secret_key`).  Drop stale analyst endpoints from the `_CHAT_SKILL` docstring.
 - Adopt `@robotsix/ui` shared styling base for the dashboard UI.  The
   cost-monitor pages now load the compiled `dist/style.css` (dark theme,
   hue-tinted to match the existing navy palette via `--rsu-dark-hue: 226`

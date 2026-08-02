@@ -1,6 +1,13 @@
-"""Registry client: discovers Langfuse-enabled components from central-deploy."""
+"""Registry client: discovers Langfuse-enabled components from central-deploy.
+
+Queries the central-deploy ``GET /fleet/langfuse`` endpoint, which returns
+every registered component and, for each Langfuse-enabled one, its shared
+``langfuse_host`` and a list of projects with read-only credentials.
+"""
 
 from __future__ import annotations
+
+from typing import Any
 
 import httpx
 import structlog
@@ -14,9 +21,10 @@ logger = structlog.get_logger(__name__)
 class RegistryClient:
     """Discovers Langfuse-enabled components from the central-deploy registry.
 
-    The central-deploy registry exposes an authenticated endpoint that returns
-    every registered component and, for each Langfuse-enabled one, its
-    Langfuse host/project/read-credentials.
+    The central-deploy registry exposes an authenticated ``GET /fleet/langfuse``
+    endpoint that returns every registered component and, for each
+    Langfuse-enabled one, its ``langfuse_host`` and ``projects``
+    (each with ``alias``, ``public_key``, ``secret_key``).
     """
 
     def __init__(self, base_url: str, api_key: str, timeout: float = 30.0) -> None:
@@ -32,38 +40,43 @@ class RegistryClient:
         Logs and returns empty on any transient failure — the service
         keeps its last-known-good project list.
         """
-        url = f"{self._base_url}/api/registry/components"
-        headers = {"Authorization": f"Bearer {self._api_key}"}
+        url = f"{self._base_url}/fleet/langfuse"
+        headers = {"X-API-Key": self._api_key}
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as http_client:
                 client = RetryClient(http_client)
                 resp = await client.get(url, headers=headers)
             resp.raise_for_status()
-            data = resp.json()
+            payload = resp.json()
         except Exception:
             logger.exception("registry fetch failed — keeping existing projects")
             return []
 
+        # 7af1 schema: the response is a list of component objects, each with
+        # `langfuse_host` and `projects[] = {alias, public_key, secret_key}`.
+        raw_components: Any = (
+            payload if isinstance(payload, list) else payload.get("components", [])
+        )
+
         projects: list[RegistryProject] = []
-        for comp in data.get("components", []):
-            lf = comp.get("langfuse")
-            if not lf:
-                continue
-            try:
-                projects.append(
-                    RegistryProject(
-                        name=comp["name"],
-                        slug=comp.get("slug", comp["name"].lower().replace(" ", "-")),
-                        langfuse_public_key=lf["public_key"],
-                        langfuse_secret_key=lf["secret_key"],
-                        langfuse_base_url=lf.get(
-                            "base_url", "https://cloud.langfuse.com"
-                        ),
-                        openrouter_key=comp.get("openrouter_key"),
+        for comp in raw_components:
+            langfuse_host = comp.get("langfuse_host", "https://cloud.langfuse.com")
+            for proj in comp.get("projects", []):
+                try:
+                    alias = proj["alias"]
+                    projects.append(
+                        RegistryProject(
+                            name=alias,
+                            slug=alias,
+                            langfuse_public_key=proj["public_key"],
+                            langfuse_secret_key=proj["secret_key"],
+                            langfuse_base_url=langfuse_host,
+                            openrouter_key=None,
+                        )
                     )
-                )
-            except KeyError, TypeError:
-                logger.warning(
-                    "skipping malformed registry component: %s", comp.get("name")
-                )
+                except KeyError, TypeError:
+                    logger.warning(
+                        "skipping malformed registry project: %s",
+                        proj.get("alias", repr(proj)),
+                    )
         return projects
