@@ -74,7 +74,7 @@ class RegistryClient:
                             openrouter_key=None,
                         )
                     )
-                except KeyError, TypeError:
+                except KeyError, TypeError:  # PEP 758 (py3.14): KeyError OR TypeError
                     logger.warning(
                         "skipping malformed registry project: %s",
                         proj.get("alias", repr(proj)),

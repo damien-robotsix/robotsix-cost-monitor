@@ -255,7 +255,7 @@ All read endpoints (`GET`) are safe and require no confirmation.
 
 
 @router.get("/chat-skill", response_class=PlainTextResponse)
-def chat_skill(cfg: Config = Depends(get_config)) -> str:
+def chat_skill() -> str:
     """GET /chat-skill — robotsix-chat agent skill document (Markdown)."""
     return _CHAT_SKILL
 

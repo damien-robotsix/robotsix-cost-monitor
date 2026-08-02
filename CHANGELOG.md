@@ -1,6 +1,11 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Address review feedback on the registry-based project discovery PR:
+  - Clarified that the `except A, B:` exception clauses in `registry.py` and
+    `_utils.py` are intentional PEP 758 syntax (Python 3.14 target) that catch
+    both exception types, with inline clarifying comments.
+  - Removed the unused `cfg` dependency from the `chat_skill` route handler.
 - Rewrite `RegistryClient` to match the 7af1 central-deploy schema: `GET /fleet/langfuse`
   with `X-API-Key` auth, parsing `langfuse_host` + `projects[]` (`alias`, `public_key`,
   `secret_key`).  Drop stale analyst endpoints from the `_CHAT_SKILL` docstring.
