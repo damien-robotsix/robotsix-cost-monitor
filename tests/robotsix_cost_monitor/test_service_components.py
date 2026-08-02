@@ -9,10 +9,11 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 from robotsix_cost_monitor.clients.models import RegistryProject
+from robotsix_cost_monitor.service import CostService
 from tests.robotsix_cost_monitor.helpers import _proj, _svc
 
 
-def _multi() -> object:
+def _multi() -> CostService:
     """Service with one two-project component and one single-project component."""
     return _svc(
         _proj("robotsix-chat", component="chat"),
@@ -24,7 +25,7 @@ def _multi() -> object:
 class TestComponentGrouping:
     def test_components_groups_projects_by_owner(self) -> None:
         svc = _multi()
-        groups = {k: [p.slug for p in v] for k, v in svc.components().items()}  # type: ignore[attr-defined]
+        groups = {k: [p.slug for p in v] for k, v in svc.components().items()}
         assert groups == {
             "chat": ["robotsix-chat", "robotsix-chat-cognee"],
             "mill": ["robotsix-mill"],
@@ -33,29 +34,29 @@ class TestComponentGrouping:
     def test_project_without_component_groups_under_its_own_slug(self) -> None:
         """An unknown owner must not collapse projects into one bucket."""
         svc = _svc(_proj("orphan-a", component=""), _proj("orphan-b", component=""))
-        groups = {k: [p.slug for p in v] for k, v in svc.components().items()}  # type: ignore[attr-defined]
+        groups = {k: [p.slug for p in v] for k, v in svc.components().items()}
         assert groups == {"orphan-a": ["orphan-a"], "orphan-b": ["orphan-b"]}
 
 
 class TestSelectorResolution:
     def test_component_id_selects_all_its_projects(self) -> None:
         svc = _multi()
-        assert [p.slug for p in svc._projects("chat")] == [  # type: ignore[attr-defined]
+        assert [p.slug for p in svc._projects("chat")] == [
             "robotsix-chat",
             "robotsix-chat-cognee",
         ]
 
     def test_project_slug_selects_just_that_project(self) -> None:
         svc = _multi()
-        assert [p.slug for p in svc._projects("robotsix-chat")] == ["robotsix-chat"]  # type: ignore[attr-defined]
+        assert [p.slug for p in svc._projects("robotsix-chat")] == ["robotsix-chat"]
 
     def test_all_selects_everything(self) -> None:
         svc = _multi()
-        assert len(svc._projects("all")) == 3  # type: ignore[attr-defined]
-        assert len(svc._projects(None)) == 3  # type: ignore[attr-defined]
+        assert len(svc._projects("all")) == 3
+        assert len(svc._projects(None)) == 3
 
     def test_unknown_selector_selects_nothing(self) -> None:
-        assert _multi()._projects("ghost") == []  # type: ignore[attr-defined]
+        assert _multi()._projects("ghost") == []
 
     def test_project_slug_wins_over_component_id_on_collision(self) -> None:
         """A project is the more specific thing, so it takes precedence.
@@ -67,7 +68,7 @@ class TestSelectorResolution:
             _proj("mill", component="mill"),
             _proj("other", component="mill"),
         )
-        assert [p.slug for p in svc._projects("mill")] == ["mill"]  # type: ignore[attr-defined]
+        assert [p.slug for p in svc._projects("mill")] == ["mill"]
 
 
 class TestSummaryRollup:
@@ -78,7 +79,7 @@ class TestSummaryRollup:
             ("robotsix-chat-cognee", 2.0),
             ("robotsix-mill", 5.0),
         ):
-            client = svc._clients[slug]  # type: ignore[attr-defined]
+            client = svc._clients[slug]
             object.__setattr__(
                 client,
                 "fetch_model_usage_window",
@@ -88,7 +89,7 @@ class TestSummaryRollup:
                 client, "fetch_trace_count_window", AsyncMock(return_value=1)
             )
 
-        result = await svc.summary("all", 24)  # type: ignore[attr-defined]
+        result = await svc.summary("all", 24)
         assert result["total_cost"] == 17.0
         comps = {c["component"]: c for c in result["components"]}
         assert comps["chat"]["cost"] == 12.0

@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
+from robotsix_cost_monitor.clients.models import RegistryProject
 from robotsix_cost_monitor.clients.registry import RegistryClient
 
 
@@ -259,7 +260,7 @@ class TestFetchProjects:
             assert projects[0].langfuse_base_url == "https://cloud.langfuse.com"
 
 
-async def _fetch(payload: object) -> list:
+async def _fetch(payload: object) -> list[RegistryProject]:
     """Run fetch_projects() against a stubbed registry response."""
     with patch(
         "robotsix_cost_monitor.clients.registry.RetryClient.get",
