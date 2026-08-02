@@ -209,15 +209,29 @@ and no valid credentials are supplied.  `/health` is always exempt.
 
 ## Read endpoints
 
-All read endpoints accept an optional `?project=<slug>` query parameter
-(default `all`) and an optional `?hours=<n>` window (default 168 h).
+All read endpoints accept an optional `?project=<scope>` query parameter
+(default `all`) and an optional `?hours=<n>` window (default 168 h, capped
+at 168).
+
+`<scope>` resolves at either level:
+
+- a **component id** (e.g. `chat`) — every Langfuse project that component
+  owns, aggregated;
+- a **project slug** (e.g. `robotsix-chat-cognee`) — that one LLM function.
+
+A component owns one project per LLM function, so `chat` covers both
+`robotsix-chat` and `robotsix-chat-cognee`.  Components and their projects
+are discovered from the central-deploy registry — anything with a Langfuse
+config is monitored automatically, so do not assume a fixed list; call
+`GET /api/components` to see what exists right now.
 
 ### Cost summaries
 
 | Endpoint | Description |
 |---|---|
-| `GET /api/summary` | Total cost and per-project totals for the window. |
-| `GET /api/projects` | List all configured projects (name + slug). |
+| `GET /api/summary` | Total cost, per-project totals, and a per-component rollup. |
+| `GET /api/components` | Discovered components and the projects each owns. |
+| `GET /api/projects` | All discovered projects (name + slug + owning component). |
 
 ### Per-agent / per-model breakdowns
 
