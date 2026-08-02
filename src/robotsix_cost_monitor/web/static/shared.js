@@ -59,9 +59,6 @@ export const API = {
   HIGHLIGHTS: '/api/highlights',
   RECONCILE: '/api/reconcile',
   RECONCILE_LAST: '/api/reconcile/last',
-  ANALYST_PROPOSALS: '/api/analyst/proposals',
-  ANALYST_RUN: '/api/analyst/run',
-  ANALYST_KIND: '/api/analyst',
 };
 
 /** Query-string parameter name constants. */

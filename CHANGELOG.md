@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Removed vestigial LLM cost-analyst references from README.md, ARCHITECTURE.md, shared.js (ANALYST_ API constants), index.html (nav link), dashboard.css (comment), and pyproject.toml (mypy override for test_analyst). Updated test comment references and reconcile.py install hint.
 - Remove orphaned CostService methods (`candidate_traces`, `trace_detail`, `top_ticket`, `top_stage`) and `ProjectConfigError` exception — all had zero callers after the LLM cost-analyst subsystem removal. Drop hardcoded `projects` field from `GET /health`.
 - Dockerfile: remove `--extra analyst` from `uv export` invocations — the `analyst` extra was removed when `robotsix-llmio` became a regular dependency.
 - Address review feedback on the registry-based project discovery PR:
