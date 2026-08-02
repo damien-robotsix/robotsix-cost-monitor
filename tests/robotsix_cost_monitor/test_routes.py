@@ -21,10 +21,10 @@ from fastapi.testclient import TestClient
 # Mock the optional ``robotsix-llmio`` package before importing
 # ``robotsix_cost_monitor.routes`` (which transitively imports
 # ``robotsix_cost_monitor.reconcile`` → ``robotsix_llmio.openrouter``).
-# This keeps the test suite runnable without the ``analyst`` extra.
+# This keeps the test suite runnable when ``robotsix-llmio`` is not installed.
 #
 # Save and restore the original sys.modules entries so that other test
-# modules (e.g. test_analyst.py) that need the real robotsix_llmio are
+# modules that need the real robotsix_llmio are
 # not broken by this mock leaking across the whole session.
 # ---------------------------------------------------------------------------
 _orig_llmio = sys.modules.get("robotsix_llmio")

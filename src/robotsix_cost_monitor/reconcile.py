@@ -99,9 +99,7 @@ async def reconcile_project(
     try:
         from robotsix_llmio.openrouter import OpenRouterKeyCostSource
     except ImportError:
-        result["error"] = (
-            "robotsix-llmio is not installed. Install it with: uv sync --extra analyst"
-        )
+        result["error"] = "robotsix-llmio is not installed. Install it with: uv sync"
         return result
 
     orc = OpenRouterKeyCostSource(api_key=project.openrouter_key)

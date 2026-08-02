@@ -15,13 +15,11 @@
 │   ├── config.py               #   Pydantic settings models + JSON config loader (robotsix-config)
 │   ├── service.py              #   Cross-project cost aggregation layer + SWR TTL cache
 │   ├── reconcile.py            #   OpenRouter ↔ Langfuse reconciliation engine
-│   ├── analyst.py              #   Optional LLM cost-analyst (robotsix-llmio)
 │   ├── aggregations.py         #   Pure cost-aggregation functions (no I/O)
 │   ├── clients/
 │   │   └── langfuse.py         #   Self-contained async Langfuse REST client (httpx)
 │   └── web/                    #   Server-rendered dashboard UI
 │       ├── index.html          #     Main dashboard page
-│       ├── analyst.html        #     Analyst results page
 │       └── static/             #     JS + CSS assets
 ├── tests/                      # Test suite (pytest + vitest for JS)
 ├── Dockerfile                  # Multi-stage container build
@@ -53,8 +51,6 @@
           │  Background loops (FastAPI lifespan)            │
           │  • reconcile_loop: snapshots OpenRouter per-key │
           │    cumulative usage on a configurable interval  │
-          │  • analyst_loop: runs all 3 analyses (fleet /   │
-          │    ticket / stage) on a configurable interval   │
           │  • cache_refresh_loop: keeps dashboard cost     │
           │    aggregates precomputed; a one-shot warm-up   │
           │    runs at startup                              │
@@ -79,7 +75,7 @@
    trace dicts into the shapes the dashboard needs (by-agent, by-model,
    trend, highlights).
 5. **Response** — JSON for API endpoints; server-rendered HTML for the
-   dashboard pages (`web/index.html`, `web/analyst.html`).
+   dashboard pages (`web/index.html`).
 
 ### Reconciliation data flow
 
@@ -109,12 +105,8 @@ manager in `create_app()`) and cancelled on shutdown:
 | Loop | Config key | Default | What it does |
 | --- | --- | --- | --- |
 | `_reconcile_loop` | `settings.reconcile_schedule_hours` | 24 h | Runs `reconcile_all()` for every project; stores result in `.data/reconcile/last.json` (powers the warning banner) |
-| `_analyst_loop` | `settings.analyst.schedule_hours` | 24 h | Runs all three analyses (fleet, most-costly ticket, most-costly stage); persists results under `.data/analyst/` |
 | `_cache_refresh_loop` | `settings.dashboard_refresh_interval_seconds` | 120 s | Periodically re-fetches dashboard aggregates so the cache stays warm; a one-shot `_warm_cache` also runs at startup, pre-fetching all dashboard window presets (1 h, 6 h, 1 d, 1 w) so window switches are cache hits from the first page load |
 
-- The analyst loop computes its **first delay** from the last persisted run
-  timestamp (`_last_analyst_run()`), so frequent redeploys (Watchtower) don't
-  starve the schedule — if a full interval has elapsed it runs immediately.
 - The cache-warm loop (**best-effort**) logs and discards failures — a cold
   cache is a performance problem, not a correctness one; the stale-while-
   revalidate SWR path still keeps the dashboard responsive.
@@ -122,28 +114,10 @@ manager in `create_app()`) and cancelled on shutdown:
 - All loops are **asyncio tasks**; the app's lifespan cancels them on
   shutdown.
 
-## Optional `analyst` extra
-
-The LLM cost-analyst is optional — the dashboard, reconciliation, and all
-CLI commands work without it. It requires two packages installed via the
-`[analyst]` extra:
-
-| Package | Role |
-| --- | --- |
-| `robotsix-llmio` | Level-2 (DeepSeek via OpenRouter) and Level-3 (Claude Opus) LLM agents that analyse cost patterns |
-
-- All imports of these packages are **lazy** (inside function bodies in
-  `analyst.py`), guarded by `analyst.enabled` checks in `app.py`.
-- The analyst runs **three analyses** per cycle: a **fleet-wide** analysis,
-  a **most-costly ticket** analysis, and a **most-costly stage** analysis.
-- Each analysis produces proposals which are stored under `.data/analyst/` for
-  surfacing in the dashboard.
-
 ## Key invariants
 
 - **No `robotsix-llmio` dependency in the base install.** The Langfuse client is
-  self-contained (`httpx` only). The OpenRouter client is imported from `robotsix-llmio`
-  (analyst extra). The analyst extra is installed separately.
+  self-contained (`httpx` only). The OpenRouter client is imported from `robotsix-llmio`.
 - **Reconciliation is idempotent.** Running it twice back-to-back with no
   intervening spend must produce `provider_delta_usd ≈ 0` and
   `within_tolerance: true`.
@@ -160,8 +134,8 @@ CLI commands work without it. It requires two packages installed via the
 - **Configuration flows through Pydantic.** `Config` →
   `Config.model_validate()` is the only path. Never bypass the models.
 - **Runtime state lives under the configured data directory**
-  (`settings.data_dir`, default `.data`). Two subsystems write here:
-  reconciliation (`<data_dir>/reconcile/`) and analyst (`<data_dir>/analyst/`).
+  (`settings.data_dir`, default `.data`). One subsystem writes here:
+  reconciliation (`<data_dir>/reconcile/`).
 - **The dashboard has no built-in auth.** In production, a host nginx
   terminates TLS + basic auth and proxies to `127.0.0.1:8080` inside the
   container.

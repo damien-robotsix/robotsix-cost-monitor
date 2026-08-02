@@ -2,7 +2,7 @@
 
 A standalone cost-monitoring service for LLM agent fleets. Connects to **several
 Langfuse projects** and shows their costs in one convenient dashboard, plus
-**OpenRouter ↔ Langfuse reconciliation** and an optional **LLM cost-analyst**.
+**OpenRouter ↔ Langfuse reconciliation**.
 
 Extracted from `robotsix-mill` so cost tracking lives in one place and can watch
 multiple projects at once.
@@ -14,10 +14,6 @@ multiple projects at once.
 - **Reconciliation** — diffs each project's OpenRouter cumulative spend
   (snapshot-based) against Langfuse traced cost; flags drift beyond a tolerance;
   shows the remaining OpenRouter balance.
-- **Cost-analyst (optional)** — a deterministic cost digest, plus an
-  OpenAI-compatible LLM pass that proposes high-confidence cost reductions
-  (surfaced in the dashboard, not written to any external board).
-
 Built on `robotsix-llmio` for Langfuse (`AsyncLangfuseReadClient`) and OpenRouter
 (`OpenRouterKeyCostSource`) — no second client instantiation or direct REST API calls.
 
@@ -41,7 +37,6 @@ committed template. Override the path with `ROBOTSIX_CONFIG_FILE`.
 uv run robotsix-cost-monitor serve [--host H --port P]     # run the dashboard
 uv run robotsix-cost-monitor summary [--project SLUG --hours N]
 uv run robotsix-cost-monitor reconcile [--project SLUG]
-uv run robotsix-cost-monitor analyst [--kind fleet|ticket|stage|all]
 ```
 
 ## API
@@ -51,7 +46,6 @@ uv run robotsix-cost-monitor analyst [--kind fleet|ticket|stage|all]
 | GET | `/health` | — | `{"status":"ok","projects":["…"]}` |
 | GET | `/chat-skill` | — | Markdown skill document for the robotsix-chat agent (base URL, read endpoints, auth, safety) |
 | GET | `/` | — | Dashboard HTML page |
-| GET | `/analyst` | — | Analyst dashboard HTML page |
 | GET | `/api/projects` | — | List of configured projects (`name`, `slug`) |
 | GET | `/api/summary` | `?project=<slug\|all>&hours=<N>` | Total cost and per-project totals (includes ISO-8601 `last_updated` when cached data is available) |
 | POST | `/api/refresh` | — | Invalidate all caches and force a fresh Langfuse fetch on the next dashboard request |
@@ -62,22 +56,13 @@ uv run robotsix-cost-monitor analyst [--kind fleet|ticket|stage|all]
 | GET | `/api/trend` | `?project=<slug\|all>&hours=<N>&buckets=<1-200>` | Bucketed cost-over-time trend series |
 | GET | `/api/highlights` | `?project=<slug\|all>&hours=<N>&backend=<all\|backend>` | Most expensive trace and session for the window |
 | GET | `/api/reconcile` | `?project=<slug\|all>` | OpenRouter↔Langfuse reconciliation result |
-| GET | `/api/reconcile/last` | — | Most recent full reconciliation snapshot |
-| GET | `/api/analyst/digest` | `?hours=<N>` | Cost-analysis digest from recent trace data |
-| GET | `/api/analyst/proposals` | — | Saved cost-reduction proposals |
-| POST | `/api/analyst/run` | — | Trigger a full cost-analyst analysis run |
-| GET | `/api/analyst/ticket` | — | Saved ticket-level targeted analysis |
-| POST | `/api/analyst/run/ticket` | — | Trigger a ticket-level targeted analysis run |
-| GET | `/api/analyst/stage` | — | Saved stage-level targeted analysis |
-| POST | `/api/analyst/run/stage` | — | Trigger a stage-level targeted analysis run |
-| GET | `/api/analyst/fleet` | — | Saved fleet-level targeted analysis |
-| POST | `/api/analyst/run/fleet` | — | Trigger a fleet-level targeted analysis run |
-| POST | `/api/analyst/run/{kind}` | — | Run a targeted analyst analysis (ticket, stage, or fleet) |
+| GET | `/api/reconcile/last` | — | Most recent reconciliation result (powers the dashboard warning banner) |
+| POST | `/api/reconcile/run` | `?project=<slug>` | Run reconciliation for a specific project (returns JSON result) |
 
 ## Architecture
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the directory layout, data flow,
-background loop lifecycle, optional `analyst` extra, and key invariants.
+background loop lifecycle, and key invariants.
 
 ## Contributing
 

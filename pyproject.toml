@@ -92,7 +92,6 @@ ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = [
-    "robotsix_cost_monitor.test_analyst",
     "robotsix_cost_monitor.test_reconcile",
     "robotsix_cost_monitor.test_routes",
     "robotsix_cost_monitor.clients.test_langfuse",
