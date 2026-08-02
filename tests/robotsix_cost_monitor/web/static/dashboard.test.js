@@ -628,7 +628,8 @@ describe('renderHighlights', () => {
     expect(el.innerHTML).toContain('most expensive trace');
     expect(el.innerHTML).toContain('big call');
     expect(el.innerHTML).toContain('$99.90');
-    expect(el.innerHTML).toContain('most expensive ticket');
+    expect(el.innerHTML).toContain('most expensive session');
+    expect(el.innerHTML).not.toContain('ticket');
     expect(el.innerHTML).toContain('sess-1');
     expect(el.innerHTML).toContain('$500');
     expect(el.innerHTML).toContain('12 traces');

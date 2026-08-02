@@ -138,7 +138,7 @@ def _trace_label(trace: LangfuseTrace) -> str:
     without a name (a pydantic-ai/claude_sdk span became the trace root in a
     context where the session was lost — see robotsix-llmio's trace-name
     handling); rather than dumping their cost into one opaque "(unnamed)"
-    bucket, attribute it to the session/ticket so it's still actionable.
+    bucket, attribute it to its session so it's still actionable.
     """
     name = trace.name
     if name:
@@ -163,7 +163,13 @@ def aggregate_by_name(traces: list[LangfuseTrace]) -> list[dict[str, Any]]:
 
 
 def aggregate_by_session(traces: list[LangfuseTrace]) -> list[dict[str, Any]]:
-    """Cost + trace-count grouped by sessionId (the ticket)."""
+    """Cost + trace-count grouped by sessionId.
+
+    What a session *means* is the traced component's business, not this
+    dashboard's: a mill ticket run, a chat conversation, a cognee ingest
+    batch.  Group and report by the id; never name it after one component's
+    unit of work.
+    """
     acc: dict[str, dict[str, float]] = {}
     for t in traces:
         sid = t.session_id
