@@ -219,7 +219,7 @@ async def reconcile_all(config: Config, service: CostService) -> dict[str, Any]:
     """
     reconcile_runs.inc()
     t0 = time.monotonic()
-    projects = list(service._project_map.values())
+    projects = service.projects()
     results = [await reconcile_project(p, config.settings) for p in projects]
     reconcile_duration.set(time.monotonic() - t0)
     out: dict[str, Any] = {

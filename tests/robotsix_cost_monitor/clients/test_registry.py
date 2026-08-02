@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
+from robotsix_cost_monitor.clients.models import RegistryProject
 from robotsix_cost_monitor.clients.registry import RegistryClient
 
 
@@ -257,3 +258,84 @@ class TestFetchProjects:
             projects = await client.fetch_projects()
             assert len(projects) == 1
             assert projects[0].langfuse_base_url == "https://cloud.langfuse.com"
+
+
+async def _fetch(payload: object) -> list[RegistryProject]:
+    """Run fetch_projects() against a stubbed registry response."""
+    with patch(
+        "robotsix_cost_monitor.clients.registry.RetryClient.get",
+        new_callable=AsyncMock,
+    ) as mock_get:
+        mock_get.return_value = _mock_response(200, payload)
+        client = RegistryClient(base_url="http://central-deploy:8080", api_key="k")
+        return await client.fetch_projects()
+
+
+@pytest.mark.asyncio
+class TestRegistryComponentAndOpenRouter:
+    """Discovery must carry component ownership and the provider key through.
+
+    Dropping either is what made the dashboard unable to group by component
+    and left reconciliation permanently unconfigured.
+    """
+
+    async def test_component_id_and_openrouter_key_are_carried(self) -> None:
+        payload = {
+            "components": [
+                {
+                    "component_id": "chat",
+                    "langfuse_host": "https://lf.example.com",
+                    "projects": [
+                        {
+                            "alias": "robotsix-chat",
+                            "public_key": "pk-1",
+                            "secret_key": "sk-1",
+                            "openrouter_key": "sk-or-1",
+                        },
+                        {
+                            "alias": "robotsix-chat-cognee",
+                            "public_key": "pk-2",
+                            "secret_key": "sk-2",
+                        },
+                    ],
+                }
+            ]
+        }
+        projects = await _fetch(payload)
+        assert [p.slug for p in projects] == ["robotsix-chat", "robotsix-chat-cognee"]
+        assert {p.component_id for p in projects} == {"chat"}
+        assert projects[0].openrouter_key == "sk-or-1"
+        # Absent key stays None rather than inheriting a sibling's.
+        assert projects[1].openrouter_key is None
+
+    async def test_missing_component_id_falls_back_to_name(self) -> None:
+        payload = {
+            "components": [
+                {
+                    "name": "legacy-comp",
+                    "projects": [
+                        {"alias": "p", "public_key": "pk", "secret_key": "sk"}
+                    ],
+                }
+            ]
+        }
+        assert (await _fetch(payload))[0].component_id == "legacy-comp"
+
+    async def test_empty_openrouter_key_becomes_none(self) -> None:
+        """An empty string must not read as a configured key downstream."""
+        payload = {
+            "components": [
+                {
+                    "component_id": "c",
+                    "projects": [
+                        {
+                            "alias": "p",
+                            "public_key": "pk",
+                            "secret_key": "sk",
+                            "openrouter_key": "",
+                        }
+                    ],
+                }
+            ]
+        }
+        assert (await _fetch(payload))[0].openrouter_key is None

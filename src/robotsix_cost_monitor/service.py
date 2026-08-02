@@ -128,14 +128,44 @@ class CostService:
         }
         self.invalidate_all()
         logger.info(
-            "refresh_projects: discovered %d project(s)", len(self._project_map)
+            "refresh_projects: discovered %d project(s) across %d component(s)",
+            len(self._project_map),
+            len(self.components()),
         )
 
-    def _projects(self, slug: str | None) -> list[RegistryProject]:
-        if slug and slug != "all":
-            p = self._project_map.get(slug)
-            return [p] if p else []
+    def projects(self) -> list[RegistryProject]:
+        """Return every discovered project, in registry order."""
         return list(self._project_map.values())
+
+    def components(self) -> dict[str, list[RegistryProject]]:
+        """Return discovered projects grouped by owning component.
+
+        Insertion order follows the registry, so the dashboard's component list
+        is stable across refreshes.  Projects whose component is unknown are
+        grouped under their own slug rather than dropped.
+        """
+        out: dict[str, list[RegistryProject]] = {}
+        for p in self._project_map.values():
+            out.setdefault(p.component_id or p.slug, []).append(p)
+        return out
+
+    def _projects(self, slug: str | None) -> list[RegistryProject]:
+        """Resolve a selector to the projects it covers.
+
+        Accepts ``"all"``/empty (everything), a **component id** (every project
+        that component owns), or a single **project slug**.  Resolving both
+        levels here is what lets every endpoint be component-aware without any
+        per-endpoint or per-component code.
+
+        Project slugs win over component ids on collision: a project is the
+        more specific thing, and the single-project component case (where the
+        two names coincide) resolves identically either way.
+        """
+        if not slug or slug == "all":
+            return list(self._project_map.values())
+        if (p := self._project_map.get(slug)) is not None:
+            return [p]
+        return [q for q in self._project_map.values() if q.component_id == slug]
 
     async def _safe_project_fetch[T](
         self,
@@ -247,15 +277,33 @@ class CostService:
                 {
                     "name": p.name,
                     "slug": p.slug,
+                    "component": p.component_id,
                     "cost": cost,
                     "trace_count": trace_count,
                 }
             )
         total = round(total, 6)
+        by_component: dict[str, dict[str, Any]] = {}
+        for row in per_project:
+            agg = by_component.setdefault(
+                str(row["component"] or row["slug"]),
+                {
+                    "component": row["component"] or row["slug"],
+                    "cost": 0.0,
+                    "trace_count": 0,
+                    "projects": [],
+                },
+            )
+            agg["cost"] = round(agg["cost"] + float(row["cost"]), 6)
+            agg["trace_count"] += int(row["trace_count"])
+            agg["projects"].append(row)
         return {
             "window_hours": hours,
             "total_cost": total,
             "projects": per_project,
+            "components": sorted(
+                by_component.values(), key=lambda c: float(c["cost"]), reverse=True
+            ),
         }
 
     async def by_agent(

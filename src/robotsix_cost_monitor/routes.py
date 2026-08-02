@@ -273,7 +273,36 @@ async def projects(
     service: CostService = Depends(get_service),
 ) -> list[dict[str, str]]:
     """GET /api/projects — list all discovered projects with name and slug."""
-    return [{"name": p.name, "slug": p.slug} for p in service._project_map.values()]
+    return [
+        {"name": p.name, "slug": p.slug, "component": p.component_id}
+        for p in service.projects()
+    ]
+
+
+@router.get("/api/components")
+async def components(
+    service: CostService = Depends(get_service),
+) -> list[dict[str, Any]]:
+    """GET /api/components — discovered components and the projects they own.
+
+    Drives the dashboard's selector.  Everything here comes from registry
+    discovery, so a newly onboarded component with a Langfuse config appears
+    without any change to this service.
+    """
+    return [
+        {
+            "component": component_id,
+            "projects": [
+                {
+                    "name": p.name,
+                    "slug": p.slug,
+                    "reconcilable": bool(p.openrouter_key),
+                }
+                for p in projects_
+            ],
+        }
+        for component_id, projects_ in service.components().items()
+    ]
 
 
 @router.get("/api/summary")

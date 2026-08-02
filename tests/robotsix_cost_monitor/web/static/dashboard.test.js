@@ -22,26 +22,56 @@ function fixture(html) {
 }
 
 describe('renderSummary', () => {
-  it('renders all-backend summary with project cards', () => {
+  it('renders one card per single-project component', () => {
     fixture('<section id="summary-cards"></section>');
     const s = {
       total_cost: 123.45,
       window_hours: 24,
-      projects: [
-        { name: 'proj-a', cost: 80, trace_count: 10 },
-        { name: 'proj-b', cost: 43.45, trace_count: 3 },
+      projects: [],
+      components: [
+        { component: 'comp-a', cost: 80, trace_count: 10, projects: [{ name: 'proj-a' }] },
+        { component: 'comp-b', cost: 43.45, trace_count: 3, projects: [{ name: 'proj-b' }] },
       ],
     };
     renderSummary(s, 'all', []);
 
     const el = document.getElementById('summary-cards');
-    expect(el.children.length).toBe(3); // total + 2 projects
+    expect(el.children.length).toBe(3); // total + 2 components
     expect(el.innerHTML).toContain('total cost');
     expect(el.innerHTML).toContain('$123');
-    expect(el.innerHTML).toContain('proj-a');
+    expect(el.innerHTML).toContain('comp-a');
     expect(el.innerHTML).toContain('$80');
-    expect(el.innerHTML).toContain('proj-b');
+    expect(el.innerHTML).toContain('comp-b');
     expect(el.innerHTML).toContain('$43.45');
+    // A lone project would just repeat its component — not shown twice.
+    expect(el.innerHTML).not.toContain('proj-a');
+  });
+
+  it('breaks a multi-project component out into its projects', () => {
+    fixture('<section id="summary-cards"></section>');
+    const s = {
+      total_cost: 12,
+      window_hours: 24,
+      projects: [],
+      components: [
+        {
+          component: 'chat',
+          cost: 12,
+          trace_count: 5,
+          projects: [
+            { name: 'robotsix-chat', cost: 10, trace_count: 4 },
+            { name: 'robotsix-chat-cognee', cost: 2, trace_count: 1 },
+          ],
+        },
+      ],
+    };
+    renderSummary(s, 'all', []);
+
+    const el = document.getElementById('summary-cards');
+    expect(el.children.length).toBe(4); // total + component + 2 projects
+    expect(el.innerHTML).toContain('chat');
+    expect(el.innerHTML).toContain('robotsix-chat-cognee');
+    expect(el.innerHTML).toContain('$10');
   });
 
   it('renders selected-backend summary with single card', () => {
@@ -63,7 +93,7 @@ describe('renderSummary', () => {
 
   it('renders all-backend with no projects', () => {
     fixture('<section id="summary-cards"></section>');
-    const s = { total_cost: 0, window_hours: 1, projects: [] };
+    const s = { total_cost: 0, window_hours: 1, projects: [], components: [] };
     renderSummary(s, 'all', []);
     const el = document.getElementById('summary-cards');
     expect(el.children.length).toBe(1); // only total
@@ -613,28 +643,59 @@ describe('renderHighlights', () => {
 });
 
 describe('loadProjects', () => {
-  it('fetches projects and populates the dropdown', async () => {
+  async function withComponents(components, assert) {
     fixture('<select id="project"></select>');
     const origFetch = globalThis.fetch;
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => [
-        { slug: 'proj-a', name: 'Project A' },
-        { slug: 'proj-b', name: 'Project B' },
-      ],
-    });
-
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => components });
     try {
       await loadProjects();
-      const sel = /** @type {HTMLSelectElement} */ (document.getElementById('project'));
-      expect(sel.children.length).toBe(2);
-      expect(sel.children[0].value).toBe('proj-a');
-      expect(sel.children[0].textContent).toBe('Project A');
-      expect(sel.children[1].value).toBe('proj-b');
-      expect(sel.children[1].textContent).toBe('Project B');
+      assert(/** @type {HTMLSelectElement} */ (document.getElementById('project')));
     } finally {
       globalThis.fetch = origFetch;
     }
+  }
+
+  it('lists single-project components as flat options', async () => {
+    await withComponents(
+      [
+        { component: 'comp-a', projects: [{ slug: 'proj-a', name: 'Project A' }] },
+        { component: 'comp-b', projects: [{ slug: 'proj-b', name: 'Project B' }] },
+      ],
+      (sel) => {
+        expect(sel.children.length).toBe(2);
+        expect(sel.children[0].value).toBe('comp-a');
+        expect(sel.children[0].textContent).toBe('comp-a');
+        expect(sel.children[1].value).toBe('comp-b');
+      },
+    );
+  });
+
+  it('nests a multi-project component under an optgroup', async () => {
+    await withComponents(
+      [
+        {
+          component: 'chat',
+          projects: [
+            { slug: 'robotsix-chat', name: 'robotsix-chat' },
+            { slug: 'robotsix-chat-cognee', name: 'robotsix-chat-cognee' },
+          ],
+        },
+      ],
+      (sel) => {
+        const group = sel.children[0];
+        expect(group.tagName).toBe('OPTGROUP');
+        expect(group.label).toBe('chat');
+        // component-wide option first, then one per project
+        expect(group.children.length).toBe(3);
+        expect(group.children[0].value).toBe('chat');
+        expect(group.children[1].value).toBe('robotsix-chat');
+        expect(group.children[2].value).toBe('robotsix-chat-cognee');
+      },
+    );
+  });
+
+  it('renders nothing when no component is discovered', async () => {
+    await withComponents([], (sel) => expect(sel.children.length).toBe(0));
   });
 });
 

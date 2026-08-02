@@ -95,4 +95,5 @@ async def test_unknown_slug_returns_empty() -> None:
         "window_hours": 24,
         "total_cost": 0.0,
         "projects": [],
+        "components": [],
     }

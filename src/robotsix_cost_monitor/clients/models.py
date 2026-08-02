@@ -67,10 +67,21 @@ class LangfuseTrace(BaseModel):
 
 
 class RegistryProject(BaseModel):
-    """A component discovered from the central-deploy registry."""
+    """One Langfuse project discovered from the central-deploy registry.
+
+    A project is a single LLM *function*, not a component: a component with
+    two tracing subsystems declares two projects (e.g. ``robotsix-chat`` and
+    ``robotsix-chat-cognee``).  :attr:`component_id` records which component
+    owns it, so the dashboard can roll a component's projects up without any
+    per-component code.
+    """
 
     name: str
     slug: str
+    component_id: str = Field(
+        default="",
+        description="Owning component (registry `component_id`); '' when unknown",
+    )
     langfuse_public_key: str
     langfuse_secret_key: str
     langfuse_base_url: str = "https://cloud.langfuse.com"

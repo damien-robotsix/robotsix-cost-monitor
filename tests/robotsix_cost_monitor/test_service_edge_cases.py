@@ -15,6 +15,7 @@ async def test_empty_project_list_summary() -> None:
         "window_hours": 24,
         "total_cost": 0.0,
         "projects": [],
+        "components": [],
     }
 
 
