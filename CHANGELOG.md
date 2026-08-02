@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Dockerfile: remove `--extra analyst` from `uv export` invocations — the `analyst` extra was removed when `robotsix-llmio` became a regular dependency.
 - Address review feedback on the registry-based project discovery PR:
   - Clarified that the `except A, B:` exception clauses in `registry.py` and
     `_utils.py` are intentional PEP 758 syntax (Python 3.14 target) that catch
