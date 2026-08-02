@@ -55,3 +55,14 @@ class LangfuseTrace(BaseModel):
     cost: float | None = None
 
     model_config = {"populate_by_name": True, "extra": "allow"}
+
+
+class RegistryProject(BaseModel):
+    """A component discovered from the central-deploy registry."""
+
+    name: str
+    slug: str
+    langfuse_public_key: str
+    langfuse_secret_key: str
+    langfuse_base_url: str = "https://cloud.langfuse.com"
+    openrouter_key: str | None = None

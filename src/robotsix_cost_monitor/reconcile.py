@@ -21,9 +21,11 @@ import structlog
 
 from ._utils import safe_load_json
 from .clients.langfuse import LangfuseClient
-from .config import Config, ProjectConfig, Settings, data_dir
+from .clients.models import RegistryProject
+from .config import Config, Settings, data_dir
 from .exceptions import ExternalServiceError
 from .metrics import reconcile_duration, reconcile_runs
+from .service import CostService
 
 logger = structlog.get_logger(__name__)
 
@@ -74,7 +76,7 @@ async def _fetch_credits(api_key: str) -> dict[str, float]:
 
 
 async def reconcile_project(
-    project: ProjectConfig, settings: Settings
+    project: RegistryProject, settings: Settings
 ) -> dict[str, Any]:
     """Reconcile one project's OpenRouter spend vs Langfuse traced cost.
 
@@ -102,7 +104,7 @@ async def reconcile_project(
         )
         return result
 
-    orc = OpenRouterKeyCostSource(api_key=project.openrouter_key.get_secret_value())
+    orc = OpenRouterKeyCostSource(api_key=project.openrouter_key)
     # Per-KEY cumulative usage is the reconciliation basis (isolates this
     # consumer even when several keys share one OpenRouter account).
     try:
@@ -119,9 +121,7 @@ async def reconcile_project(
     # Account-level remaining balance — informational only (shared balance pool).
     # Optional: a balance fetch failure must not fail the reconcile.
     with contextlib.suppress(Exception):
-        result["balance"] = await _fetch_credits(
-            project.openrouter_key.get_secret_value()
-        )
+        result["balance"] = await _fetch_credits(project.openrouter_key)
         if (
             settings.low_balance_threshold_usd > 0
             and result["balance"]["remaining"] < settings.low_balance_threshold_usd
@@ -146,9 +146,9 @@ async def reconcile_project(
     provider_delta = round(cumulative - float(prior["cumulative"]), 6)
 
     lf = LangfuseClient(
-        public_key=project.public_key.get_secret_value(),
-        secret_key=project.secret_key.get_secret_value(),
-        base_url=project.base_url,
+        public_key=project.langfuse_public_key,
+        secret_key=project.langfuse_secret_key,
+        base_url=project.langfuse_base_url,
     )
     # Traced cost over the SAME interval as the provider delta (both since the
     # prior snapshot), so the two sides are comparable. Using a rounded ≥1h
@@ -213,7 +213,7 @@ def reconcile_status(results: list[dict[str, Any]]) -> str:
     return "ok"
 
 
-async def reconcile_all(config: Config) -> dict[str, Any]:
+async def reconcile_all(config: Config, service: CostService) -> dict[str, Any]:
     """Reconcile every project, persist the result, and return it.
 
     The stored ``last.json`` powers the dashboard's warning banner and the
@@ -221,7 +221,8 @@ async def reconcile_all(config: Config) -> dict[str, Any]:
     """
     reconcile_runs.inc()
     t0 = time.monotonic()
-    results = [await reconcile_project(p, config.settings) for p in config.projects]
+    projects = list(service._project_map.values())
+    results = [await reconcile_project(p, config.settings) for p in projects]
     reconcile_duration.set(time.monotonic() - t0)
     out: dict[str, Any] = {
         "generated_at": datetime.now(UTC).isoformat(),

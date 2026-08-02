@@ -9,9 +9,9 @@ import sys
 
 import uvicorn
 
-from .analyst import AnalystKind, run_analyst, run_stage_analyst, run_ticket_analyst
+from .clients.registry import RegistryClient
 from .config import load_config
-from .reconcile import reconcile_project
+from .reconcile import reconcile_all, reconcile_project
 from .service import CostService
 
 
@@ -31,14 +31,6 @@ def main(argv: list[str] | None = None) -> int:
     recon = sub.add_parser("reconcile", help="run OpenRouter↔Langfuse reconciliation")
     recon.add_argument("--project", default="all")
 
-    analyst = sub.add_parser("analyst", help="run the LLM cost analyst")
-    analyst.add_argument(
-        "--kind",
-        default="all",
-        choices=["all"] + [k.value for k in AnalystKind],
-        help="analysis kind: fleet, ticket, stage, or all (default)",
-    )
-
     args = parser.parse_args(argv)
 
     if args.cmd == "serve" or args.cmd is None:
@@ -57,37 +49,31 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     cfg = load_config()
+    registry = RegistryClient(
+        base_url=cfg.settings.registry_base_url,
+        api_key=cfg.settings.registry_api_key.get_secret_value(),
+    )
     if args.cmd == "summary":
-        svc = CostService(cfg)
+        svc = CostService(cfg, registry)
+        if cfg.settings.registry_base_url:
+            asyncio.run(svc.refresh_projects())
         h = args.hours or cfg.settings.default_window_hours
         out = asyncio.run(svc.summary(args.project, h))
         print(json.dumps(out, indent=2))
         return 0
     if args.cmd == "reconcile":
-        targets = (
-            cfg.projects
-            if args.project == "all"
-            else [p for p in cfg.projects if p.slug == args.project]
-        )
-        recon_rows = [asyncio.run(reconcile_project(p, cfg.settings)) for p in targets]
-        print(json.dumps(recon_rows, indent=2))
-        return 0
-    if args.cmd == "analyst":
-        svc = CostService(cfg)
-        kind = args.kind
-        if kind == AnalystKind.FLEET:
-            result = asyncio.run(run_analyst(cfg, svc))
-        elif kind == AnalystKind.TICKET:
-            result = asyncio.run(run_ticket_analyst(cfg, svc))
-        elif kind == AnalystKind.STAGE:
-            result = asyncio.run(run_stage_analyst(cfg, svc))
-        else:  # all
-            result = {
-                AnalystKind.FLEET: asyncio.run(run_analyst(cfg, svc)),
-                AnalystKind.TICKET: asyncio.run(run_ticket_analyst(cfg, svc)),
-                AnalystKind.STAGE: asyncio.run(run_stage_analyst(cfg, svc)),
-            }
-        print(json.dumps(result, indent=2))
+        svc = CostService(cfg, registry)
+        if cfg.settings.registry_base_url:
+            asyncio.run(svc.refresh_projects())
+        if args.project == "all":
+            out = asyncio.run(reconcile_all(cfg, svc))
+            print(json.dumps(out, indent=2))
+        else:
+            projects = [p for p in svc._project_map.values() if p.slug == args.project]
+            recon_rows = [
+                asyncio.run(reconcile_project(p, cfg.settings)) for p in projects
+            ]
+            print(json.dumps(recon_rows, indent=2))
         return 0
 
     parser.print_help()

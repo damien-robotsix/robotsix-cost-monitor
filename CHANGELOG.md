@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Address review feedback on the registry-based project discovery PR:
+  - Clarified that the `except A, B:` exception clauses in `registry.py` and
+    `_utils.py` are intentional PEP 758 syntax (Python 3.14 target) that catch
+    both exception types, with inline clarifying comments.
+  - Removed the unused `cfg` dependency from the `chat_skill` route handler.
+- Rewrite `RegistryClient` to match the 7af1 central-deploy schema: `GET /fleet/langfuse`
+  with `X-API-Key` auth, parsing `langfuse_host` + `projects[]` (`alias`, `public_key`,
+  `secret_key`).  Drop stale analyst endpoints from the `_CHAT_SKILL` docstring.
 - Adopt `@robotsix/ui` shared styling base for the dashboard UI.  The
   cost-monitor pages now load the compiled `dist/style.css` (dark theme,
   hue-tinted to match the existing navy palette via `--rsu-dark-hue: 226`
@@ -8,6 +16,11 @@
   reset, body typography) are removed from the local `dashboard.css`; only
   cost-monitor-specific component classes remain.
 - Extract `TTLCache` into its own module (`src/robotsix_cost_monitor/cache.py`) — the generic stale-while-revalidate cache is now independently importable and testable.
+- **Removed** the hardcoded per-project Langfuse credential list from config.  Cost-monitor now discovers projects at runtime from the central-deploy registry (`registry_base_url` + `registry_api_key` settings), so newly-deployed Langfuse-enabled components appear automatically without touching cost-monitor config.
+- **Removed** the LLM cost-analyst subsystem entirely — analyst endpoints (`/api/analyst/*`), background analyst scheduler, LLM agent code, chat-skill analyst section, and the `[analyst]` extra dependency.
+- **Added** `RegistryClient` in `clients/registry.py` for querying the central-deploy component registry.
+- **Changed** `CostService` to accept a `RegistryClient` and populate its project map dynamically via `refresh_projects()`.
+- **Changed** config model: `ProjectConfig` and `AnalystConfig` classes removed; `Settings` gains `registry_base_url`, `registry_api_key`, and `registry_poll_interval_seconds`.
 - Dashboard cache now covers both window and backend dimensions: all five data kinds (traces, models, backend costs, agent usage, trace counts) are fetched as a unit and cached together, so switching the backend filter never triggers a fresh Langfuse round-trip.  Startup cache warming now pre-fetches all dashboard window presets (1 h, 6 h, 1 d, 1 w) instead of only the default window.
 - Added `GET /chat-skill` endpoint returning a Markdown skill document
   describing the HTTP API surface for the robotsix-chat agent (base URL,

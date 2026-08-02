@@ -1,7 +1,7 @@
 [project]
 name = "robotsix-cost-monitor"
 version = "0.1.0"
-description = "Multi-Langfuse cost monitoring dashboard, OpenRouter↔Langfuse reconciliation, and an LLM cost-reduction analyst."
+description = "Multi-Langfuse cost monitoring dashboard with OpenRouter↔Langfuse reconciliation."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
@@ -17,11 +17,6 @@ dependencies = [
     "robotsix-config @ git+https://github.com/damien-robotsix/robotsix-config.git@358da8b9c66f1dd52b85854ceabfffdc35229e63",
     "robotsix-http @ git+https://github.com/damien-robotsix/robotsix-http.git@4cf79993f07c0d56e50cf02af816058144beacb9",
     "robotsix-llmio @ git+https://github.com/damien-robotsix/robotsix-llmio.git@2fd2be4dcf7f0a44e91012fd1167517e5e09180e",
-]
-
-[project.optional-dependencies]
-analyst = [
-    "robotsix-llmio[openrouter,claude_sdk] @ git+https://github.com/damien-robotsix/robotsix-llmio.git@2fd2be4dcf7f0a44e91012fd1167517e5e09180e",
 ]
 
 [project.scripts]

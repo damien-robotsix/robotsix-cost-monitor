@@ -11,23 +11,12 @@ create_app  # called via string reference in cli.py (uvicorn --factory)
 health
 reconcile
 reconcile_last
-analyst_digest
-analyst_proposals
-analyst_run
-analyst_run_targeted
-analyst_targeted
 index
-analyst_page
 _basic_auth  # FastAPI middleware registered via @app.middleware decorator
 
 # routes.py — FastAPI route handlers (registered via router decorators)
 chat_skill
 refresh_cache
-
-# analyst.py — Pydantic model fields (consumed by pydantic BaseModel)
-title
-rationale
-estimated_saving
 
 # tests/test_reconcile.py — _FrozenNow.now(tz) mimics datetime.now interface
 tz

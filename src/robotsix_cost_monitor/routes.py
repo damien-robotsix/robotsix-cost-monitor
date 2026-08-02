@@ -17,17 +17,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from robotsix_http import ExternalHTTPError
 
 from .aggregations import BackendKind
-from .analyst import (
-    AnalystKind,
-    build_digest,
-    load_proposals,
-    load_targeted_analysis,
-    run_analyst,
-    run_stage_analyst,
-    run_ticket_analyst,
-)
 from .config import Config
-from .exceptions import CostMonitorError, ProjectNotFoundError
+from .exceptions import CostMonitorError
 from .reconcile import load_last_reconcile, reconcile_all, reconcile_project
 from .service import CostService
 
@@ -63,11 +54,6 @@ class ProjectWindow(NamedTuple):
     hours: int
 
 
-def _require_project(project: str, cfg: Config) -> None:
-    if project != "all" and not cfg.project(project):
-        raise ProjectNotFoundError(f"Unknown project slug: {project}")
-
-
 def _window(hours: int, config: Config) -> int:
     return hours or config.settings.default_window_hours
 
@@ -75,8 +61,7 @@ def _window(hours: int, config: Config) -> int:
 def resolve_project(
     project: str = Query("all"), cfg: Config = Depends(get_config)
 ) -> str:
-    """Validate *project* slug exists in config; raise 404 if not."""
-    _require_project(project, cfg)
+    """Validate and return the project slug query parameter."""
     return project
 
 
@@ -190,9 +175,9 @@ def register_exception_handlers(app: FastAPI) -> None:
 
 
 @router.get("/health")
-def health(cfg: Config = Depends(get_config)) -> dict[str, Any]:
-    """GET /health — health check returning status and project names."""
-    return {"status": "ok", "projects": [p.name for p in cfg.projects]}
+def health() -> dict[str, Any]:
+    """GET /health — health check returning status."""
+    return {"status": "ok", "projects": []}
 
 
 # ---------------------------------------------------------------------------
@@ -249,14 +234,6 @@ All read endpoints accept an optional `?project=<slug>` query parameter
 | `GET /api/reconcile` | Reconcile OpenRouter usage against Langfuse traced costs. |
 | `GET /api/reconcile/last` | Most recent reconciliation result. |
 
-### Analyst (cost-reduction proposals)
-
-| Endpoint | Description |
-|---|---|
-| `GET /api/analyst/digest` | Cost-analysis digest from recent trace data. |
-| `GET /api/analyst/proposals` | Saved cost-reduction proposals. |
-| `GET /api/analyst/{kind}` | Saved targeted analysis (kind: `ticket` or `stage`). |
-
 ### Health
 
 | Endpoint | Description |
@@ -265,30 +242,30 @@ All read endpoints accept an optional `?project=<slug>` query parameter
 
 ## Safety
 
-**Mutating endpoints** — these change server state (invalidate caches,
-trigger cost-analyst runs).  The chat agent MUST ask for explicit
-operator confirmation before calling any of them:
+**Mutating endpoints** — these change server state (invalidate caches).
+The chat agent MUST ask for explicit operator confirmation before
+calling any of them:
 
 | Endpoint | What it does |
 |---|---|
 | `POST /api/refresh` | Invalidate all caches; next request fetches fresh data. |
-| `POST /api/analyst/run` | Trigger a full cost-analyst analysis (fleet-wide). |
-| `POST /api/analyst/run/{kind}` | Targeted analysis (`ticket`, `stage`, `fleet`). |
 
 All read endpoints (`GET`) are safe and require no confirmation.
 """
 
 
 @router.get("/chat-skill", response_class=PlainTextResponse)
-def chat_skill(cfg: Config = Depends(get_config)) -> str:
+def chat_skill() -> str:
     """GET /chat-skill — robotsix-chat agent skill document (Markdown)."""
     return _CHAT_SKILL
 
 
 @router.get("/api/projects")
-def projects(cfg: Config = Depends(get_config)) -> list[dict[str, str]]:
-    """GET /api/projects — list all configured projects with name and slug."""
-    return [{"name": p.name, "slug": p.slug} for p in cfg.projects]
+async def projects(
+    service: CostService = Depends(get_service),
+) -> list[dict[str, str]]:
+    """GET /api/projects — list all discovered projects with name and slug."""
+    return [{"name": p.name, "slug": p.slug} for p in service._project_map.values()]
 
 
 @router.get("/api/summary")
@@ -387,15 +364,13 @@ async def highlights(
 async def reconcile(
     project: str = Query("all"),
     cfg: Config = Depends(get_config),
+    service: CostService = Depends(get_service),
 ) -> list[dict[str, Any]]:
     """GET /api/reconcile — reconcile OpenRouter usage against Langfuse traced costs."""
-    # Running all projects persists last.json (banner + scheduler share it);
-    # a single-project run is a transient check that doesn't overwrite it.
-    _require_project(project, cfg)
     if project == "all":
-        out = await reconcile_all(cfg)
+        out = await reconcile_all(cfg, service)
         return cast("list[dict[str, Any]]", out["results"])
-    targets = [p for p in cfg.projects if p.slug == project]
+    targets = [p for _, p in service._project_map.items() if p.slug == project]
     return [await reconcile_project(p, cfg.settings) for p in targets]
 
 
@@ -405,63 +380,7 @@ def reconcile_last(cfg: Config = Depends(get_config)) -> dict[str, Any]:
     return load_last_reconcile(cfg.settings)
 
 
-@router.get("/api/analyst/digest")
-async def analyst_digest(
-    hours: int = Query(0, ge=0),
-    cfg: Config = Depends(get_config),
-    service: CostService = Depends(get_service),
-) -> dict[str, Any]:
-    """GET /api/analyst/digest — build a cost-analysis digest from recent trace data."""
-    h = hours or cfg.settings.analyst.window_hours
-    return await build_digest(service, h, cfg)
-
-
-@router.get("/api/analyst/proposals")
-def analyst_proposals(cfg: Config = Depends(get_config)) -> dict[str, Any]:
-    """GET /api/analyst/proposals — load saved cost-reduction proposals."""
-    return load_proposals(cfg.settings)
-
-
-@router.post("/api/analyst/run")
-async def analyst_run(
-    cfg: Config = Depends(get_config),
-    service: CostService = Depends(get_service),
-) -> dict[str, Any]:
-    """POST /api/analyst/run — trigger a full cost-analyst analysis run."""
-    return await run_analyst(cfg, service)
-
-
-@router.post("/api/analyst/run/{kind}")
-async def analyst_run_targeted(
-    kind: AnalystKind,
-    cfg: Config = Depends(get_config),
-    service: CostService = Depends(get_service),
-) -> dict[str, Any]:
-    """POST /api/analyst/run/{kind} — run targeted analysis (ticket, stage, fleet)."""
-    if kind == AnalystKind.FLEET:
-        return await run_analyst(cfg, service)
-    if kind == AnalystKind.TICKET:
-        return await run_ticket_analyst(cfg, service)
-    if kind == AnalystKind.STAGE:
-        return await run_stage_analyst(cfg, service)
-    raise HTTPException(status_code=422, detail=f"Unknown analyst kind: {kind}")
-
-
-@router.get("/api/analyst/{kind}")
-def analyst_targeted(
-    kind: AnalystKind, cfg: Config = Depends(get_config)
-) -> dict[str, Any]:
-    """GET /api/analyst/{kind} — load a saved targeted analysis (ticket or stage)."""
-    return load_targeted_analysis(kind, cfg.settings)
-
-
 @router.get("/", response_class=HTMLResponse)
 def index() -> str:
     """GET / — serve the main dashboard HTML page."""
     return (_WEB / "index.html").read_text()
-
-
-@router.get("/analyst", response_class=HTMLResponse)
-def analyst_page() -> str:
-    """GET /analyst — serve the analyst dashboard HTML page."""
-    return (_WEB / "analyst.html").read_text()

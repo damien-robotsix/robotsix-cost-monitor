@@ -7,7 +7,6 @@ from typing import Any
 
 import pytest
 
-from robotsix_cost_monitor import analyst as analyst_mod
 from robotsix_cost_monitor._utils import safe_load_json
 
 # ---------------------------------------------------------------------------
@@ -49,90 +48,3 @@ def test_safe_load_json_permission_error_propagates(
     )
     with pytest.raises(PermissionError):
         safe_load_json(path, default=None)
-
-
-# ---------------------------------------------------------------------------
-# analyst call-sites — load_proposals / load_targeted_analysis
-# ---------------------------------------------------------------------------
-
-
-def test_load_proposals_corrupt(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """load_proposals returns default when proposals.json is corrupt."""
-    monkeypatch.setattr(
-        "robotsix_cost_monitor.analyst.data_dir", lambda settings=None: tmp_path
-    )
-    d = tmp_path / "analyst"
-    d.mkdir()
-    (d / "proposals.json").write_text("not json {{{")
-    result = analyst_mod.load_proposals()
-    assert result == {"generated_at": None, "proposals": []}
-
-
-def test_load_proposals_permission_error(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """load_proposals lets PermissionError propagate (not caught)."""
-    monkeypatch.setattr(
-        "robotsix_cost_monitor.analyst.data_dir", lambda settings=None: tmp_path
-    )
-    d = tmp_path / "analyst"
-    d.mkdir()
-    (d / "proposals.json").write_text("{}")
-    monkeypatch.setattr(
-        Path, "exists", lambda self: (_ for _ in ()).throw(PermissionError)
-    )
-    with pytest.raises(PermissionError):
-        analyst_mod.load_proposals()
-
-
-def test_load_targeted_analysis_permission_error(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """load_targeted_analysis lets PermissionError propagate (not caught)."""
-    monkeypatch.setattr(
-        "robotsix_cost_monitor.analyst.data_dir", lambda settings=None: tmp_path
-    )
-    d = tmp_path / "analyst"
-    d.mkdir()
-    (d / "ticket.json").write_text("{}")
-    monkeypatch.setattr(
-        Path, "exists", lambda self: (_ for _ in ()).throw(PermissionError)
-    )
-    with pytest.raises(PermissionError):
-        analyst_mod.load_targeted_analysis(analyst_mod.AnalystKind.TICKET)
-
-
-def test_load_targeted_analysis_permission_error_stage(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """load_targeted_analysis propagates PermissionError for kind='stage'."""
-    monkeypatch.setattr(
-        "robotsix_cost_monitor.analyst.data_dir", lambda settings=None: tmp_path
-    )
-    d = tmp_path / "analyst"
-    d.mkdir()
-    (d / "stage.json").write_text("{}")
-    monkeypatch.setattr(
-        Path, "exists", lambda self: (_ for _ in ()).throw(PermissionError)
-    )
-    with pytest.raises(PermissionError):
-        analyst_mod.load_targeted_analysis(analyst_mod.AnalystKind.STAGE)
-
-
-def test_load_targeted_analysis_permission_error_fleet(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """load_targeted_analysis propagates PermissionError for kind='fleet'."""
-    monkeypatch.setattr(
-        "robotsix_cost_monitor.analyst.data_dir", lambda settings=None: tmp_path
-    )
-    d = tmp_path / "analyst"
-    d.mkdir()
-    (d / "proposals.json").write_text("{}")
-    monkeypatch.setattr(
-        Path, "exists", lambda self: (_ for _ in ()).throw(PermissionError)
-    )
-    with pytest.raises(PermissionError):
-        analyst_mod.load_targeted_analysis(analyst_mod.AnalystKind.FLEET)
