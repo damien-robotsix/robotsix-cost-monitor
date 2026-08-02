@@ -9,8 +9,8 @@ FROM python:3.14-slim AS builder
 # Bring in the uv static binary (pinned to a released version for reproducibility).
 COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /usr/local/bin/uv
 
-# git is needed to install the `analyst` extra's git dependency
-# (robotsix-llmio) during the uv pip install below.
+# git is needed to install git dependencies (robotsix-llmio, etc.)
+# during the uv pip install below.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
@@ -48,12 +48,12 @@ RUN npm ci --ignore-scripts \
 
 # Export the EXACT revisions pinned in uv.lock (no fresh resolution), install
 # them, then install the project itself with --no-deps so they are not
-# re-resolved. The `analyst` extra (robotsix-llmio) is included so the optional
-# LLM cost-analyst works when configured; the dashboard runs fine without it.
-RUN uv export --frozen --no-emit-project --no-hashes --extra analyst > requirements.txt \
+# re-resolved. The LLM cost-analyst (robotsix-llmio) is a regular dependency
+# so it is always included; the dashboard runs fine without configuring it.
+RUN uv export --frozen --no-emit-project --no-hashes > requirements.txt \
     && uv pip install --python /opt/venv/bin/python -r requirements.txt \
     && uv pip install --python /opt/venv/bin/python --no-deps . \
-    && uv export --format cyclonedx1.5 --frozen --extra analyst --preview-features sbom-export > /app/sbom.cyclonedx.json
+    && uv export --format cyclonedx1.5 --frozen --preview-features sbom-export > /app/sbom.cyclonedx.json
 
 # ---------------------------------------------------------------------------
 # Runtime stage: minimal image with only the prebuilt virtual environment,
