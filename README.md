@@ -44,6 +44,7 @@ uv run robotsix-cost-monitor reconcile [--project SLUG]
 | Method | Path | Query Parameters | Response |
 | -------- | ------ | ------------------ | ---------- |
 | GET | `/health` | — | `{"status":"ok","projects":["…"]}` |
+| GET | `/metrics` | — | Prometheus scrape endpoint (counters/gauges for reconcile runs, cache warm-ups, etc.) |
 | GET | `/chat-skill` | — | Markdown skill document for the robotsix-chat agent (base URL, read endpoints, auth, safety) |
 | GET | `/` | — | Dashboard HTML page |
 | GET | `/api/projects` | — | List of configured projects (`name`, `slug`) |

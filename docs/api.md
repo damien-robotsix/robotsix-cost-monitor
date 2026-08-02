@@ -8,9 +8,6 @@
 .. automodule:: robotsix_cost_monitor.aggregations
    :members:
 
-.. automodule:: robotsix_cost_monitor.analyst
-   :members:
-
 .. automodule:: robotsix_cost_monitor.app
    :members:
 
