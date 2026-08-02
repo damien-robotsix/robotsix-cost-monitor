@@ -44,14 +44,6 @@ async def test_empty_project_list_highlights() -> None:
     }
 
 
-async def test_empty_project_list_candidate_traces() -> None:
-    assert await _svc().candidate_traces(None, 24, limit=5) == []
-
-
-async def test_empty_project_list_trace_detail() -> None:
-    assert await _svc().trace_detail("nope", "tr-1") == {}
-
-
 async def test_hours_zero_does_not_crash() -> None:
     svc = _svc(_proj("a"))
     result = await svc.summary(None, 0)

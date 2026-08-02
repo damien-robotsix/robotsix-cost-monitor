@@ -345,10 +345,10 @@ def client() -> TestClient:
     return _client(cfg, svc)
 
 
-def test_health_includes_project_names(client: TestClient) -> None:
+def test_health_returns_ok(client: TestClient) -> None:
     r = client.get("/health")
     assert r.status_code == 200
-    assert r.json()["projects"] == []
+    assert r.json() == {"status": "ok"}
 
 
 def test_chat_skill_returns_200_with_markdown(client: TestClient) -> None:

@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Remove orphaned CostService methods (`candidate_traces`, `trace_detail`, `top_ticket`, `top_stage`) and `ProjectConfigError` exception — all had zero callers after the LLM cost-analyst subsystem removal. Drop hardcoded `projects` field from `GET /health`.
 - Dockerfile: remove `--extra analyst` from `uv export` invocations — the `analyst` extra was removed when `robotsix-llmio` became a regular dependency.
 - Address review feedback on the registry-based project discovery PR:
   - Clarified that the `except A, B:` exception clauses in `registry.py` and

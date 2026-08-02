@@ -209,28 +209,3 @@ async def test_highlights_backend_no_match_returns_none() -> None:
     result = await svc.highlights("x", 24, backend="claude-sdk")
     assert result["most_expensive_trace"] is None
     assert result["most_expensive_session"] is None
-
-
-async def test_cross_project_candidate_traces_merges_and_sorts() -> None:
-    svc = _svc(_proj("a"), _proj("b"))
-    # Distinct agent names so per-agent selection keeps all three (this test
-    # checks the cross-project merge + global cost sort).
-    object.__setattr__(
-        svc._clients["a"],
-        "fetch_traces_window",
-        AsyncMock(return_value=[trace(5.0, "agentA", tid="expensive-a")]),
-    )
-    object.__setattr__(
-        svc._clients["b"],
-        "fetch_traces_window",
-        AsyncMock(
-            return_value=[
-                trace(3.0, "agentB", tid="mid-b"),
-                trace(8.0, "agentC", tid="top-b"),
-            ]
-        ),
-    )
-
-    rows = await svc.candidate_traces(None, 24, limit=5)
-    assert [r["trace_id"] for r in rows] == ["top-b", "expensive-a", "mid-b"]
-    assert rows[0]["project"] == "b"
