@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import AsyncMock, patch
 
+from robotsix_cost_monitor.cache import TTLCache
 from tests.robotsix_cost_monitor.helpers import _model_row, _proj, _svc, trace
 
 # ---------------------------------------------------------------------------
@@ -178,3 +179,65 @@ async def test_summary_uses_both_caches() -> None:
     await svc.summary("demo", 24)
     assert client.fetch_trace_count_window.call_count == 1  # type: ignore[attr-defined]
     assert client.fetch_model_usage_window.call_count == 1  # type: ignore[attr-defined]
+
+
+# ---------------------------------------------------------------------------
+# LRU bound
+# ---------------------------------------------------------------------------
+
+
+async def test_cache_evicts_least_recently_used_beyond_max_entries() -> None:
+    """The store never exceeds max_entries; the LRU key is the one dropped."""
+    cache: TTLCache[int, int] = TTLCache(ttl=60.0, max_entries=3)
+
+    async def _fetch(v: int) -> int:
+        return v
+
+    for k in (1, 2, 3):
+        await cache.get_or_fetch(k, lambda k=k: _fetch(k))  # type: ignore[misc]
+    assert set(cache._store) == {1, 2, 3}
+
+    # Touch key 1 so key 2 becomes the least-recently-used.
+    await cache.get_or_fetch(1, lambda: _fetch(1))
+    await cache.get_or_fetch(4, lambda: _fetch(4))
+
+    assert len(cache._store) == 3
+    assert set(cache._store) == {1, 3, 4}
+
+
+async def test_cache_unbounded_key_space_stays_bounded() -> None:
+    """A caller walking distinct keys cannot grow the cache without limit.
+
+    ``hours`` reaches the cache key straight from a query parameter, so this
+    is the property that stops a crawler from pinning arbitrary windows in
+    memory.
+    """
+    cache: TTLCache[int, str] = TTLCache(ttl=60.0, max_entries=8)
+
+    async def _fetch(v: int) -> str:
+        return f"value-{v}"
+
+    for k in range(500):
+        await cache.get_or_fetch(k, lambda k=k: _fetch(k))  # type: ignore[misc]
+
+    assert len(cache._store) == 8
+    # The most recent keys survive.
+    assert set(cache._store) == set(range(492, 500))
+
+
+async def test_background_refresh_respects_max_entries() -> None:
+    """A stale-triggered background refresh re-inserts without breaking the bound."""
+    cache: TTLCache[int, int] = TTLCache(ttl=0.0, max_entries=2)
+
+    async def _fetch(v: int) -> int:
+        return v
+
+    for k in (1, 2):
+        await cache.get_or_fetch(k, lambda k=k: _fetch(k))  # type: ignore[misc]
+    # ttl=0 → both entries are already stale; serving them schedules refreshes.
+    await cache.get_or_fetch(1, lambda: _fetch(1))
+    await cache.get_or_fetch(2, lambda: _fetch(2))
+    for _ in range(8):
+        await asyncio.sleep(0)
+
+    assert len(cache._store) <= 2
