@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Dashboard: the session highlight is labelled "most expensive **session**", not "most expensive ticket". A ticket is mill's unit of work; the underlying field has always been Langfuse's generic `sessionId`, which is a chat conversation for the chat agent and an ingest batch for cognee. Now that discovery is generic, a mill-specific label mislabels every other component's data. The `aggregate_by_session` docstring says the same thing so the next reader doesn't reintroduce it.
 - Removed vestigial LLM cost-analyst references from README.md, ARCHITECTURE.md, shared.js (ANALYST_ API constants), index.html (nav link), dashboard.css (comment), and pyproject.toml (mypy override for test_analyst). Updated test comment references and reconcile.py install hint.
 - Remove orphaned CostService methods (`candidate_traces`, `trace_detail`, `top_ticket`, `top_stage`) and `ProjectConfigError` exception — all had zero callers after the LLM cost-analyst subsystem removal. Drop hardcoded `projects` field from `GET /health`.
 - Dockerfile: remove `--extra analyst` from `uv export` invocations — the `analyst` extra was removed when `robotsix-llmio` became a regular dependency.

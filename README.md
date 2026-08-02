@@ -10,7 +10,7 @@ multiple projects at once.
 ## Features
 
 - **Multi-project dashboard** — per-project and aggregated cost over a window;
-  cost-over-time trend; cost by agent/stage; most-expensive trace & ticket.
+  cost-over-time trend; cost by agent/stage; most-expensive trace & session.
 - **Reconciliation** — diffs each project's OpenRouter cumulative spend
   (snapshot-based) against Langfuse traced cost; flags drift beyond a tolerance;
   shows the remaining OpenRouter balance.

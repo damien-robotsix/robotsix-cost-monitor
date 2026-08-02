@@ -331,7 +331,7 @@ export function renderHighlights(h) {
     );
   if (s)
     rows.push(
-      `<div class="hl"><div class="k">most expensive ticket</div><div class="v">${esc(s.session_id)} — ${fmt(s.cost)} (${s.count} traces)</div></div>`,
+      `<div class="hl"><div class="k">most expensive session</div><div class="v">${esc(s.session_id)} — ${fmt(s.cost)} (${s.count} traces)</div></div>`,
     );
   $('highlights').innerHTML = rows.join('') || '<div class="muted">no data</div>';
 }
