@@ -538,3 +538,61 @@ def test_load_snapshot_stale_data(
     assert loaded is not None
     assert loaded["cumulative"] == 1.0
     assert loaded["at"] == old.isoformat()
+
+
+class TestFetchCreditsRemaining:
+    """`remaining` is derived, because OpenRouter does not return it.
+
+    Reading a non-existent `remaining` field yielded 0.0 for every account,
+    which is always below any positive low-balance threshold — so the warning
+    fired on every project on every run regardless of the real balance.
+    """
+
+    @staticmethod
+    def _patch_get(payload: dict[str, object]) -> Any:
+        from unittest.mock import AsyncMock, MagicMock, patch
+
+        resp = MagicMock()
+        resp.json = MagicMock(return_value=payload)
+        return patch(
+            "robotsix_http.RetryClient.get", new_callable=AsyncMock, return_value=resp
+        )
+
+    async def test_remaining_is_credits_minus_usage(self) -> None:
+        from robotsix_cost_monitor.reconcile import _fetch_credits
+
+        with self._patch_get(
+            {"data": {"total_credits": 5640.0, "total_usage": 5532.5}}
+        ):
+            balance = await _fetch_credits("sk-or-test")
+
+        assert balance["total_credits"] == 5640.0
+        assert balance["total_usage"] == 5532.5
+        assert balance["remaining"] == pytest.approx(107.5)
+
+    async def test_an_unreturned_remaining_field_is_ignored(self) -> None:
+        """Even if the payload carried `remaining`, the derived value wins.
+
+        Guards against silently reverting to the field that never exists.
+        """
+        from robotsix_cost_monitor.reconcile import _fetch_credits
+
+        with self._patch_get(
+            {"data": {"total_credits": 100.0, "total_usage": 25.0, "remaining": 0.0}}
+        ):
+            assert (await _fetch_credits("sk-or-test"))["remaining"] == pytest.approx(
+                75.0
+            )
+
+    async def test_exhausted_account_reports_zero_not_negative_credits(self) -> None:
+        from robotsix_cost_monitor.reconcile import _fetch_credits
+
+        with self._patch_get({"data": {"total_credits": 10.0, "total_usage": 10.0}}):
+            assert (await _fetch_credits("sk-or-test"))["remaining"] == 0.0
+
+    async def test_empty_payload_is_all_zero(self) -> None:
+        from robotsix_cost_monitor.reconcile import _fetch_credits
+
+        with self._patch_get({}):
+            balance = await _fetch_credits("sk-or-test")
+        assert balance == {"total_credits": 0.0, "total_usage": 0.0, "remaining": 0.0}
