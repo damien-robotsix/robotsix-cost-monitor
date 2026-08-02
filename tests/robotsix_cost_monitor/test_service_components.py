@@ -55,8 +55,13 @@ class TestSelectorResolution:
         assert len(svc._projects("all")) == 3
         assert len(svc._projects(None)) == 3
 
-    def test_unknown_selector_selects_nothing(self) -> None:
-        assert _multi()._projects("ghost") == []
+    def test_unknown_selector_raises_project_not_found(self) -> None:
+        import pytest
+
+        from robotsix_cost_monitor.exceptions import ProjectNotFoundError
+
+        with pytest.raises(ProjectNotFoundError, match="ghost"):
+            _multi()._projects("ghost")
 
     def test_project_slug_wins_over_component_id_on_collision(self) -> None:
         """A project is the more specific thing, so it takes precedence.

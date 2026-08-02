@@ -39,6 +39,7 @@ from .clients.registry import RegistryClient
 from .config import Config
 from .exceptions import (
     CacheError,
+    ProjectNotFoundError,
 )
 
 _T = TypeVar("_T")
@@ -165,7 +166,13 @@ class CostService:
             return list(self._project_map.values())
         if (p := self._project_map.get(slug)) is not None:
             return [p]
-        return [q for q in self._project_map.values() if q.component_id == slug]
+        result = [q for q in self._project_map.values() if q.component_id == slug]
+        if not result:
+            raise ProjectNotFoundError(
+                f"Project '{slug}' not found — no configured project or "
+                f"component matches this slug."
+            )
+        return result
 
     async def _safe_project_fetch[T](
         self,

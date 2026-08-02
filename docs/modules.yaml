@@ -127,6 +127,7 @@ modules:
     description: Repository root metadata and configuration files
     paths:
       - .codespell-ignore
+      - .docagent-memory.md
       - .dockerignore
       - .markdownlint.jsonc
       - .gitignore
