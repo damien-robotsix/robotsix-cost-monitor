@@ -46,7 +46,7 @@ RUN npm ci --ignore-scripts \
 # lint, and docs groups so the sandbox can run pytest, mypy, ruff, mkdocs, etc.
 # --active ensures uv sync installs into /opt/venv (the active venv) rather
 # than creating a separate .venv in the project directory.
-RUN uv export --frozen --no-emit-project --no-hashes --extra analyst > requirements.txt \
+RUN uv export --frozen --no-emit-project --no-hashes > requirements.txt \
     && uv pip install --python /opt/venv/bin/python -r requirements.txt \
     && uv pip install --python /opt/venv/bin/python --no-deps . \
     && uv sync --active --locked --group dev --group lint --group docs
@@ -60,24 +60,12 @@ COPY --from=builder /opt/venv /opt/venv
 ENV VIRTUAL_ENV=/opt/venv \
     PATH="/opt/venv/bin:$PATH"
 
-# Install Node.js + claude-code (same as the production image) so the analyst
-# extra works if configured.
-# Version pinned in sync with package.json devDependencies — Dependabot tracks it there.
-# When Dependabot bumps package.json, grep this Dockerfile for CLAUDE_CODE_VERSION
-# and update the ARG default so the installed version stays in sync.
-ARG CLAUDE_CODE_VERSION=2.1.220
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends nodejs npm \
-    && npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
-    && claude --version \
-    && rm -rf /var/lib/apt/lists/*
-
 ARG APP_UID=1001
 ARG APP_GID=1001
 RUN groupadd --gid ${APP_GID} app \
     && useradd --create-home --uid ${APP_UID} --gid ${APP_GID} app \
-    && mkdir -p /home/app/config /home/app/.claude /data \
-    && chown -R app:app /home/app/config /home/app/.claude /data
+    && mkdir -p /home/app/config /data \
+    && chown -R app:app /home/app/config /data
 
 WORKDIR /home/app
 USER app

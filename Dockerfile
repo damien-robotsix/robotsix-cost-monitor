@@ -69,34 +69,15 @@ COPY --from=builder /app/sbom.cyclonedx.json /home/app/sbom.cyclonedx.json
 ENV VIRTUAL_ENV=/opt/venv \
     PATH="/opt/venv/bin:$PATH"
 
-# Claude Agent SDK transport: the level-3 orchestrator runs on Claude Opus when
-# analyst.orchestrator_provider == "claude-sdk", which drives the `claude` CLI
-# subprocess for subscription auth. Install Node + the CLI globally; the
-# subscription credentials come from a bind-mounted ~/.claude (see the deploy
-# compose). Harmless when the analyst falls back to OpenRouter.
-# hadolint ignore=DL3008
-# Version pinned in sync with package.json devDependencies — Dependabot tracks it there.
-# When Dependabot bumps package.json, grep this Dockerfile for CLAUDE_CODE_VERSION
-# and update the ARG default so the installed version stays in sync.
-ARG CLAUDE_CODE_VERSION=2.1.220
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends nodejs npm \
-    && npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
-    && claude --version \
-    && rm -rf /var/lib/apt/lists/*
-
-# Run as a non-root user with a writable home directory. The UID/GID match
-# the deploy host's user (robotsix = 1001) so the bind-mounted ~/.claude (whose
-# mode-600 credentials are owned by that user) is readable and the `claude` CLI
-# can write its state back. Pre-create an app-owned ~/.claude as a fallback
-# when no mount is present. Persistent runtime state lives under /data
+# Run as a non-root user with a writable home directory.
+# Persistent runtime state lives under /data
 # (bind-mounted or volume-backed in production).
 ARG APP_UID=1001
 ARG APP_GID=1001
 RUN groupadd --gid ${APP_GID} app \
     && useradd --create-home --uid ${APP_UID} --gid ${APP_GID} app \
-    && mkdir -p /home/app/config /home/app/.claude /data \
-    && chown -R app:app /home/app/config /home/app/.claude /data
+    && mkdir -p /home/app/config /data \
+    && chown -R app:app /home/app/config /data
 WORKDIR /home/app
 USER app
 

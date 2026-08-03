@@ -162,7 +162,6 @@ modules:
       - changelog.d/README.md
       - checklist_results.md
       - docs/modules.yaml
-      - tests/robotsix_cost_monitor/test_claude_code_version_contract.py
 
   - id: github-config
     description: GitHub templates, Dependabot config, and CI/CD workflows
