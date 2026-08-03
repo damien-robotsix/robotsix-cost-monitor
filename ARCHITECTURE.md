@@ -127,8 +127,8 @@ manager in `create_app()`) and cancelled on shutdown:
 
 ## Key invariants
 
-- **No `robotsix-llmio` dependency in the base install.** The Langfuse client is
-  self-contained (`httpx` only). The OpenRouter client is imported from `robotsix-llmio`.
+- **`robotsix-llmio` is a regular base dependency.** The Langfuse client and
+  OpenRouter client are both provided by `robotsix-llmio`.
 - **Reconciliation is idempotent.** Running it twice back-to-back with no
   intervening spend must produce `provider_delta_usd ≈ 0` and
   `within_tolerance: true`.
