@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Fix high-severity JS dependency advisories by bumping overrides to fixed versions (brace-expansion 5.0.9, minimatch 10.2.6, postcss 8.5.25) so `npm audit --audit-level=high` passes deterministically without a runtime patching step.
 - Remove remaining vestigial analyst references from CONTRIBUTING.md, ARCHITECTURE.md, deploy/README.md, CodeQL config, and docker-compose files. robotsix-llmio is now a regular base dependency.
 - Document 404 `PROJECT_NOT_FOUND` error contract in `_CHAT_SKILL` (served at `GET /chat-skill`) for unmatched `?project=<scope>` values.
 - Unknown `?project=<slug>` query parameters now return **404** with `{"error":{"code":"PROJECT_NOT_FOUND",...}}` instead of silently returning 200 with empty data. This covers all project-scoped endpoints (`/api/summary`, `/api/by-agent`, `/api/by-model`, `/api/backend-trend`, `/api/trend`, `/api/highlights`, `/api/reconcile`). The previously dead `ProjectNotFoundError` exception is now raised from `CostService._projects()`.
