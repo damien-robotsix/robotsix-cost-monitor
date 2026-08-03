@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Remove remaining vestigial analyst references from CONTRIBUTING.md, ARCHITECTURE.md, deploy/README.md, CodeQL config, and docker-compose files. robotsix-llmio is now a regular base dependency.
 - Document 404 `PROJECT_NOT_FOUND` error contract in `_CHAT_SKILL` (served at `GET /chat-skill`) for unmatched `?project=<scope>` values.
 - Unknown `?project=<slug>` query parameters now return **404** with `{"error":{"code":"PROJECT_NOT_FOUND",...}}` instead of silently returning 200 with empty data. This covers all project-scoped endpoints (`/api/summary`, `/api/by-agent`, `/api/by-model`, `/api/backend-trend`, `/api/trend`, `/api/highlights`, `/api/reconcile`). The previously dead `ProjectNotFoundError` exception is now raised from `CostService._projects()`.
 - Dashboard: the session highlight is labelled "most expensive **session**", not "most expensive ticket". A ticket is mill's unit of work; the underlying field has always been Langfuse's generic `sessionId`, which is a chat conversation for the chat agent and an ingest batch for cognee. Now that discovery is generic, a mill-specific label mislabels every other component's data. The `aggregate_by_session` docstring says the same thing so the next reader doesn't reintroduce it.

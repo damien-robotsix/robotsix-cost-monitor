@@ -16,16 +16,7 @@ cp config/config.example.json config/config.json
 The project targets **Python ≥ 3.14**. Dependency management uses
 [uv](https://docs.astral.sh/uv/); the lockfile (`uv.lock`) is committed.
 
-### Optional: analyst extra
 
-The LLM cost-analyst requires additional packages:
-
-```bash
-uv sync --locked --extra analyst
-```
-
-Without this extra, the dashboard, reconciliation, and CLI commands still
-work — only the `/api/analyst/*` endpoints are unavailable.
 
 ## Running tests
 
@@ -90,14 +81,12 @@ hook.
 
 ## Git-dependency upgrade process
 
-The `analyst` extra pins a private git dependency with exact commit
-SHAs:
-
-- `robotsix-llmio` (LLM agent framework)
+`robotsix-llmio` (LLM agent framework) is a regular git dependency pinned
+with exact commit SHAs in `pyproject.toml`.
 
 To upgrade it to a newer revision:
 
-1. Update the commit SHA in the `[project.optional-dependencies]` table of
+1. Update the commit SHA in the `[project.dependencies]` table of
    `pyproject.toml`.
 2. Remove the git dependency line **temporarily** from `pyproject.toml`
    and its `[tool.uv.sources]` block (if present), then run:

@@ -33,7 +33,7 @@ services:
     volumes:
       # Operator-managed runtime config, written by central-deploy.
       - cost_monitor_config:/home/app/config
-      # Persistent runtime state (reconciliation snapshots, analyst proposals).
+      # Persistent runtime state (reconciliation snapshots).
       - cost_monitor_data:/data
 
 volumes:

@@ -78,9 +78,6 @@ Then edit the config:
 docker run --rm -it -v cost_monitor_config:/data alpine vi /data/config.json
 ```
 
-To enable the optional LLM cost-analyst, fill in the `settings.analyst` block
-in `config.json`. The image already includes the `analyst` extra.
-
 ### 4. GHCR pull access (only if the package is private)
 
 The simplest setup is to make the GHCR package **public** (GitHub → the package
