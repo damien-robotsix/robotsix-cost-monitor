@@ -225,6 +225,10 @@ are discovered from the central-deploy registry — anything with a Langfuse
 config is monitored automatically, so do not assume a fixed list; call
 `GET /api/components` to see what exists right now.
 
+An unmatched `<scope>` (stale or mistyped slug) returns `404` with error
+code `PROJECT_NOT_FOUND` — distinct from a valid-but-empty project and from
+`?project=all` which always returns `200`.
+
 ### Cost summaries
 
 | Endpoint | Description |
