@@ -16,6 +16,16 @@ install-lint:
 test: install-test
 	uv run --no-sync pytest --cov=robotsix_cost_monitor --cov-report=term-missing
 
+# Run all Langfuse-related tests in one invocation.
+# Useful for CI-fix agents to avoid one-test-per-invocation overhead.
+test-langfuse:
+	uv run pytest -q \
+		tests/robotsix_cost_monitor/clients/test_langfuse.py \
+		tests/robotsix_cost_monitor/clients/test_registry.py \
+		tests/robotsix_cost_monitor/test_routes.py \
+		tests/robotsix_cost_monitor/test_reconcile.py \
+		tests/robotsix_cost_monitor/test_aggregations.py
+
 lint: install-lint
 	uv run pre-commit run --all-files
 
