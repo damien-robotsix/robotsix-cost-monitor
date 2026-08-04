@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Added HTTP-level TestClient coverage for the ``/api/components`` route and extracted ``_fetch_or_error`` helper to deduplicate error-handling blocks in ``reconcile_project``.
 - Add `make test-langfuse` target to run all Langfuse-related tests in a
   single pytest invocation, reducing tool-call overhead for CI-fix agents.
 - Fix high-severity JS dependency advisories by bumping overrides to fixed versions (brace-expansion 5.0.9, minimatch 10.2.6, postcss 8.5.25) so `npm audit --audit-level=high` passes deterministically without a runtime patching step.
