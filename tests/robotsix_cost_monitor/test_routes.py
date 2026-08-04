@@ -372,6 +372,60 @@ def test_health_returns_ok(client: TestClient) -> None:
     assert r.json() == {"status": "ok"}
 
 
+def test_readyz_returns_200_when_all_dependencies_healthy(
+    client: TestClient,
+) -> None:
+    """``/readyz`` returns 200 when every Langfuse project responds."""
+    from tests.robotsix_cost_monitor.helpers import _mock_client, _proj
+
+    proj = _proj("demo")
+    mock_cl = _mock_client()
+    svc = client.app.state.service  # type: ignore[attr-defined]
+    svc.projects.return_value = [proj]
+    svc._clients = {proj.slug: mock_cl}
+    r = client.get("/readyz")
+    assert r.status_code == 200
+    assert r.json() == {"status": "ready"}
+
+
+def test_readyz_returns_503_when_dependency_unreachable(
+    client: TestClient,
+) -> None:
+    """``/readyz`` returns 503 with a per-dependency status map when any
+    Langfuse project is unreachable.
+    """
+    from tests.robotsix_cost_monitor.helpers import _mock_client, _proj
+
+    proj_a = _proj("alpha")
+    proj_b = _proj("beta")
+    mock_healthy = _mock_client()
+    mock_unhealthy = _mock_client(check_health=AsyncMock(return_value=False))
+    svc = client.app.state.service  # type: ignore[attr-defined]
+    svc.projects.return_value = [proj_a, proj_b]
+    svc._clients = {proj_a.slug: mock_healthy, proj_b.slug: mock_unhealthy}
+    r = client.get("/readyz")
+    assert r.status_code == 503
+    body = r.json()
+    assert body["status"] == "not ready"
+    assert body["dependencies"] == {
+        "alpha": "ok",
+        "beta": "unreachable",
+    }
+
+
+def test_readyz_returns_200_when_no_projects_configured() -> None:
+    """``/readyz`` returns 200 when no projects are configured — nothing to
+    probe means nothing is broken.
+    """
+    cfg = _config()
+    svc = Mock()
+    svc.projects.return_value = []
+    c = _client(cfg, svc)
+    r = c.get("/readyz")
+    assert r.status_code == 200
+    assert r.json() == {"status": "ready"}
+
+
 def test_chat_skill_returns_200_with_markdown(client: TestClient) -> None:
     """GET /chat-skill returns a Markdown skill document."""
     r = client.get("/chat-skill")

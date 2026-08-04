@@ -68,6 +68,12 @@ def test_auth_health_is_exempt() -> None:
     assert r.status_code == 200
 
 
+def test_auth_readyz_is_exempt() -> None:
+    # The container readiness probe hits /readyz without credentials.
+    r = _auth_app().get("/readyz")
+    assert r.status_code == 200
+
+
 def test_auth_disabled_when_unconfigured() -> None:
     # No username/password -> dashboard is open (loopback/dev).
     r = _empty_app().get("/")
