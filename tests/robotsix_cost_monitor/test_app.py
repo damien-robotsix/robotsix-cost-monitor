@@ -763,7 +763,7 @@ def test_lifespan_teardown_cancels_all_tasks() -> None:
     tasks_created: list[asyncio.Task[object]] = []
 
     def tracking_create_task(coro: object) -> asyncio.Task[object]:
-        task = real_create_task(coro)  # type: ignore[arg-type]
+        task: asyncio.Task[object] = real_create_task(coro)
         tasks_created.append(task)
         return task
 
