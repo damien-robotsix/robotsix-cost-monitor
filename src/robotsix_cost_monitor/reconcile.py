@@ -12,6 +12,7 @@ import asyncio
 import contextlib
 import json
 import time
+from collections.abc import Awaitable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -80,6 +81,29 @@ async def _fetch_credits(api_key: str) -> dict[str, float]:
     }
 
 
+async def _fetch_or_error[T](
+    label: str,
+    transient: tuple[type[Exception], ...],
+    coro: Awaitable[T],
+    result: dict[str, Any],
+) -> T | None:
+    """Await *coro*, catching transient and unexpected exceptions uniformly.
+
+    On failure, records ``result["error"]`` and returns ``None`` so the
+    caller can return the result dict immediately.
+    """
+    try:
+        return await coro
+    except transient as exc:
+        logger.warning("%s fetch transient failure: %s", label, exc)
+        result["error"] = f"{label} fetch failed: {exc}"
+        return None
+    except Exception as exc:
+        logger.exception("%s fetch unexpected failure: %s", label, exc)
+        result["error"] = f"{label} fetch failed: {exc}"
+        return None
+
+
 async def reconcile_project(
     project: RegistryProject, settings: Settings
 ) -> dict[str, Any]:
@@ -108,18 +132,19 @@ async def reconcile_project(
         return result
 
     orc = OpenRouterKeyCostSource(api_key=project.openrouter_key)
+
     # Per-KEY cumulative usage is the reconciliation basis (isolates this
     # consumer even when several keys share one OpenRouter account).
-    try:
-        cumulative = (await asyncio.to_thread(orc.fetch_key_usage)).usage
-    except ExternalServiceError as exc:
-        logger.warning("OpenRouter fetch transient failure: %s", exc)
-        result["error"] = f"OpenRouter fetch failed: {exc}"
+    async def _fetch_cumulative() -> float:
+        ku = await asyncio.to_thread(orc.fetch_key_usage)
+        return ku.usage
+
+    cumulative_ = await _fetch_or_error(
+        "OpenRouter", (ExternalServiceError,), _fetch_cumulative(), result
+    )
+    if cumulative_ is None:
         return result
-    except Exception as exc:
-        logger.exception("OpenRouter fetch unexpected failure: %s", exc)
-        result["error"] = f"OpenRouter fetch failed: {exc}"
-        return result
+    cumulative = cumulative_
 
     # Account-level remaining balance — informational only (shared balance pool).
     # Optional: a balance fetch failure must not fail the reconcile.
@@ -162,16 +187,15 @@ async def reconcile_project(
     # the *openrouter*-backend traced cost. Claude-SDK (level-3) traffic is
     # traced in Langfuse but billed by Anthropic, not OpenRouter — including it
     # made "traced" exceed "provider" by the Claude portion.
-    try:
-        by_backend = await lf.fetch_cost_by_backend(interval_h)
-    except (ExternalServiceError, httpx.HTTPError, json.JSONDecodeError) as exc:
-        logger.warning("Langfuse fetch failed during reconcile: %s", exc)
-        result["error"] = f"Langfuse fetch failed: {exc}"
+    by_backend_ = await _fetch_or_error(
+        "Langfuse",
+        (ExternalServiceError, httpx.HTTPError, json.JSONDecodeError),
+        lf.fetch_cost_by_backend(interval_h),
+        result,
+    )
+    if by_backend_ is None:
         return result
-    except Exception as exc:
-        logger.exception("Langfuse fetch unexpected failure: %s", exc)
-        result["error"] = f"Langfuse fetch failed: {exc}"
-        return result
+    by_backend = by_backend_
 
     logged = round(by_backend.get("openrouter", 0.0), 6)
     total_traced = round(sum(by_backend.values()), 6)

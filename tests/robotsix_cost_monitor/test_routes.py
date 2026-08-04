@@ -427,6 +427,26 @@ def test_projects_returns_slug(client: TestClient) -> None:
     assert r.json() == [{"name": "Demo", "slug": "demo", "component": ""}]
 
 
+def test_components_returns_list_of_dicts(client: TestClient) -> None:
+    """GET /api/components — response shape matches dashboard.js contract."""
+    r = client.get("/api/components")
+    assert r.status_code == 200
+    body = r.json()
+    assert isinstance(body, list)
+    assert len(body) >= 1
+    for entry in body:
+        assert isinstance(entry, dict)
+        assert "component" in entry
+        assert "projects" in entry
+        assert isinstance(entry["projects"], list)
+        for proj in entry["projects"]:
+            assert isinstance(proj, dict)
+            assert "name" in proj
+            assert "slug" in proj
+            assert "reconcilable" in proj
+            assert isinstance(proj["reconcilable"], bool)
+
+
 def test_summary_window_defaults_to_config_default(client: TestClient) -> None:
     """``hours`` query param defaults to 0, so _window falls back to
     settings.default_window_hours (168).
