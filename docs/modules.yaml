@@ -181,6 +181,7 @@ modules:
       - .github/workflows/release.yml
       - .github/workflows/sbom.yml
       - .github/workflows/scan-container.yml
+      - .github/workflows/update-git-deps.yml
 
   - id: robotsix-mill
     description: robotsix-mill periodic task definitions and mill configuration
