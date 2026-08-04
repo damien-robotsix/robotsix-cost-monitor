@@ -18,11 +18,14 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from robotsix_cost_monitor.app import (
+    _cache_refresh_loop,
     _reconcile_loop,
+    _warm_cache,
     add_correlation_id,
     create_app,
 )
 from robotsix_cost_monitor.config import Config, Settings, load_config
+from robotsix_cost_monitor.metrics import cache_warm_failure, cache_warm_success
 
 
 def _empty_app() -> TestClient:
@@ -457,3 +460,328 @@ def test_log_level_info_filters_debug_events() -> None:
         )
     finally:
         logging.getLogger().removeHandler(capture)
+
+
+# ---------------------------------------------------------------------------
+# _warm_cache — counter logic
+# ---------------------------------------------------------------------------
+
+
+def _mock_service(*, with_projects: bool = True) -> Mock:
+    """Return a mock CostService with controlled ``_project_map``."""
+    svc = Mock()
+    svc._project_map = {"proj-a": Mock()} if with_projects else {}
+    svc.summary = AsyncMock(return_value=[])
+    svc.by_model = AsyncMock(return_value=[])
+    svc.trend = AsyncMock(return_value=[])
+    return svc
+
+
+@pytest.mark.asyncio
+async def test_warm_cache_increments_success_when_all_windows_succeed() -> None:
+    """When every window warms without error, ``cache_warm_success`` is incremented."""
+    cfg = Config()
+    svc = _mock_service()
+
+    before_success = cache_warm_success._value.get()
+    before_failure = cache_warm_failure._value.get()
+
+    await _warm_cache(cfg, svc)
+
+    assert cache_warm_success._value.get() == before_success + 1
+    assert cache_warm_failure._value.get() == before_failure
+
+
+@pytest.mark.asyncio
+async def test_warm_cache_increments_failure_when_window_raises() -> None:
+    """When any window warm-up raises, ``cache_warm_failure`` is incremented."""
+    cfg = Config()
+    svc = _mock_service()
+    svc.by_model.side_effect = RuntimeError("simulated cache fetch failure")
+
+    before_success = cache_warm_success._value.get()
+    before_failure = cache_warm_failure._value.get()
+
+    await _warm_cache(cfg, svc)
+
+    assert cache_warm_success._value.get() == before_success
+    assert cache_warm_failure._value.get() == before_failure + 1
+
+
+@pytest.mark.asyncio
+async def test_warm_cache_noop_when_no_projects() -> None:
+    """When ``_project_map`` is empty the function returns immediately —
+    no counters are touched and no service calls are made.
+    """
+    cfg = Config()
+    svc = _mock_service(with_projects=False)
+
+    before_success = cache_warm_success._value.get()
+    before_failure = cache_warm_failure._value.get()
+
+    await _warm_cache(cfg, svc)
+
+    assert cache_warm_success._value.get() == before_success
+    assert cache_warm_failure._value.get() == before_failure
+    svc.summary.assert_not_called()
+    svc.by_model.assert_not_called()
+    svc.trend.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# _cache_refresh_loop — schedule + error tolerance
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_cache_refresh_loop_sleeps_and_calls_warm_cache() -> None:
+    """The refresh loop sleeps for *interval_s* seconds and then calls
+    ``_warm_cache`` on each iteration.
+    """
+    cfg = Config()
+    svc = _mock_service()
+
+    warm_calls = 0
+    _real_sleep = asyncio.sleep
+
+    async def fake_warm(_cfg: Config, _svc: object) -> None:
+        nonlocal warm_calls
+        warm_calls += 1
+
+    sleep_args: list[float] = []
+
+    async def fake_sleep(seconds: float) -> None:
+        sleep_args.append(seconds)
+        await _real_sleep(0)
+
+    with (
+        patch("robotsix_cost_monitor.app._warm_cache", fake_warm),
+        patch("robotsix_cost_monitor.app.asyncio.sleep", fake_sleep),
+    ):
+        task = asyncio.create_task(_cache_refresh_loop(cfg, svc, interval_s=120))
+        while warm_calls < 2:
+            await _real_sleep(0)
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+    assert warm_calls >= 2
+    assert len(sleep_args) >= 2
+    assert sleep_args[0] == 120
+    assert sleep_args[1] == 120
+
+
+@pytest.mark.asyncio
+async def test_cache_refresh_loop_cancellation() -> None:
+    """Cancelling the cache-refresh loop raises ``CancelledError``."""
+    cfg = Config()
+    svc = Mock()
+
+    async def blocked(_cfg: Config, _svc: object) -> None:
+        await asyncio.Event().wait()
+
+    with (
+        patch("robotsix_cost_monitor.app.asyncio.sleep", AsyncMock()),
+        patch("robotsix_cost_monitor.app._warm_cache", blocked),
+    ):
+        task = asyncio.create_task(_cache_refresh_loop(cfg, svc, interval_s=60))
+        await asyncio.sleep(0)  # let loop enter _warm_cache
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+
+# ---------------------------------------------------------------------------
+# lifespan — conditional task creation
+# ---------------------------------------------------------------------------
+
+
+def _make_mock_service(*, with_projects: bool = True) -> Mock:
+    """Return a mock CostService that carries a non-empty ``_project_map``."""
+    svc = Mock()
+    svc._project_map = {"proj-a": Mock()} if with_projects else {}
+    svc.refresh_projects = AsyncMock()
+    svc.summary = AsyncMock(return_value=[])
+    svc.by_model = AsyncMock(return_value=[])
+    svc.trend = AsyncMock(return_value=[])
+    return svc
+
+
+def test_lifespan_skips_background_loops_when_intervals_zero() -> None:
+    """When all schedule intervals are zero only ``_warm_cache`` runs (one-shot)."""
+    cfg = Config(
+        settings=Settings(
+            reconcile_schedule_hours=0,
+            dashboard_refresh_interval_seconds=0,
+            registry_poll_interval_seconds=0,
+        )
+    )
+    mock_reconcile = AsyncMock()
+    mock_cache_refresh = AsyncMock()
+    mock_warm = AsyncMock()
+
+    with (
+        patch("robotsix_cost_monitor.app._reconcile_loop", mock_reconcile),
+        patch("robotsix_cost_monitor.app._cache_refresh_loop", mock_cache_refresh),
+        patch("robotsix_cost_monitor.app._warm_cache", mock_warm),
+    ):
+        app = create_app(cfg)
+        with TestClient(app) as _client:
+            pass
+
+    mock_reconcile.assert_not_called()
+    mock_cache_refresh.assert_not_called()
+    mock_warm.assert_called_once()
+
+
+def test_lifespan_starts_reconcile_loop_when_positive_and_projects() -> None:
+    """A positive ``reconcile_schedule_hours`` with projects starts the reconcile loop."""
+    cfg = Config(settings=Settings(reconcile_schedule_hours=24))
+    mock_reconcile = AsyncMock()
+    mock_service = _make_mock_service()
+
+    with (
+        patch("robotsix_cost_monitor.app.CostService", return_value=mock_service),
+        patch("robotsix_cost_monitor.app._reconcile_loop", mock_reconcile),
+        patch("robotsix_cost_monitor.app._cache_refresh_loop", AsyncMock()),
+        patch("robotsix_cost_monitor.app._warm_cache", AsyncMock()),
+    ):
+        app = create_app(cfg)
+        with TestClient(app) as _client:
+            pass
+
+    mock_reconcile.assert_called_once()
+
+
+def test_lifespan_skips_reconcile_when_no_projects() -> None:
+    """A positive ``reconcile_schedule_hours`` with an empty project map
+    does NOT start the reconcile loop.
+    """
+    cfg = Config(settings=Settings(reconcile_schedule_hours=24))
+    mock_reconcile = AsyncMock()
+    mock_service = _make_mock_service(with_projects=False)
+
+    with (
+        patch("robotsix_cost_monitor.app.CostService", return_value=mock_service),
+        patch("robotsix_cost_monitor.app._reconcile_loop", mock_reconcile),
+        patch("robotsix_cost_monitor.app._cache_refresh_loop", AsyncMock()),
+        patch("robotsix_cost_monitor.app._warm_cache", AsyncMock()),
+    ):
+        app = create_app(cfg)
+        with TestClient(app) as _client:
+            pass
+
+    mock_reconcile.assert_not_called()
+
+
+def test_lifespan_starts_cache_refresh_when_positive_and_projects() -> None:
+    """A positive ``dashboard_refresh_interval_seconds`` with projects starts
+    the cache-refresh loop.
+    """
+    cfg = Config(settings=Settings(dashboard_refresh_interval_seconds=120))
+    mock_cache_refresh = AsyncMock()
+    mock_service = _make_mock_service()
+
+    with (
+        patch("robotsix_cost_monitor.app.CostService", return_value=mock_service),
+        patch("robotsix_cost_monitor.app._cache_refresh_loop", mock_cache_refresh),
+        patch("robotsix_cost_monitor.app._reconcile_loop", AsyncMock()),
+        patch("robotsix_cost_monitor.app._warm_cache", AsyncMock()),
+    ):
+        app = create_app(cfg)
+        with TestClient(app) as _client:
+            pass
+
+    mock_cache_refresh.assert_called_once()
+
+
+def test_lifespan_starts_registry_poll_when_interval_positive() -> None:
+    """A positive ``registry_poll_interval_seconds`` starts a poll loop that
+    calls ``service.refresh_projects``.
+    """
+    cfg = Config(settings=Settings(registry_poll_interval_seconds=1))
+    mock_service = _make_mock_service()
+
+    # Let the poll loop run a couple of iterations.
+    _real_sleep = asyncio.sleep
+
+    async def fast_sleep(seconds: float) -> None:
+        await _real_sleep(0)
+
+    with (
+        patch("robotsix_cost_monitor.app.CostService", return_value=mock_service),
+        patch("robotsix_cost_monitor.app._warm_cache", AsyncMock()),
+        patch("robotsix_cost_monitor.app.asyncio.sleep", fast_sleep),
+    ):
+        app = create_app(cfg)
+        with TestClient(app) as _client:
+            pass
+
+    # The poll loop should have called refresh_projects at least once
+    # before the lifespan was torn down.
+    assert mock_service.refresh_projects.call_count >= 1
+
+
+def test_lifespan_warm_cache_always_runs() -> None:
+    """``_warm_cache`` is always started even when all loops are disabled."""
+    cfg = Config(
+        settings=Settings(
+            reconcile_schedule_hours=0,
+            dashboard_refresh_interval_seconds=0,
+            registry_poll_interval_seconds=0,
+        )
+    )
+    mock_warm = AsyncMock()
+
+    with patch("robotsix_cost_monitor.app._warm_cache", mock_warm):
+        app = create_app(cfg)
+        with TestClient(app) as _client:
+            pass
+
+    mock_warm.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# lifespan — teardown
+# ---------------------------------------------------------------------------
+
+
+def test_lifespan_teardown_cancels_all_tasks() -> None:
+    """After the ``TestClient`` context manager exits every background task
+    has been cancelled and awaited (``task.done()`` is True).
+    """
+    cfg = Config(
+        settings=Settings(
+            reconcile_schedule_hours=24,
+            dashboard_refresh_interval_seconds=120,
+            registry_poll_interval_seconds=30,
+        )
+    )
+    mock_service = _make_mock_service()
+
+    real_create_task = asyncio.create_task
+    tasks_created: list[asyncio.Task[object]] = []
+
+    def tracking_create_task(coro: object) -> asyncio.Task[object]:
+        task: asyncio.Task[object] = real_create_task(coro)
+        tasks_created.append(task)
+        return task
+
+    async def _block_forever(*args: object, **kwargs: object) -> None:
+        await asyncio.Event().wait()
+
+    with (
+        patch("robotsix_cost_monitor.app.CostService", return_value=mock_service),
+        patch("robotsix_cost_monitor.app._reconcile_loop", _block_forever),
+        patch("robotsix_cost_monitor.app._cache_refresh_loop", _block_forever),
+        patch("robotsix_cost_monitor.app._warm_cache", _block_forever),
+        patch("robotsix_cost_monitor.app.asyncio.create_task", tracking_create_task),
+    ):
+        app = create_app(cfg)
+        with TestClient(app) as _client:
+            pass
+
+    # reconcile, cache_refresh, warm_cache, registry_poll → ≥ 4 tasks
+    assert len(tasks_created) >= 4, f"expected ≥ 4 tasks, got {len(tasks_created)}"
+    for task in tasks_created:
+        assert task.done(), f"task {task.get_name()!r} was not done after teardown"
