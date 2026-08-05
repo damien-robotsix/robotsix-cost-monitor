@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Bump `uv` from 0.11.21 to 0.12.1 in `Dockerfile` and `Dockerfile.dev`
 - Remove remaining vestigial analyst references from AGENT.md, docker-compose.yml, docs/.docagent-memory.md, and .secrets.baseline.
 - Added HTTP-level TestClient coverage for the ``/api/components`` route and extracted ``_fetch_or_error`` helper to deduplicate error-handling blocks in ``reconcile_project``.
 - Add `make test-langfuse` target to run all Langfuse-related tests in a
