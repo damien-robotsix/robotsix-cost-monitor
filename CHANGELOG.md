@@ -1,6 +1,7 @@
 <!-- markdownlint-disable MD013 -->
 ## 0.0.0 (unreleased)
 
+- Remove remaining vestigial analyst references from AGENT.md, docker-compose.yml, docs/.docagent-memory.md, and .secrets.baseline.
 - Added HTTP-level TestClient coverage for the ``/api/components`` route and extracted ``_fetch_or_error`` helper to deduplicate error-handling blocks in ``reconcile_project``.
 - Add `make test-langfuse` target to run all Langfuse-related tests in a
   single pytest invocation, reducing tool-call overhead for CI-fix agents.
