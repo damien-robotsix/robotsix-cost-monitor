@@ -28,6 +28,6 @@ services:
     volumes:
       # Config bind-mount — projects.yaml available without an image rebuild.
       - ./config:/home/app/config
-      # Runtime state — reconciliation snapshots + analyst proposals persist
+      # Runtime state — reconciliation snapshots persist
       # across restarts (git-ignored ./.data on the host, mapped to /data).
       - ./.data:/data
