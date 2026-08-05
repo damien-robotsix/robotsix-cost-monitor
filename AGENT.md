@@ -16,9 +16,6 @@ This repo follows the [robotsix stack standards](https://github.com/damien-robot
   - `robotsix_llmio.core.AsyncLangfuseReadClient` is mocked via
     `unittest.mock.patch.object` on the composed `LangfuseClient._lf` instance
     (see `tests/robotsix_cost_monitor/clients/test_langfuse.py`).
-  - The LLM analyst path is stubbed by monkeypatching the local `_run_agents`
-    wrapper rather than `robotsix_llmio.core.run_agent` directly (see
-    `tests/test_analyst.py`).
   - `tests/conftest.py` provides a `_mock_client()` factory that returns a
     `Mock` with `AsyncMock` fetch methods returning empty results — prefer this
     when adding new tests that need a LangfuseClient seam.
@@ -45,8 +42,7 @@ template is `config/config.example.json`. Top-level keys:
 - **`projects`** — list of Langfuse projects to monitor. Each entry: `name`,
   `public_key`, `secret_key`, `base_url`, optional `openrouter_key`.
 - **`settings`** — global knobs: `default_window_hours`, `cache_ttl_seconds`,
-  `reconcile_tolerance_usd`, `reconcile_schedule_hours`, plus an optional
-  **`analyst`** block (LLM cost-analyst).
+  `reconcile_tolerance_usd`, `reconcile_schedule_hours`.
 
 New fields added to the config MUST flow through the Pydantic models in
 `src/robotsix_cost_monitor/config.py` and be reflected in the example file.
@@ -54,18 +50,14 @@ New fields added to the config MUST flow through the Pydantic models in
 ### Model hierarchy (`src/robotsix_cost_monitor/config.py`)
 
 ```text
-Config                       # top-level: projects + settings
-├── projects: list[ProjectConfig]
-│     name, public_key, secret_key, base_url, openrouter_key?
-│     └── .slug  (derived URL-safe identifier)
+Config                       # top-level: settings
 └── settings: Settings
-      default_window_hours, cache_ttl_seconds, reconcile_tolerance_usd,
-      reconcile_schedule_hours
-      └── analyst: AnalystConfig
-            openrouter_key?, global_model?, trace_model?, window_hours,
-            top_stages, traces_per_agent, max_trace_analyses, schedule_hours,
-            langfuse_* (own tracing project)
-            └── .enabled       (bool — openrouter_key is set)
+      auth (AuthConfig), server_host, server_port, registry_base_url,
+      registry_api_key, registry_poll_interval_seconds,
+      default_window_hours, cache_ttl_seconds,
+      dashboard_refresh_interval_seconds, reconcile_tolerance_usd,
+      reconcile_schedule_hours, subscription_call_cap,
+      low_balance_threshold_usd, data_dir, log_format, log_level
 ```
 
 All config loading goes through `load_config()` → `Config.model_validate()`.
@@ -108,8 +100,8 @@ instantiate a second Langfuse client or call the Langfuse REST API directly.
 
 ## OpenRouter client (`robotsix-llmio`)
 
-`OpenRouterKeyCostSource` is a sync OpenRouter client imported from `robotsix_llmio.openrouter`
-(part of the optional `[analyst]` extra). It wraps the per-key usage endpoint:
+`OpenRouterKeyCostSource` is a sync OpenRouter client imported from `robotsix_llmio.openrouter`.
+It wraps the per-key usage endpoint:
 
 - `fetch_key_usage()` → `KeyUsage` — per-key cumulative usage (the reconciliation basis),
   returned as a `KeyUsage(usage, limit, label)` dataclass. Called via `asyncio.to_thread`
@@ -125,16 +117,15 @@ in favour of this shared client. New OpenRouter endpoints or features should go 
 ## Data directory convention
 
 Persistent runtime state lives under the directory set by `settings.data_dir`
-in the config file (default `.data`). Two subsystems write here:
+in the config file (default `.data`). One subsystem writes here:
 
 | Subsystem | Path | Content |
 | --- | --- | --- |
 | Reconciliation | `.data/reconcile/<slug>.json` | Per-project cumulative-usage snapshots + `last.json` aggregate result |
-| Analyst | `.data/analyst/proposals.json` | Stored cost-reduction proposals (surfaced in the dashboard) |
 
 The `data_dir_audit` periodic workflow inspects this directory. Agents MUST
 NOT repurpose `.data/` for unrelated state — use it only for reconciliation
-snapshots and analyst output. Follow the fleet convention (shared with
+snapshots. Follow the fleet convention (shared with
 `robotsix-chat`, `robotsix-auto-mail`).
 
 ## Reconciliation flow (`src/robotsix_cost_monitor/reconcile.py`)
