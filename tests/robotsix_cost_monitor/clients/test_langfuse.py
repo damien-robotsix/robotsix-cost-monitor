@@ -1,6 +1,6 @@
 """Unit tests for LangfuseClient (no network).
 
-Covers __init__, fetch_traces_window and fetch_trace_detail delegation,
+Covers __init__, fetch_traces_window delegation,
 metrics query construction, and the derived aggregation methods.
 """
 
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import respx
 
@@ -113,28 +113,6 @@ async def test_fetch_traces_window_passes_hours() -> None:
     with patch.object(c._lf, "fetch_traces_window", side_effect=_mock_fetch):
         await c.fetch_traces_window(hours=12.5)
     mock.assert_called_once_with(12.5)
-
-
-# ---------------------------------------------------------------------------
-# fetch_trace_detail
-# ---------------------------------------------------------------------------
-
-
-async def test_fetch_trace_detail_delegates() -> None:
-    """fetch_trace_detail delegates and returns the raw payload.
-
-    It returns the raw dict rather than a :class:`LangfuseTrace` because that
-    model drops every undeclared field — which is exactly the observation
-    detail this call exists to return.
-    """
-    c = _client()
-    detail = {"id": "tr-99", "name": "implement", "observations": [{"id": "obs-1"}]}
-    mock = AsyncMock(return_value=detail)
-    with patch.object(c._lf, "fetch_trace_detail", mock):
-        result = await c.fetch_trace_detail("tr-99")
-    assert result == detail
-    assert result["observations"] == [{"id": "obs-1"}]
-    mock.assert_called_once_with("tr-99")
 
 
 # ---------------------------------------------------------------------------

@@ -66,20 +66,6 @@ class LangfuseClient:
             async for t in self._lf.fetch_traces_window(hours)
         ]
 
-    async def fetch_trace_detail(self, trace_id: str) -> dict[str, Any]:
-        """Return a single trace's full detail (including its observations).
-
-        Returns the raw Langfuse payload rather than a :class:`LangfuseTrace`:
-        that model deliberately drops everything but the seven cost/aggregation
-        fields (see its docstring), which would discard exactly the detail this
-        call exists to provide.  Unlike the window fetch, a single trace is not
-        cached, so retaining its full body is bounded and safe.
-
-        Delegates to :meth:`AsyncLangfuseReadClient.fetch_trace_detail`.
-        """
-        detail: dict[str, Any] = await self._lf.fetch_trace_detail(trace_id)
-        return detail
-
     async def _metrics(
         self,
         hours: float,
