@@ -1,9 +1,5 @@
 """Test helper utilities — imported explicitly, NOT auto-discovered.
 
-Fixtures (auto-discovered by pytest when placed in ``conftest.py``, but also
-accessible via direct import):
-  - ``event_loop`` — session-scoped loop for pytest-asyncio + xdist compat
-
 Data-builder / factory functions that test files import directly (rather than
 fixtures auto-discovered by pytest):
   - ``trace`` — build a LangfuseTrace for tests
@@ -17,13 +13,10 @@ fixtures auto-discovered by pytest):
 
 from __future__ import annotations
 
-import asyncio
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, Mock
-
-import pytest
 
 from robotsix_cost_monitor.clients.models import LangfuseTrace, RegistryProject
 from robotsix_cost_monitor.clients.registry import RegistryClient
@@ -184,16 +177,3 @@ def _model_row(
         "total_tokens": total_tokens,
         "observations": observations,
     }
-
-
-# ---------------------------------------------------------------------------
-# Session-scoped event loop fixture (pytest-asyncio + xdist compat)
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture(scope="session")
-def event_loop() -> Any:
-    """Session-scoped event loop for pytest-asyncio + xdist compatibility."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
