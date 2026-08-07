@@ -160,6 +160,10 @@ modules:
       - vitest.config.js
       - vulture_whitelist.py
       - changelog.d/README.md
+      # Glob rather than one entry per fragment: every towncrier newsfragment
+      # would otherwise need a manual registration, which is a whole class of
+      # busywork tickets. robotsix-auto-mail moved to a glob for this reason.
+      - changelog.d/*.md
       - checklist_results.md
       - docs/modules.yaml
 
