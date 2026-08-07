@@ -1,7 +1,7 @@
 """Unit tests for LangfuseClient (no network).
 
-Covers __init__, fetch_traces_window delegation,
-metrics query construction, and the derived aggregation methods.
+Covers __init__, fetch_traces_window, metrics query construction,
+and the derived aggregation methods.
 """
 
 from __future__ import annotations
