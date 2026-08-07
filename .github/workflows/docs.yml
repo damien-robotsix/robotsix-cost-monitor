@@ -6,10 +6,24 @@ on:
 
 permissions: {}  # no workflow-level default; the job grants its own
 
+# The shared spine sets no workflow-level concurrency on purpose: inside a
+# called workflow `github.workflow` resolves to the CALLER's name, so a group
+# built from it there would deadlock against this one. `pages` names the
+# resource actually serialised — the single Pages deployment.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
   docs:
     name: Build and deploy docs
-    # contents: write needed to push built docs to the gh-pages branch
     permissions:
-      contents: write  # push built docs to the gh-pages branch
+      # A caller job's permissions map REPLACES the called workflow's scopes —
+      # anything unlisted is zeroed. The spine deploys through the Pages
+      # Actions, not `mkdocs gh-deploy`, so contents:write satisfied none of
+      # what it needs and every run died at STARTUP with no logs. See
+      # robotsix-standards docs/docs-site-deployment.md rule 1.
+      contents: read  # the spine's build job checks out this repo
+      pages: write  # the spine's deploy job publishes the Pages artifact
+      id-token: write  # OIDC auth for actions/deploy-pages
     uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-docs.yml@77e10e286717cfe0eeb6b8d9ce985f3794236d15  # main
