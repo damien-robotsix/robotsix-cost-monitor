@@ -518,7 +518,10 @@ def read_config(request: Request) -> dict[str, Any]:
 
 
 @router.put("/config")
-def write_config(update: dict[str, Any], request: Request) -> dict[str, Any] | JSONResponse:
+def write_config(
+    update: dict[str, Any],
+    request: Request,
+) -> dict[str, Any] | JSONResponse:
     """PUT /config — apply a partial update and record a new version.
 
     Keys omitted from *update* keep their current values. A secret submitted
@@ -548,7 +551,10 @@ def config_versions() -> dict[str, Any]:
 
 
 @router.post("/config/rollback")
-def config_rollback(body: dict[str, Any], request: Request) -> dict[str, Any] | JSONResponse:
+def config_rollback(
+    body: dict[str, Any],
+    request: Request,
+) -> dict[str, Any] | JSONResponse:
     """POST /config/rollback — restore an earlier version as a new version.
 
     Secrets are not rolled back: the history never stores them, so they are
