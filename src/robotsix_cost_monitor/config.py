@@ -25,8 +25,8 @@ class AuthConfig(BaseModel):
     The dashboard has no other access control, so when it is exposed through
     the central-deploy gateway (an unauthenticated reverse proxy) this MUST
     be set — otherwise the cost data is public. When either field is empty
-    the dashboard is served open (local dev / SSH-tunnel only). ``/health``
-    is always exempt so the container healthcheck works.
+    the dashboard is served open (local dev / SSH-tunnel only). ``/health``,
+    ``/readyz`` and ``/metrics`` are always exempt so container probes work.
     """
 
     username: str = ""

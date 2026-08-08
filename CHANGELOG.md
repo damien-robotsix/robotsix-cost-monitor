@@ -8,6 +8,9 @@
 - Remove remaining vestigial analyst references from AGENT.md, docker-compose.yml, docs/.docagent-memory.md, and .secrets.baseline.
 - Remove stale "analyst proposals" reference from docker-compose.yml volume comment
 - Added HTTP-level TestClient coverage for the ``/api/components`` route and extracted ``_fetch_or_error`` helper to deduplicate error-handling blocks in ``reconcile_project``.
+- Add `/readyz` readiness probe that checks Langfuse connectivity per-project,
+  returns 503 with per-dependency status when any backend is unreachable.
+  `/health` remains as a static liveness probe; both are auth-exempt.
 - Add `make test-langfuse` target to run all Langfuse-related tests in a
   single pytest invocation, reducing tool-call overhead for CI-fix agents.
 - Fix high-severity JS dependency advisories by bumping overrides to fixed versions (brace-expansion 5.0.9, minimatch 10.2.6, postcss 8.5.25) so `npm audit --audit-level=high` passes deterministically without a runtime patching step.

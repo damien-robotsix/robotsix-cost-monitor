@@ -104,6 +104,37 @@ other robotsix services).
 
 ---
 
+## Container probes
+
+The service exposes two health endpoints — use them for container probes so the
+orchestrator can distinguish a running process from a ready-to-serve one:
+
+| Endpoint   | Probe type  | Behaviour |
+|------------|-------------|-----------|
+| `GET /health`  | **Liveness**  | Always 200 while the process is up.  No dependency I/O. |
+| `GET /readyz`  | **Readiness** | 200 when all Langfuse projects are reachable; 503 with a per-dependency status map when any is down. |
+
+Both endpoints are auth-exempt so the container runtime can reach them without
+credentials.
+
+Example Docker Compose snippet:
+
+```yaml
+healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+  interval: 30s
+  timeout: 5s
+  retries: 3
+  start_period: 10s
+
+# Orchestrator readiness (Kubernetes-style):
+#   readinessProbe:
+#     httpGet:
+#       path: /readyz
+#       port: 8080
+#     periodSeconds: 10
+```
+
 ## One-shot commands
 
 ```sh

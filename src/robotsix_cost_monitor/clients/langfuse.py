@@ -174,6 +174,26 @@ class LangfuseClient:
             for (stage, backend), v in ordered
         ]
 
+    async def check_health(self, timeout: float = 5.0) -> bool:
+        """Lightweight connectivity check against the Langfuse API.
+
+        Issues an authenticated GET to ``/api/public/traces?page=1&limit=1``
+        with a short *timeout*.  Returns ``True`` when the API responds (any
+        2xx status), ``False`` on connection errors or timeouts.
+        """
+        import httpx
+
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as http_client:
+                resp = await http_client.get(
+                    self._lf.url("/api/public/traces"),
+                    params={"page": 1, "limit": 1},
+                    headers={"Authorization": self._lf.auth_header()},
+                )
+            return 200 <= resp.status_code < 300
+        except Exception:
+            return False
+
     async def fetch_model_usage_window(self, hours: int) -> list[dict[str, Any]]:
         """Per-model cost + token usage over the exact last *hours*.
 
