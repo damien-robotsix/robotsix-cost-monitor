@@ -1,0 +1,1 @@
+Dashboard stage breakdown, highlights, and total card now all honor the shared backend filter. Removed the marginal/subscription two-column design from the stage table; it now uses a single cost column. `/api/by-agent-segmented` endpoint and related UI, service method, and aggregation function have been removed.
