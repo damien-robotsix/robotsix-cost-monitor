@@ -1,0 +1,1 @@
+Bump the transitive `nanoid` dev dependency to 3.3.17, clearing GHSA-2v37-7h3g-55p8 (custom generators can loop indefinitely when size is zero), which was failing `npm audit --audit-level=high` in CI.
