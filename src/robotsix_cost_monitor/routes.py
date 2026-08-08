@@ -252,7 +252,6 @@ code `PROJECT_NOT_FOUND` — distinct from a valid-but-empty project and from
 | Endpoint | Description |
 |---|---|
 | `GET /api/by-agent` | Cost breakdown by agent name. Optional `?backend=`. |
-| `GET /api/by-agent-segmented` | Agent costs segmented by model and backend. |
 | `GET /api/by-model` | Cost breakdown by model. |
 
 ### Trends
@@ -371,15 +370,6 @@ async def by_agent(
 ) -> list[dict[str, Any]]:
     """GET /api/by-agent — cost breakdown by agent name for a project and window."""
     return await service.by_agent(pw.project, pw.hours, backend)
-
-
-@router.get("/api/by-agent-segmented")
-async def by_agent_segmented(
-    pw: ProjectWindow = Depends(project_window),
-    service: CostService = Depends(get_service),
-) -> dict[str, Any]:
-    """GET /api/by-agent-segmented — agent costs segmented by model and backend."""
-    return await service.by_agent_segmented(pw.project, pw.hours)
 
 
 @router.get("/api/by-model")
