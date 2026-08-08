@@ -517,7 +517,7 @@ def read_config(request: Request) -> dict[str, Any]:
     }
 
 
-@router.put("/config")
+@router.put("/config", response_model=None)
 def write_config(
     update: dict[str, Any],
     request: Request,
@@ -550,7 +550,7 @@ def config_versions() -> dict[str, Any]:
     return {"versions": list(reversed(read_versions(include_data=False)))}
 
 
-@router.post("/config/rollback")
+@router.post("/config/rollback", response_model=None)
 def config_rollback(
     body: dict[str, Any],
     request: Request,
