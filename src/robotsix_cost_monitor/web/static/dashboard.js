@@ -241,9 +241,6 @@ export function renderByAgent(rows) {
           `<span class="cost">${fmt(r.cost)}</span></div>`,
       )
       .join('') || '<div class="muted">no data</div>';
-}
-
-
 
 /**
  * Render the by-model cost bar chart.
