@@ -28,6 +28,7 @@ modules:
     paths:
       - src/robotsix_cost_monitor/app.py
       - src/robotsix_cost_monitor/web/index.html
+      - src/robotsix_cost_monitor/web/settings.html
       - src/robotsix_cost_monitor/web/static/dashboard.js
       - src/robotsix_cost_monitor/web/static/dashboard.css
       - tests/robotsix_cost_monitor/test_app.py
@@ -44,6 +45,7 @@ modules:
     paths:
       - src/robotsix_cost_monitor/config.py
       - tests/robotsix_cost_monitor/test_config.py
+      - config/config.json
       - config/config.example.json
       - config/config.schema.json
       - scripts/generate_config_schema.py

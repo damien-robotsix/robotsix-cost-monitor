@@ -1,0 +1,23 @@
+{
+  "settings": {
+    "auth": {
+      "username": "",
+      "password": ""
+    },
+    "server_host": "0.0.0.0",
+    "server_port": 8080,
+    "registry_base_url": "",
+    "registry_api_key": "",
+    "registry_poll_interval_seconds": 300,
+    "default_window_hours": 168,
+    "cache_ttl_seconds": 60,
+    "dashboard_refresh_interval_seconds": 120,
+    "reconcile_tolerance_usd": 1.0,
+    "reconcile_schedule_hours": 24.0,
+    "subscription_call_cap": 0,
+    "low_balance_threshold_usd": 5.0,
+    "log_format": "json",
+    "log_level": "INFO",
+    "data_dir": ".data"
+  }
+}

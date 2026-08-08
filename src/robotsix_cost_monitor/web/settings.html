@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>robotsix · settings</title>
+  <link rel="stylesheet" href="/static/robotsix-ui/style.css" />
+</head>
+<body>
+  <header>
+    <h1>settings</h1>
+    <div class="controls">
+      <a href="/" class="nav-link">← dashboard</a>
+    </div>
+  </header>
+  <div id="settings-root"></div>
+  <script type="module">
+    import { mountConfigPanel } from "/static/robotsix-ui/vanilla.js";
+    mountConfigPanel(document.getElementById("settings-root"), { title: "Settings" });
+  </script>
+</body>
+</html>
