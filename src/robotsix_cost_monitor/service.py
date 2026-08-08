@@ -25,7 +25,6 @@ from .aggregations import (
     BackendKind,
     aggregate_by_name,
     aggregate_by_name_backend,
-    aggregate_by_name_split,
     backend_cost_series,
     cost_trend,
     merge_model_costs,
@@ -332,42 +331,6 @@ class CostService:
 
         all_rows = await self._gather_list_results(slug, hours, self._agent_usage)
         return aggregate_by_name_backend(all_rows, backend)
-
-    async def by_agent_segmented(self, slug: str | None, hours: int) -> dict[str, Any]:
-        """Return cost by stage, split into OpenRouter vs subscription pools.
-
-        Returns::
-
-            {"window_hours": int,
-             "rows": list[dict],
-             "openrouter_marginal_total": float,
-             "subscription_estimate_total": float,
-             "subscription_count_total": int,
-             "subscription_cap": int,
-             "subscription_cap_pct": float | None}
-
-        Each row in ``rows`` carries the stage name, per-pool cost + count,
-        total cost, and a ``marginal_reducible`` flag.  ``subscription_cap_pct``
-        is ``subscription_count_total / subscription_cap`` when the cap > 0,
-        otherwise ``None``.
-        """
-        all_rows = await self._gather_list_results(slug, hours, self._agent_usage)
-        rows = aggregate_by_name_split(all_rows)
-        openrouter_marginal_total = sum(r["openrouter_cost"] for r in rows)
-        subscription_estimate_total = sum(r["subscription_cost"] for r in rows)
-        subscription_count_total = sum(r["subscription_count"] for r in rows)
-        cap = self.config.settings.subscription_call_cap
-        return {
-            "window_hours": hours,
-            "rows": rows,
-            "openrouter_marginal_total": round(openrouter_marginal_total, 6),
-            "subscription_estimate_total": round(subscription_estimate_total, 6),
-            "subscription_count_total": subscription_count_total,
-            "subscription_cap": cap,
-            "subscription_cap_pct": (
-                round(subscription_count_total / cap, 6) if cap > 0 else None
-            ),
-        }
 
     async def _model_usage(
         self, project: RegistryProject, hours: int

@@ -55,7 +55,7 @@ export const API = {
   SUMMARY: '/api/summary',
   TREND: '/api/trend',
   BACKEND_TREND: '/api/backend-trend',
-  BY_AGENT_SEG: '/api/by-agent-segmented',
+  BY_AGENT: '/api/by-agent',
   BY_MODEL: '/api/by-model',
   HIGHLIGHTS: '/api/highlights',
   RECONCILE: '/api/reconcile',
