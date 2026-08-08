@@ -90,6 +90,7 @@ modules:
     paths:
       - src/robotsix_cost_monitor/routes.py
       - tests/robotsix_cost_monitor/test_routes.py
+      - tests/robotsix_cost_monitor/test_config_routes.py
 
   - id: clients
     description: External API client sub-package (Langfuse, Registry) including typed httpx retry client
