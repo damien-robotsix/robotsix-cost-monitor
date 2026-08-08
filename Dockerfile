@@ -43,7 +43,8 @@ COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts \
     && mkdir -p src/robotsix_cost_monitor/web/static/robotsix-ui \
     && cp node_modules/@robotsix/ui/dist/style.css \
-       src/robotsix_cost_monitor/web/static/robotsix-ui/style.css \
+       node_modules/@robotsix/ui/dist/vanilla.js \
+       src/robotsix_cost_monitor/web/static/robotsix-ui/ \
     && rm -rf node_modules package.json package-lock.json
 
 # Export the EXACT revisions pinned in uv.lock (no fresh resolution), install

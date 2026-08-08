@@ -451,6 +451,12 @@ def index() -> str:
     return (_WEB / "index.html").read_text()
 
 
+@router.get("/settings", response_class=HTMLResponse)
+def settings_page() -> str:
+    """GET /settings — serve the settings page (shared config panel)."""
+    return (_WEB / "settings.html").read_text()
+
+
 def _read_config_file() -> dict[str, Any]:
     """Return the raw contents of the component's config file.
 
@@ -511,8 +517,11 @@ def read_config(request: Request) -> dict[str, Any]:
     }
 
 
-@router.put("/config")
-def write_config(update: dict[str, Any], request: Request) -> dict[str, Any]:
+@router.put("/config", response_model=None)
+def write_config(
+    update: dict[str, Any],
+    request: Request,
+) -> dict[str, Any] | JSONResponse:
     """PUT /config — apply a partial update and record a new version.
 
     Keys omitted from *update* keep their current values. A secret submitted
@@ -521,7 +530,16 @@ def write_config(update: dict[str, Any], request: Request) -> dict[str, Any]:
     try:
         merged, _changed, version = apply_update(Config, update)
     except InvalidConfigError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return JSONResponse(
+            status_code=422,
+            media_type="application/problem+json",
+            content={
+                "type": "urn:robotsix:error:config-validation",
+                "title": "Config Validation Error",
+                "detail": str(exc),
+                "status": 422,
+            },
+        )
     _reload_app_config(request, merged)
     return {"config": _masked(merged), "version": version}
 
@@ -532,8 +550,11 @@ def config_versions() -> dict[str, Any]:
     return {"versions": list(reversed(read_versions(include_data=False)))}
 
 
-@router.post("/config/rollback")
-def config_rollback(body: dict[str, Any], request: Request) -> dict[str, Any]:
+@router.post("/config/rollback", response_model=None)
+def config_rollback(
+    body: dict[str, Any],
+    request: Request,
+) -> dict[str, Any] | JSONResponse:
     """POST /config/rollback — restore an earlier version as a new version.
 
     Secrets are not rolled back: the history never stores them, so they are
@@ -541,10 +562,28 @@ def config_rollback(body: dict[str, Any], request: Request) -> dict[str, Any]:
     """
     target = body.get("version")
     if not isinstance(target, int):
-        raise HTTPException(status_code=422, detail="'version' must be an integer")
+        return JSONResponse(
+            status_code=422,
+            media_type="application/problem+json",
+            content={
+                "type": "urn:robotsix:error:config-validation",
+                "title": "Config Validation Error",
+                "detail": "'version' must be an integer",
+                "status": 422,
+            },
+        )
     try:
         restored, _changed, version = rollback(Config, target)
     except InvalidConfigError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return JSONResponse(
+            status_code=422,
+            media_type="application/problem+json",
+            content={
+                "type": "urn:robotsix:error:config-validation",
+                "title": "Config Validation Error",
+                "detail": str(exc),
+                "status": 422,
+            },
+        )
     _reload_app_config(request, restored)
     return {"config": _masked(restored), "version": version}
