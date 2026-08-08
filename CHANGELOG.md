@@ -3,6 +3,7 @@
 
 - Remove dead `LangfuseClient.fetch_trace_detail` method and its unit test; the method had no production callers and was a thin delegation wrapper over `AsyncLangfuseReadClient.fetch_trace_detail`.
 - Removed orphaned `LangfuseClient.fetch_trace_detail` method (no production consumer since the `CostService.trace_detail` removal).
+- Convert `docs/api.md` from MyST `{eval-rst}` fences to mkdocstrings native `:::` directive syntax, fixing broken API reference page rendering.
 - Bump `uv` from 0.11.21 to 0.12.1 in `Dockerfile` and `Dockerfile.dev`
 - Remove remaining vestigial analyst references from AGENT.md, docker-compose.yml, docs/.docagent-memory.md, and .secrets.baseline.
 - Remove stale "analyst proposals" reference from docker-compose.yml volume comment
