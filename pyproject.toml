@@ -1,6 +1,6 @@
 [project]
 name = "robotsix-cost-monitor"
-version = "0.3.1"
+version = "0.4.0"
 description = "Multi-Langfuse cost monitoring dashboard with OpenRouter↔Langfuse reconciliation."
 readme = "README.md"
 requires-python = ">=3.14"
