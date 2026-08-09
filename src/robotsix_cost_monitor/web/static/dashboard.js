@@ -48,12 +48,7 @@ import { $, API, QS, esc, fmt, getJSON, setStatus } from './shared.js';
  * @typedef {object} AgentRow
  * @property {string} name
  * @property {number} cost
- * @property {number} [openrouter_cost]
- * @property {number} [subscription_cost]
- * @property {number} [openrouter_count]
- * @property {number} [subscription_count]
  * @property {number} [total_cost]
- * @property {boolean} [marginal_reducible]
  */
 
 /**
