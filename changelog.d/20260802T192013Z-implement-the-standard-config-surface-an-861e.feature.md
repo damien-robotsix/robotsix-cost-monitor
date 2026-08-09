@@ -1,1 +1,0 @@
-Commit a safe-default `config/config.json` (secrets empty) to seed the deploy plane's first deploy, and add a `/settings` page that mounts the `@robotsix/ui` config panel for runtime config editing with typed inputs, secret masking, and version history.
