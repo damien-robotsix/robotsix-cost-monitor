@@ -1,30 +1,3 @@
-## 0.2.0 (2026-08-09)
-
-### Features
-
-- Expose the standard config HTTP surface required by `config-ownership.md`: `GET /config` (effective config with secrets masked, plus schema and version), `PUT /config` (partial update, validated and recorded as a new version), `GET /config/versions`, and `POST /config/rollback`. All four delegate to `robotsix_config.history`, so the version history lives in a `config.json.versions` sidecar beside the config file and secret values are never written to it. (config-http-surface)
-- Commit a safe-default `config/config.json` (secrets empty) to seed the deploy plane's first deploy, and add a `/settings` page that mounts the `@robotsix/ui` config panel for runtime config editing with typed inputs, secret masking, and version history. (20260802T192013Z-implement-the-standard-config-surface-an-861e)
-
-### Bugfixes
-
-- Fixed the Docs workflow, which had never run. The caller granted `contents:
-  write` — the shape `mkdocs gh-deploy` needs — but the shared docs spine deploys
-  through the Pages Actions and requires `contents: read` plus `pages: write` and
-  `id-token: write`. All three were unmet, and an unmet request fails the run at
-  startup with no logs and no checks. (docs-pages-permissions)
-- Bump the transitive `nanoid` dev dependency to 3.3.17, clearing GHSA-2v37-7h3g-55p8 (custom generators can loop indefinitely when size is zero), which was failing `npm audit --audit-level=high` in CI. (nanoid-advisory)
-- Fix release Docker build: update package-lock.json to pin @robotsix/ui to v0.1.6 so dist/vanilla.js is present after npm ci. (20260808T142418Z-ci-failure-release-on-main-077c)
-
-### Deprecations and Removals
-
-- Dashboard stage breakdown, highlights, and total card now all honor the shared backend filter. Removed the marginal/subscription two-column design from the stage table; it now uses a single cost column. `/api/by-agent-segmented` endpoint and related UI, service method, and aggregation function have been removed. (20260807T220028Z-dashboard-backend-filter-not-applied-to-86e8)
-
-### Misc
-
-- 20260807T021237Z-robotsix-cost-monitor-enable-credit-bala-218e
-
-
-<!-- markdownlint-disable MD013 -->
 ## [0.3.0](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.2.0...v0.3.0) (2026-08-09)
 
 
@@ -86,7 +59,13 @@
 
 * **chat-skill:** document component-level scoping ([#432](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/432)) ([93a883b](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/93a883be1b9213c5f5d2b7dfdadb07dca5803cb7))
 
-## 0.0.0 (unreleased)
+## Pre-release-please history
+
+Everything below predates the release-please migration and was
+maintained by hand or by towncrier. It is kept verbatim; new entries
+are added above by release-please.
+
+### 0.0.0 (unreleased, pre-release-please)
 
 - Remove dead `LangfuseClient.fetch_trace_detail` method and its unit test; the method had no production callers and was a thin delegation wrapper over `AsyncLangfuseReadClient.fetch_trace_detail`.
 - Removed orphaned `LangfuseClient.fetch_trace_detail` method (no production consumer since the `CostService.trace_detail` removal).
@@ -219,3 +198,30 @@
 - Delete `config/projects.example.yaml` — superseded by `config/projects.example.json`.
 - Enable Biome CSS linting and formatting for `dashboard.css` by adding `*.css` to `files.include` in `biome.json`
 - Update `vulture_whitelist
+## 0.2.0 (2026-08-09)
+
+### Features
+
+- Expose the standard config HTTP surface required by `config-ownership.md`: `GET /config` (effective config with secrets masked, plus schema and version), `PUT /config` (partial update, validated and recorded as a new version), `GET /config/versions`, and `POST /config/rollback`. All four delegate to `robotsix_config.history`, so the version history lives in a `config.json.versions` sidecar beside the config file and secret values are never written to it. (config-http-surface)
+- Commit a safe-default `config/config.json` (secrets empty) to seed the deploy plane's first deploy, and add a `/settings` page that mounts the `@robotsix/ui` config panel for runtime config editing with typed inputs, secret masking, and version history. (20260802T192013Z-implement-the-standard-config-surface-an-861e)
+
+### Bugfixes
+
+- Fixed the Docs workflow, which had never run. The caller granted `contents:
+  write` — the shape `mkdocs gh-deploy` needs — but the shared docs spine deploys
+  through the Pages Actions and requires `contents: read` plus `pages: write` and
+  `id-token: write`. All three were unmet, and an unmet request fails the run at
+  startup with no logs and no checks. (docs-pages-permissions)
+- Bump the transitive `nanoid` dev dependency to 3.3.17, clearing GHSA-2v37-7h3g-55p8 (custom generators can loop indefinitely when size is zero), which was failing `npm audit --audit-level=high` in CI. (nanoid-advisory)
+- Fix release Docker build: update package-lock.json to pin @robotsix/ui to v0.1.6 so dist/vanilla.js is present after npm ci. (20260808T142418Z-ci-failure-release-on-main-077c)
+
+### Deprecations and Removals
+
+- Dashboard stage breakdown, highlights, and total card now all honor the shared backend filter. Removed the marginal/subscription two-column design from the stage table; it now uses a single cost column. `/api/by-agent-segmented` endpoint and related UI, service method, and aggregation function have been removed. (20260807T220028Z-dashboard-backend-filter-not-applied-to-86e8)
+
+### Misc
+
+- 20260807T021237Z-robotsix-cost-monitor-enable-credit-bala-218e
+
+
+<!-- markdownlint-disable MD013 -->
