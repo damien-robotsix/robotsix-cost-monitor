@@ -69,6 +69,7 @@ import { $, API, QS, esc, fmt, getJSON, setStatus } from './shared.js';
  * @typedef {object} Highlights
  * @property {{name?: string, cost: number, id?: string}} [most_expensive_trace]
  * @property {{session_id: string, cost: number, count: number}} [most_expensive_session]
+ * @property {string} session_cost_scope
  */
 
 /**
@@ -284,7 +285,7 @@ export function renderHighlights(h) {
     );
   if (s)
     rows.push(
-      `<div class="hl"><div class="k">most expensive session</div><div class="v">${esc(s.session_id)} — ${fmt(s.cost)} (${s.count} traces)</div></div>`,
+      `<div class="hl"><div class="k">${h.session_cost_scope === 'all' ? 'most expensive session' : `session cost on ${h.session_cost_scope}`}</div><div class="v">${esc(s.session_id)} — ${fmt(s.cost)} (${s.count} traces)</div></div>`,
     );
   $('highlights').innerHTML = rows.join('') || '<div class="muted">no data</div>';
 }
