@@ -1,14 +1,27 @@
-name: Release Please
+name: release-please
 
+# Fleet-wide release automation per robotsix-standards release-please.md.
+# Opens/updates a release PR on every push to main; creates the tag and
+# GitHub Release when that release PR is merged.
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
   workflow_dispatch:
 
+# Serialise releases per branch. Deliberately NOT cancel-in-progress: a cancel
+# between pushing the release commit and creating the tag would leave the repo
+# half-released.
 concurrency:
-  group: release-please-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: false
 
+# Job-scoped below, not here.
 permissions: {}
 
 jobs:
@@ -17,26 +30,71 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write       # required to create releases and tags
-      pull-requests: write  # required to manage release PRs
+      contents: write       # create the release commit, tag and GitHub Release
+      pull-requests: write  # open and update the release PR
+    if: |
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.merged == true &&
+       github.event.pull_request.head.ref == 'release-please--branches--main')
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
           egress-policy: audit
-      - name: Check release token
-        id: check-token
-        env:
-          TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
-        run: |
-          if [ -n "$TOKEN" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-          fi
-      - uses: googleapis/release-please-action@a02a34c4d625f9be7cb89156071d8567266a2445 # v4.2.0
-        if: steps.check-token.outputs.available == 'true'
-        # GITHUB_TOKEN cannot create PRs when the repo setting
-        # "Allow GitHub Actions to create and approve pull requests"
-        # is disabled. Use a classic PAT with `repo` scope instead.
+
+      # The fleet App, not a PAT and not GITHUB_TOKEN. A release PR opened with
+      # GITHUB_TOKEN triggers no workflow runs, so its checks never report.
+      - name: Mint a GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349  # v2.2.2
         with:
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          # Scoped: an unscoped token inherits the App's blanket installation
+          # permissions (zizmor github-app, high).
+          permission-contents: write        # release commit, tag, Release
+          permission-pull-requests: write   # open and update the release PR
+
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7  # v5.0.0
+        id: release
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      # Only the lock-sync step below needs these; release-please itself needs
+      # neither a checkout nor uv.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+        if: steps.release.outputs.prs_created == 'true' || steps.release.outputs.pr != ''
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+        if: steps.release.outputs.prs_created == 'true' || steps.release.outputs.pr != ''
+        with:
+          # No cache: this job has contents:write, and a poisoned cache in a
+          # write-privileged workflow is a supply-chain risk (zizmor
+          # cache-poisoning).
+          enable-cache: false
+
+      # uv.lock records the project's own version, so a release that bumps
+      # [project].version leaves it stale and `uv sync --locked` fails.
+      # release-please cannot maintain it: `extra-files` would need a jsonpath
+      # into an array whose index shifts with every dependency change.
+      - name: Sync uv.lock to the released version
+        if: steps.release.outputs.prs_created == 'true' || steps.release.outputs.pr != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          BRANCH: release-please--branches--main
+        run: |
+          set -euo pipefail
+          git fetch --depth=1 origin "$BRANCH"
+          git checkout -B "$BRANCH" "origin/$BRANCH"
+          uv lock
+          if git diff --quiet -- uv.lock; then
+            echo "uv.lock already matches the released version."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: sync uv.lock to the released version" -- uv.lock
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$BRANCH"

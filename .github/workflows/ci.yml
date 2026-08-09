@@ -222,7 +222,7 @@ jobs:
     permissions:
       contents: read
       security-events: write  # upload SARIF scan results to the Security tab
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-security.yml@77e10e286717cfe0eeb6b8d9ce985f3794236d15 # main
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-security.yml@a6378accaf26c75b12fac324c3056255647c107b # main
     with:
       install-extras: ""
       trufflehog-pr-diff: true
@@ -234,7 +234,7 @@ jobs:
     # Minimal permissions: only need to read the repository
     permissions:
       contents: read
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/baseline-check.yml@77e10e286717cfe0eeb6b8d9ce985f3794236d15 # main
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/baseline-check.yml@a6378accaf26c75b12fac324c3056255647c107b # main
     with:
       has-docker: true
 
