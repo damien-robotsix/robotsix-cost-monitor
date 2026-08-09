@@ -174,7 +174,11 @@ export function renderSummary(s, backend, modelRows) {
   const cards =
     backend && backend !== 'all'
       ? [
-          { label: `total · ${backend}`, value: fmt(backendTotal), sub: `${s.window_hours}h window` },
+          {
+            label: `total · ${backend}`,
+            value: fmt(backendTotal),
+            sub: `${s.window_hours}h window`,
+          },
           ...scopeCards,
         ]
       : [
