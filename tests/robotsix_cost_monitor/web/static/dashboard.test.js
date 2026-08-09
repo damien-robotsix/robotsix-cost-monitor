@@ -338,6 +338,7 @@ describe('renderHighlights', () => {
         cost: 500,
         count: 12,
       },
+      session_cost_scope: 'all',
     });
     const el = document.getElementById('highlights');
     expect(el.innerHTML).toContain('most expensive trace');
@@ -355,6 +356,24 @@ describe('renderHighlights', () => {
     renderHighlights({});
     const el = document.getElementById('highlights');
     expect(el.innerHTML).toContain('no data');
+  });
+
+  it('renders session cost scope label when backend is filtered', () => {
+    fixture('<div id="highlights"></div>');
+    renderHighlights({
+      most_expensive_session: {
+        session_id: 'sess-2',
+        cost: 42,
+        count: 3,
+      },
+      session_cost_scope: 'openrouter',
+    });
+    const el = document.getElementById('highlights');
+    expect(el.innerHTML).toContain('session cost on openrouter');
+    expect(el.innerHTML).not.toContain('most expensive session');
+    expect(el.innerHTML).toContain('sess-2');
+    expect(el.innerHTML).toContain('$42.00');
+    expect(el.innerHTML).toContain('3 traces');
   });
 });
 
