@@ -65,6 +65,20 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
+## [0.4.0](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.3.1...v0.4.0) (2026-08-09)
+
+
+### Features
+
+* Dashboard: show per-component cost breakdown when a backend filter is active with scope=all (20260808T185717Z-dashboard-show-per-component-cost-breakd-9d3f) ([#474](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/474)) ([f5dbb84](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/f5dbb8427761d73cfc1a24f789455b5706636984))
+* Highlights (most expensive trace/session) still ignore backend filter after 86e8 fix (20260808T185116Z-highlights-most-expensive-trace-session-8ce5) ([#470](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/470)) ([4f1d677](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/4f1d677ccc7ef2f5c96951c0d7d2a1e747d9af08))
+
+
+### Bug Fixes
+
+* **ci:** bump the CodeQL pin so the workflow can start ([#471](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/471)) ([49c7edb](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/49c7edb37f36321d56c29924052fecd30e3a3be4))
+* **release:** don't fail lock-sync when the release branch is gone ([#473](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/473)) ([e6a6b87](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/e6a6b87f5a22aadbf03ef9393b3f3be877b2f30b))
+
 ## [0.3.1](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.3.0...v0.3.1) (2026-08-09)
 
 
