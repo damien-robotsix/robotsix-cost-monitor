@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import sys
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 from fastapi import FastAPI, HTTPException, Request
@@ -560,3 +560,366 @@ def test_internal_error_returns_sanitized_envelope() -> None:
     body = r.json()
     assert body["error"]["code"] == "INTERNAL_ERROR"
     assert body["error"]["detail"] == "Internal Server Error"
+
+
+# ---------------------------------------------------------------------------
+# Response-shape contract tests — verify every API endpoint returns data
+# matching the TypeScript typedefs in ``dashboard.js``.
+# ---------------------------------------------------------------------------
+
+
+def test_summary_response_shape(client: TestClient) -> None:
+    """GET /api/summary — response matches ``Summary`` typedef."""
+    svc = client.app.state.service  # type: ignore[attr-defined]
+    svc.summary = AsyncMock(
+        return_value={
+            "window_hours": 168,
+            "total_cost": 12.5,
+            "projects": [
+                {
+                    "name": "Demo",
+                    "slug": "demo",
+                    "component": "",
+                    "cost": 4.5,
+                    "trace_count": 10,
+                },
+                {
+                    "name": "Chat",
+                    "slug": "chat",
+                    "component": "chat",
+                    "cost": 8.0,
+                    "trace_count": 42,
+                },
+            ],
+            "components": [
+                {
+                    "component": "chat",
+                    "cost": 8.0,
+                    "trace_count": 42,
+                    "projects": [
+                        {
+                            "name": "Chat",
+                            "slug": "chat",
+                            "component": "chat",
+                            "cost": 8.0,
+                            "trace_count": 42,
+                        },
+                    ],
+                },
+            ],
+        }
+    )
+    svc.last_updated = None
+
+    r = client.get("/api/summary?hours=24")
+    assert r.status_code == 200
+    body = r.json()
+    assert isinstance(body, dict)
+    assert isinstance(body["total_cost"], (int, float))
+    assert isinstance(body["window_hours"], int)
+    assert isinstance(body["projects"], list)
+    for p in body["projects"]:
+        assert isinstance(p["name"], str)
+        assert isinstance(p["cost"], (int, float))
+        assert isinstance(p["trace_count"], int)
+    assert isinstance(body["components"], list)
+    for c in body["components"]:
+        assert isinstance(c["component"], str)
+        assert isinstance(c["cost"], (int, float))
+        assert isinstance(c["trace_count"], int)
+        assert isinstance(c["projects"], list)
+
+
+def test_summary_includes_last_updated_when_set(client: TestClient) -> None:
+    """When ``service.last_updated`` is set, the response includes the key."""
+    svc = client.app.state.service  # type: ignore[attr-defined]
+    svc.summary = AsyncMock(
+        return_value={
+            "window_hours": 1,
+            "total_cost": 0.0,
+            "projects": [],
+            "components": [],
+        }
+    )
+    from datetime import UTC, datetime
+
+    svc.last_updated = datetime(2025, 1, 15, 12, 0, 0, tzinfo=UTC)
+
+    r = client.get("/api/summary?hours=1")
+    assert r.status_code == 200
+    body = r.json()
+    assert "last_updated" in body
+    assert isinstance(body["last_updated"], str)
+
+
+def test_by_agent_response_shape(client: TestClient) -> None:
+    """GET /api/by-agent — response items have name/cost/count keys."""
+    svc = client.app.state.service  # type: ignore[attr-defined]
+    svc.by_agent = AsyncMock(
+        return_value=[
+            {"name": "implement", "cost": 5.0, "count": 10},
+            {"name": "review", "cost": 3.0, "count": 5},
+        ]
+    )
+
+    r = client.get("/api/by-agent?hours=24")
+    assert r.status_code == 200
+    body = r.json()
+    assert isinstance(body, list)
+    for row in body:
+        assert isinstance(row, dict)
+        assert isinstance(row["name"], str)
+        assert isinstance(row["cost"], (int, float))
+        assert isinstance(row["count"], int)
+
+
+def test_by_model_response_shape(client: TestClient) -> None:
+    """GET /api/by-model — response matches ``ModelRow`` typedef."""
+    svc = client.app.state.service  # type: ignore[attr-defined]
+    svc.by_model = AsyncMock(
+        return_value=[
+            {
+                "model": "claude-sonnet-4-20250514",
+                "backend": "claude-sdk",
+                "cost": 8.0,
+                "input_tokens": 1000,
+                "output_tokens": 500,
+                "total_tokens": 1500,
+                "observations": 15,
+            },
+        ]
+    )
+
+    r = client.get("/api/by-model?hours=24")
+    assert r.status_code == 200
+    body = r.json()
+    assert isinstance(body, list)
+    for row in body:
+        assert isinstance(row, dict)
+        assert isinstance(row["model"], str)
+        assert "backend" in row
+        assert isinstance(row["cost"], (int, float))
+        assert isinstance(row["total_tokens"], int)
+        assert isinstance(row["observations"], int)
+
+
+def test_trend_response_shape(client: TestClient) -> None:
+    """GET /api/trend — response matches ``TrendPoint`` typedef."""
+    svc = client.app.state.service  # type: ignore[attr-defined]
+    svc.trend = AsyncMock(
+        return_value=[
+            {"bucket_start": "2025-01-15T00:00:00Z", "cost": 1.5},
+            {"bucket_start": "2025-01-15T01:00:00Z", "cost": 2.0},
+        ]
+    )
+
+    r = client.get("/api/trend?hours=24")
+    assert r.status_code == 200
+    body = r.json()
+    assert isinstance(body, list)
+    for point in body:
+        assert isinstance(point, dict)
+        assert isinstance(point["bucket_start"], str)
+        assert isinstance(point["cost"], (int, float))
+
+
+def test_backend_trend_response_shape(client: TestClient) -> None:
+    """GET /api/backend-trend — response matches ``TrendPoint`` typedef."""
+    svc = client.app.state.service  # type: ignore[attr-defined]
+    svc.backend_trend = AsyncMock(
+        return_value=[
+            {"bucket_start": "2025-01-15T00:00:00Z", "cost": 1.5},
+            {"bucket_start": "2025-01-15T01:00:00Z", "cost": 2.0},
+        ]
+    )
+
+    r = client.get("/api/backend-trend?hours=24&backend=openrouter")
+    assert r.status_code == 200
+    body = r.json()
+    assert isinstance(body, list)
+    for point in body:
+        assert isinstance(point, dict)
+        assert isinstance(point["bucket_start"], str)
+        assert isinstance(point["cost"], (int, float))
+
+
+def test_highlights_response_shape(client: TestClient) -> None:
+    """GET /api/highlights — response matches ``Highlights`` typedef."""
+    svc = client.app.state.service  # type: ignore[attr-defined]
+    svc.highlights = AsyncMock(
+        return_value={
+            "most_expensive_trace": {"name": "big-job", "cost": 10.0, "id": "tr-123"},
+            "most_expensive_session": {
+                "session_id": "sess-1",
+                "cost": 15.0,
+                "count": 3,
+            },
+            "session_cost_scope": "all",
+        }
+    )
+
+    r = client.get("/api/highlights?hours=24")
+    assert r.status_code == 200
+    body = r.json()
+    assert isinstance(body, dict)
+    # most_expensive_trace
+    if body.get("most_expensive_trace") is not None:
+        mt = body["most_expensive_trace"]
+        assert isinstance(mt, dict)
+        assert "cost" in mt
+        assert isinstance(mt["cost"], (int, float))
+    # most_expensive_session
+    if body.get("most_expensive_session") is not None:
+        ms = body["most_expensive_session"]
+        assert isinstance(ms, dict)
+        assert isinstance(ms["session_id"], str)
+        assert isinstance(ms["cost"], (int, float))
+        assert isinstance(ms["count"], int)
+    # session_cost_scope
+    assert isinstance(body["session_cost_scope"], str)
+
+
+def test_reconcile_all_response_shape() -> None:
+    """GET /api/reconcile?project=all — response matches ``ReconcileRow`` typedef."""
+    svc = Mock()
+    svc._project_map = {}
+    svc.projects = Mock(return_value=[])
+
+    with patch(
+        "robotsix_cost_monitor.routes.reconcile_all",
+        new_callable=AsyncMock,
+    ) as mock_reconcile_all:
+        mock_reconcile_all.return_value = {
+            "generated_at": "2025-01-15T12:00:00Z",
+            "status": "ok",
+            "tolerance_usd": 1.0,
+            "results": [
+                {
+                    "project": "Demo",
+                    "configured": True,
+                    "provider_delta_usd": 12.0,
+                    "langfuse_cost_usd": 11.5,
+                    "langfuse_total_cost_usd": 12.0,
+                    "drift_usd": 0.5,
+                    "within_tolerance": True,
+                }
+            ],
+        }
+
+        r = _client(service=svc).get("/api/reconcile?project=all")
+        assert r.status_code == 200
+        body = r.json()
+        assert isinstance(body, list)
+        for row in body:
+            assert isinstance(row, dict)
+            assert isinstance(row["project"], str)
+            assert isinstance(row["configured"], bool)
+            if row["configured"] and "error" not in row:
+                assert isinstance(row["provider_delta_usd"], (int, float))
+                assert isinstance(row["within_tolerance"], bool)
+
+
+def test_reconcile_single_project_response_shape() -> None:
+    """GET /api/reconcile?project=demo — response matches ``ReconcileRow`` typedef."""
+    svc = Mock()
+    demo = _proj("Demo")
+    svc._projects = Mock(return_value=[demo])
+
+    with patch(
+        "robotsix_cost_monitor.routes.reconcile_project",
+        new_callable=AsyncMock,
+    ) as mock_reconcile_project:
+        mock_reconcile_project.return_value = {
+            "project": "Demo",
+            "slug": "demo",
+            "configured": True,
+            "at": "2025-01-15T12:00:00Z",
+            "balance": {"remaining": 50.0},
+            "low_balance": False,
+            "interval_hours": 168,
+            "provider_delta_usd": 12.0,
+            "langfuse_cost_usd": 11.5,
+            "langfuse_total_cost_usd": 12.0,
+            "langfuse_cost_by_backend": {"openrouter": 11.5},
+            "drift_usd": 0.5,
+            "within_tolerance": True,
+            "tolerance_usd": 1.0,
+        }
+
+        r = _client(service=svc).get("/api/reconcile?project=demo")
+        assert r.status_code == 200
+        body = r.json()
+        assert isinstance(body, list)
+        assert len(body) == 1
+        row = body[0]
+        assert isinstance(row["project"], str)
+        assert isinstance(row["configured"], bool)
+        assert isinstance(row["provider_delta_usd"], (int, float))
+        assert isinstance(row["within_tolerance"], bool)
+        # balance sub-shape
+        assert isinstance(row["balance"], dict)
+        assert isinstance(row["balance"]["remaining"], (int, float))
+        assert isinstance(row["low_balance"], bool)
+
+
+def test_reconcile_last_response_shape() -> None:
+    """GET /api/reconcile/last — response matches ``ReconLast`` typedef."""
+    with patch(
+        "robotsix_cost_monitor.routes.load_last_reconcile",
+    ) as mock_load:
+        mock_load.return_value = {
+            "generated_at": "2025-01-15T12:00:00Z",
+            "status": "ok",
+            "results": [
+                {
+                    "project": "Demo",
+                    "configured": True,
+                    "provider_delta_usd": 12.0,
+                    "langfuse_cost_usd": 11.5,
+                    "drift_usd": 0.5,
+                    "within_tolerance": True,
+                }
+            ],
+        }
+
+        r = _client().get("/api/reconcile/last")
+        assert r.status_code == 200
+        body = r.json()
+        assert isinstance(body, dict)
+        assert isinstance(body.get("status"), str)
+        assert isinstance(body.get("results"), list)
+        for row in body["results"]:
+            assert isinstance(row, dict)
+            assert isinstance(row["project"], str)
+
+
+def test_reconcile_last_defaults_when_no_data() -> None:
+    """GET /api/reconcile/last — returns defaults before any reconcile has run."""
+    with patch(
+        "robotsix_cost_monitor.routes.load_last_reconcile",
+    ) as mock_load:
+        mock_load.return_value = {
+            "generated_at": None,
+            "status": "unknown",
+            "results": [],
+        }
+
+        r = _client().get("/api/reconcile/last")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["status"] == "unknown"
+        assert body["generated_at"] is None
+        assert body["results"] == []
+
+
+def test_refresh_response_shape(client: TestClient) -> None:
+    """POST /api/refresh — response has status/message keys and invalidates cache."""
+    svc = client.app.state.service  # type: ignore[attr-defined]
+
+    r = client.post("/api/refresh")
+    assert r.status_code == 200
+    body = r.json()
+    assert isinstance(body, dict)
+    assert body["status"] == "ok"
+    assert isinstance(body["message"], str)
+    svc.invalidate_all.assert_called_once()
