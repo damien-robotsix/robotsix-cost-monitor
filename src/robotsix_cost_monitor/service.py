@@ -253,7 +253,9 @@ class CostService:
             parts.append(result)
         return [r for part in parts for r in part]
 
-    async def summary(self, slug: str | None, hours: int) -> dict[str, Any]:
+    async def summary(
+        self, slug: str | None, hours: int, backend: str = "all"
+    ) -> dict[str, Any]:
         """Per-project totals + the aggregate, for the window.
 
         Cost is observation-based (the same window-accurate metrics source as the
@@ -261,6 +263,10 @@ class CostService:
         rows, and the per-backend totals all reconcile — a backend can never
         exceed the total. ``trace_count`` comes from a server-side ``view=traces``
         count metric (not by paging every trace), so this stays fast.
+
+        When *backend* is not ``"all"``, only observation rows attributed to that
+        backend are counted, so the per-component rollup and total reflect costs
+        for the selected backend alone.
         """
         per_project: list[dict[str, Any]] = []
         total = 0.0
@@ -271,6 +277,8 @@ class CostService:
                 "model-usage",
                 [],
             )
+            if backend != "all":
+                models = [m for m in models if m.get("backend") == backend]
             trace_count: int = await self._safe_project_fetch(
                 p,
                 lambda: self._trace_count(p, hours),  # noqa: B023
@@ -303,13 +311,16 @@ class CostService:
             agg["cost"] = round(agg["cost"] + float(row["cost"]), 6)
             agg["trace_count"] += int(row["trace_count"])
             agg["projects"].append(row)
+        components = sorted(
+            by_component.values(), key=lambda c: float(c["cost"]), reverse=True
+        )
+        if backend != "all":
+            components = [c for c in components if c["cost"] > 0]
         return {
             "window_hours": hours,
             "total_cost": total,
             "projects": per_project,
-            "components": sorted(
-                by_component.values(), key=lambda c: float(c["cost"]), reverse=True
-            ),
+            "components": components,
         }
 
     async def by_agent(

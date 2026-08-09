@@ -444,14 +444,21 @@ def test_summary_window_defaults_to_config_default(client: TestClient) -> None:
     # The mock service returns whatever we stubbed, but the route's _window
     # logic runs before the service call — confirming it passed 168.
     svc = client.app.state.service  # type: ignore[attr-defined]
-    svc.summary.assert_called_once_with("all", 168)
+    svc.summary.assert_called_once_with("all", 168, "all")
 
 
 def test_summary_passes_explicit_hours(client: TestClient) -> None:
     r = client.get("/api/summary?project=all&hours=48")
     assert r.status_code == 200
     svc = client.app.state.service  # type: ignore[attr-defined]
-    svc.summary.assert_called_once_with("all", 48)
+    svc.summary.assert_called_once_with("all", 48, "all")
+
+
+def test_summary_passes_backend_filter(client: TestClient) -> None:
+    r = client.get("/api/summary?project=all&hours=24&backend=openrouter")
+    assert r.status_code == 200
+    svc = client.app.state.service  # type: ignore[attr-defined]
+    svc.summary.assert_called_once_with("all", 24, "openrouter")
 
 
 def test_by_agent_default_backend(client: TestClient) -> None:
