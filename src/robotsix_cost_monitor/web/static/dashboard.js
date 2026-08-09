@@ -156,7 +156,6 @@ export function populateBackends(modelRows) {
  * @param {ModelRow[]} modelRows
  */
 export function renderSummary(s, backend, modelRows) {
-  const total = modelRows.reduce((a, r) => a + (Number(r.cost) || 0), 0);
   // Lead with components; break a component out into its projects only when it
   // owns more than one, so a single-project component isn't shown twice.
   const scopeCards = (s.components ?? []).flatMap((c) =>
@@ -173,7 +172,10 @@ export function renderSummary(s, backend, modelRows) {
   );
   const cards =
     backend && backend !== 'all'
-      ? [{ label: `total · ${backend}`, value: fmt(total), sub: `${s.window_hours}h window` }]
+      ? [
+          { label: `total · ${backend}`, value: fmt(s.total_cost), sub: `${s.window_hours}h window` },
+          ...scopeCards,
+        ]
       : [
           { label: 'total cost', value: fmt(s.total_cost), sub: `${s.window_hours}h window` },
           ...scopeCards,
@@ -400,7 +402,7 @@ export async function refresh() {
         ? `${API.TREND}${qs()}`
         : `${API.BACKEND_TREND}${qs()}&${QS.BACKEND}=${encodeURIComponent(backend)}`;
     const [s, trend, agents, models, hi] = await Promise.all([
-      getJSON(`${API.SUMMARY}${qs()}`),
+      getJSON(`${API.SUMMARY}${qs()}&${QS.BACKEND}=${encodeURIComponent(backend)}`),
       getJSON(trendPath),
       getJSON(`${API.BY_AGENT}${qs()}&${QS.BACKEND}=${encodeURIComponent(backend)}`),
       getJSON(`${API.BY_MODEL}${qs()}`),

@@ -107,6 +107,62 @@ class TestSummaryRollup:
         # Ordered by spend so the dashboard leads with the expensive component.
         assert [c["component"] for c in result["components"]] == ["chat", "mill"]
 
+    async def test_summary_backend_filter_drops_other_backends(self) -> None:
+        """Per-component rollup under a backend filter only counts matching rows."""
+        svc = _multi()
+        # robotsix-chat: $10 openrouter + $3 claude-sdk
+        object.__setattr__(
+            svc._clients["robotsix-chat"],
+            "fetch_model_usage_window",
+            AsyncMock(
+                return_value=[
+                    {"model": "gpt-4o", "backend": "openrouter", "cost": 10.0},
+                    {"model": "claude-3-opus", "backend": "claude_sdk", "cost": 3.0},
+                ]
+            ),
+        )
+        object.__setattr__(
+            svc._clients["robotsix-chat"],
+            "fetch_trace_count_window",
+            AsyncMock(return_value=5),
+        )
+        # robotsix-chat-cognee: $2 openrouter only
+        object.__setattr__(
+            svc._clients["robotsix-chat-cognee"],
+            "fetch_model_usage_window",
+            AsyncMock(
+                return_value=[{"model": "gpt-4o", "backend": "openrouter", "cost": 2.0}]
+            ),
+        )
+        object.__setattr__(
+            svc._clients["robotsix-chat-cognee"],
+            "fetch_trace_count_window",
+            AsyncMock(return_value=1),
+        )
+        # robotsix-mill: $5 claude-sdk only
+        object.__setattr__(
+            svc._clients["robotsix-mill"],
+            "fetch_model_usage_window",
+            AsyncMock(
+                return_value=[
+                    {"model": "claude-3-opus", "backend": "claude_sdk", "cost": 5.0}
+                ]
+            ),
+        )
+        object.__setattr__(
+            svc._clients["robotsix-mill"],
+            "fetch_trace_count_window",
+            AsyncMock(return_value=3),
+        )
+
+        result = await svc.summary("all", 24, backend="openrouter")
+        assert result["total_cost"] == 12.0  # $10 + $2, mill's $5 dropped
+        comps = {c["component"]: c for c in result["components"]}
+        assert comps["chat"]["cost"] == 12.0
+        # mill has no openrouter spend, so it drops out entirely
+        assert "mill" not in comps
+        assert [c["component"] for c in result["components"]] == ["chat"]
+
 
 class TestRegistryProjectDefaults:
     def test_component_id_defaults_to_empty(self) -> None:

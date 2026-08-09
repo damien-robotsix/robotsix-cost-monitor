@@ -334,11 +334,12 @@ async def components(
 
 @router.get("/api/summary")
 async def summary(
+    backend: str = Query("all"),
     pw: ProjectWindow = Depends(project_window),
     service: CostService = Depends(get_service),
 ) -> dict[str, Any]:
     """GET /api/summary — total cost and per-project totals for the window."""
-    result = await service.summary(pw.project, pw.hours)
+    result = await service.summary(pw.project, pw.hours, backend)
     lu = service.last_updated
     if lu is not None:
         result["last_updated"] = lu.isoformat()
