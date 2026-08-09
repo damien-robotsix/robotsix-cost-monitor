@@ -65,6 +65,13 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
+## [0.3.1](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.3.0...v0.3.1) (2026-08-09)
+
+
+### Documentation
+
+* **changelog:** put the newest release at the top ([#468](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/468)) ([02c0976](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/02c0976a591c92a54dc084b5dd83df37dd1777ca))
+
 ### 0.0.0 (unreleased, pre-release-please)
 
 - Remove dead `LangfuseClient.fetch_trace_detail` method and its unit test; the method had no production callers and was a thin delegation wrapper over `AsyncLangfuseReadClient.fetch_trace_detail`.
