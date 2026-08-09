@@ -42,6 +42,7 @@ async def test_empty_project_list_highlights() -> None:
     assert await _svc().highlights(None, 24) == {
         "most_expensive_trace": None,
         "most_expensive_session": None,
+        "session_cost_scope": "all",
     }
 
 
