@@ -16,11 +16,10 @@ This repo follows the [robotsix stack standards](https://github.com/damien-robot
   - `robotsix_llmio.core.AsyncLangfuseReadClient` is mocked via
     `unittest.mock.patch.object` on the composed `LangfuseClient._lf` instance
     (see `tests/robotsix_cost_monitor/clients/test_langfuse.py`).
-  - `tests/conftest.py` provides a `_mock_client()` factory that returns a
+  - `tests/robotsix_cost_monitor/helpers.py` provides a `_mock_client()` factory that returns a
     `Mock` with `AsyncMock` fetch methods returning empty results — prefer this
     when adding new tests that need a LangfuseClient seam.
-- Use `pytest-asyncio` for async tests. The `conftest.py` provides a
-  session-scoped `event_loop` fixture for compatibility with `pytest-xdist`.
+- Use `pytest-asyncio` for async tests.
 
 ## Configuration invariants
 
