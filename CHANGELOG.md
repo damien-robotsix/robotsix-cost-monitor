@@ -25,6 +25,67 @@
 
 
 <!-- markdownlint-disable MD013 -->
+## [0.3.0](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.2.0...v0.3.0) (2026-08-09)
+
+
+### Features
+
+* **analyst:** file tickets via the board manager (dedup + source), not the responder ([#46](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/46)) ([2e495a6](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/2e495a66dc2dc2c7bc8e31dcd05e8378157b3ec4))
+* **analyst:** hand all proposals to the board manager for ticket creation ([#59](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/59)) ([e7e0424](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/e7e0424ded342e2585f08f9f07e88f7b0c3aa26d))
+* **analyst:** llmio L2 + L3 trace sub-agent + broker ticket filing ([#18](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/18)) ([f77a0a9](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/f77a0a94408b569c5ee59e9547ba8e71b51512b0))
+* **analyst:** most-costly-ticket and most-costly-stage analyses ([#62](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/62)) ([19f0108](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/19f01082857a0eeef925e48b088ba5c968f8804e))
+* **analyst:** run the L3 orchestrator on Claude Opus (Claude SDK) ([#51](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/51)) ([6bcc09a](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/6bcc09a45dcd258590a8872d6fda4f2dde7086d3))
+* **analyst:** select candidate traces per agent, not globally ([#61](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/61)) ([6e82162](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/6e8216212231915411ce3e1e8af26cad5ac17506))
+* **analyst:** surface why each trace was selected for analysis ([#60](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/60)) ([54c512e](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/54c512e0d85b44345cd9ebd6d4e2479ecc6d85b5))
+* **analyst:** teach prompts the Claude-SDK subscription cost model ([#64](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/64)) ([466d454](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/466d4543b8f2b7c3f492bca061f53141084de947))
+* attribute unnamed traces to their session in by-agent view ([#5](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/5)) ([b95f29e](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/b95f29e1022a4e0a0850fe2fffc78a2845854bf3))
+* **auth:** add config-driven HTTP Basic auth for gateway exposure ([#380](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/380)) ([0b3565f](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/0b3565f3955ef75d82f824f9b1913fb70041e596))
+* **config:** expose the standard config HTTP surface ([#459](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/459)) ([dc0f625](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/dc0f625aeb3c03d6d678bd296238510605f4e9f2))
+* daily auto-reconciliation + dashboard warning banner ([#58](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/58)) ([af36a83](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/af36a839d520cb783cc6875dfb58de3db2d2ca53))
+* Dockerize + continuous-deploy stack ([#1](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/1)) ([e8be9d2](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/e8be9d255db99db046fbd3785559c3b1586f7e17))
+* filter by backend (OpenRouter vs ClaudeSDK) ([#4](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/4)) ([4ad3be7](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/4ad3be7b9792637e0ebfd2dee77d8850ea236735))
+* group discovered projects by owning component ([#431](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/431)) ([93246c0](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/93246c062474819fb5788d53184f5ed1ff926b39))
+* **mill:** enable the credit_balance periodic pass ([#465](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/465)) ([913cf34](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/913cf34a6feb69789f22ce47fb7183aaf845786e))
+* per-model cost breakdown on the dashboard ([#3](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/3)) ([98130a2](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/98130a2c55cb3a93ac3b21b31a8e68adaa29058e))
+* reconcile on per-key OpenRouter usage, not account credits ([#7](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/7)) ([a655387](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/a6553876da18abfb7df2abce554a955261a840cb))
+* robotsix-cost-monitor — multi-Langfuse cost dashboard + reconciliation + cost-analyst ([5033d33](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/5033d33fe05d4aa67537158dd37edfdfd68838e1))
+* **web:** cost-analyst page — trigger + last-run traces/proposals/ticket ([#57](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/57)) ([f89fb09](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/f89fb097015f1fe4a5ef2876d05468bbf7987ef0))
+
+
+### Bug Fixes
+
+* **analyst:** migrate to llmio's get_provider_for_identifier API ([#95](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/95)) ([5a06f96](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/5a06f96f3b1ecf67feaf85a0409e593208333031))
+* **analyst:** resume the daily cadence across restarts instead of resetting it ([#97](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/97)) ([5ab62cc](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/5ab62cc8df8fcff0590f72b7ef7465e25bf548b8))
+* **analyst:** return text JSON from L2 (DeepSeek thinking rejects tool_choice) ([#44](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/44)) ([3d1fe1f](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/3d1fe1ff24cdcfe75827416d3a75ee59994982dd))
+* **analyst:** use the openrouter-deepseek provider with a valid L3 model ([#43](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/43)) ([b8175fa](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/b8175fa627c5d467786f59cc98bad31e2e5bbb75))
+* **ci:** grant security-events:write so the Release workflow can start ([#383](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/383)) ([1cd5f77](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/1cd5f777f517f8d5fd4f6a7ced2c51731b8f4581))
+* **ci:** grant the Docs caller the Pages-Actions permissions ([#458](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/458)) ([614bb53](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/614bb5327a2a239b7319437cfc9a48001196a095))
+* **ci:** repair Release workflow start-up failure (reusable SBOM permissions) ([#381](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/381)) ([c37ae0d](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/c37ae0d48455280d25ebc26537bbdd64c63408d6))
+* **dashboard:** label the session highlight "session", not "ticket" ([#434](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/434)) ([ef37554](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/ef375540a216ed6d74fa9366483b4e9b8dc4b1fb))
+* **deploy:** conform deploy compose to the central-deploy gateway contract ([#385](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/385)) ([e6316b0](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/e6316b01448809b10a4cf47f1e70fd914d0dc20f))
+* **deps:** bump nanoid to 3.3.17 for GHSA-2v37-7h3g-55p8 ([#460](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/460)) ([a605aa4](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/a605aa47b494cce985b973bfd4787695452e7a7c))
+* **deps:** bump robotsix-llmio to main (restores AsyncLangfuseReadClient) ([#94](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/94)) ([f53b9b4](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/f53b9b478cf57599f8b61e622e5f655315027bf0))
+* **docker:** install claude-code without --ignore-scripts (native binary) ([#384](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/384)) ([98aaad6](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/98aaad617ba401cc5891505148b37be454c6d198))
+* **docker:** install git in the builder for the analyst extra's git deps ([#19](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/19)) ([9f94ce1](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/9f94ce1d3ca1573a13287b571a9da9f528d2504e))
+* **memory:** stop caching full Langfuse trace payloads ([#430](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/430)) ([c8c3386](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/c8c3386408a2658e3139e8757ffa0be287744d89))
+* **reconcile:** compare OpenRouter spend against openrouter-backend traced cost ([#27](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/27)) ([01bd9e8](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/01bd9e8d13f2798f7fdaa9066e4a362ba8d1b712))
+* **reconcile:** derive remaining balance instead of reading a field that does not exist ([#433](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/433)) ([08504f4](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/08504f411c9ad882f9a956b0edfcdffdd2254aad))
+* **reconcile:** show the last reconcile on page load, not just drift warnings ([#98](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/98)) ([1512090](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/151209091adf787f121047d904e71610f01b076c))
+* **reconcile:** trace cost over the exact snapshot interval ([#9](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/9)) ([8fa77db](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/8fa77dbd3036daf57090675d8c5b616b3ca8713c))
+* **release:** align release-please with the fleet ([#466](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/466)) ([590b968](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/590b968e4a3c73f570749d29c6d65ef6e19c040c))
+* **web:** consistent per-analysis 'analyze' buttons on /analyst ([#63](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/63)) ([824c6fe](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/824c6fefe2c78dca57655569b862ea09364a6f4d))
+* window-accurate per-model/backend cost (was day-granular & over-counting) ([#6](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/6)) ([266cf12](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/266cf12f8faf56cdde49d20feaaa53fdfc88a0f7))
+
+
+### Performance Improvements
+
+* **summary:** count traces via metrics, not by paging them all ([#96](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/96)) ([e5e1f7f](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/e5e1f7f314ea63adab569d335dd34dd3c55f9cf5))
+
+
+### Documentation
+
+* **chat-skill:** document component-level scoping ([#432](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/432)) ([93a883b](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/93a883be1b9213c5f5d2b7dfdadb07dca5803cb7))
+
 ## 0.0.0 (unreleased)
 
 - Remove dead `LangfuseClient.fetch_trace_detail` method and its unit test; the method had no production callers and was a thin delegation wrapper over `AsyncLangfuseReadClient.fetch_trace_detail`.
