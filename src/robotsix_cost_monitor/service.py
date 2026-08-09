@@ -416,4 +416,5 @@ class CostService:
         return {
             "most_expensive_trace": most_expensive_trace(all_traces),
             "most_expensive_session": most_expensive_session(all_traces),
+            "session_cost_scope": backend if backend != "all" else "all",
         }

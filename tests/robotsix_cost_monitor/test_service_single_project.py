@@ -72,6 +72,7 @@ async def test_single_project_highlights() -> None:
     result = await svc.highlights("x", 24)
     assert result["most_expensive_trace"]["cost"] == 9.0
     assert result["most_expensive_session"]["session_id"] == "b"
+    assert result["session_cost_scope"] == "all"
 
 
 async def test_slug_all_returns_same_as_none() -> None:

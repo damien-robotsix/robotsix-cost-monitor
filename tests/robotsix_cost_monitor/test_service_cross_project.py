@@ -133,6 +133,7 @@ async def test_cross_project_highlights_finds_best_across_projects() -> None:
     result = await svc.highlights(None, 24)
     assert result["most_expensive_trace"]["cost"] == 8.0
     assert result["most_expensive_session"]["session_id"] == "s2"
+    assert result["session_cost_scope"] == "all"
 
 
 async def test_highlights_backend_all_unchanged() -> None:
@@ -151,6 +152,7 @@ async def test_highlights_backend_all_unchanged() -> None:
     result = await svc.highlights("x", 24, backend="all")
     assert result["most_expensive_trace"]["cost"] == 9.0
     assert result["most_expensive_session"]["session_id"] == "b"
+    assert result["session_cost_scope"] == "all"
 
 
 async def test_highlights_backend_specific_filters() -> None:
@@ -181,12 +183,14 @@ async def test_highlights_backend_specific_filters() -> None:
     assert result["most_expensive_trace"] is not None
     assert result["most_expensive_trace"]["cost"] == 9.0
     assert result["most_expensive_session"]["session_id"] == "b"
+    assert result["session_cost_scope"] == "claude-sdk"
 
     # Only "review" is in openrouter → the 1.0 trace should be the top
     result = await svc.highlights("x", 24, backend="openrouter")
     assert result["most_expensive_trace"] is not None
     assert result["most_expensive_trace"]["cost"] == 1.0
     assert result["most_expensive_session"]["session_id"] == "a"
+    assert result["session_cost_scope"] == "openrouter"
 
 
 async def test_highlights_backend_no_match_returns_none() -> None:
@@ -209,3 +213,4 @@ async def test_highlights_backend_no_match_returns_none() -> None:
     result = await svc.highlights("x", 24, backend="claude-sdk")
     assert result["most_expensive_trace"] is None
     assert result["most_expensive_session"] is None
+    assert result["session_cost_scope"] == "claude-sdk"
