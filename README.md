@@ -48,7 +48,7 @@ uv run robotsix-cost-monitor reconcile [--project SLUG]
 | GET | `/chat-skill` | — | Markdown skill document for the robotsix-chat agent (base URL, read endpoints, auth, safety) |
 | GET | `/` | — | Dashboard HTML page |
 | GET | `/api/projects` | — | List of configured projects (`name`, `slug`) |
-| GET | `/api/summary` | `?project=<slug\|all>&hours=<N>` | Total cost and per-project totals (includes ISO-8601 `last_updated` when cached data is available) |
+| GET | `/api/summary` | `?project=<slug\|all>&hours=<N>&backend=<all\|backend>` | Total cost, per-project totals, and per-component rollup (includes ISO-8601 `last_updated` when cached data is available). Optional `backend` filter (e.g. `openrouter`) restricts costs to that backend. |
 | POST | `/api/refresh` | — | Invalidate all caches and force a fresh Langfuse fetch on the next dashboard request |
 | GET | `/api/by-agent` | `?project=<slug\|all>&hours=<N>&backend=<all\|backend>` | Cost breakdown by agent name |
 | GET | `/api/by-agent-segmented` | `?project=<slug\|all>&hours=<N>` | Agent costs segmented by model and backend |
