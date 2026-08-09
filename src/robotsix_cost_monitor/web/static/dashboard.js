@@ -170,10 +170,11 @@ export function renderSummary(s, backend, modelRows) {
         ]
       : [{ label: c.component, value: fmt(c.cost), sub: `${c.trace_count} traces` }],
   );
+  const backendTotal = modelRows.reduce((sum, r) => sum + (r.cost || 0), 0);
   const cards =
     backend && backend !== 'all'
       ? [
-          { label: `total · ${backend}`, value: fmt(s.total_cost), sub: `${s.window_hours}h window` },
+          { label: `total · ${backend}`, value: fmt(backendTotal), sub: `${s.window_hours}h window` },
           ...scopeCards,
         ]
       : [
