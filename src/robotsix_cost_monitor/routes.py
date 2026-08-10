@@ -274,6 +274,7 @@ code `PROJECT_NOT_FOUND` — distinct from a valid-but-empty project and from
 | Endpoint | Description |
 |---|---|
 | `GET /health` | Health check (status + project names). Always unauthenticated. |
+| `GET /readyz` | Readiness probe (dependency checks). Always unauthenticated. |
 
 ## Safety
 
