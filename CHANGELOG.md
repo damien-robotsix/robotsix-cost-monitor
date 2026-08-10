@@ -65,6 +65,27 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
+## [0.5.0](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.4.0...v0.5.0) (2026-08-10)
+
+
+### Features
+
+* Clean up stale AgentRow JSDoc properties in dashboard.js (20260808T183618Z-clean-up-stale-agentrow-jsdoc-properties-6098) ([#482](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/482)) ([04338c6](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/04338c618f00b339232a196f0224267560d52fda))
+* Consume session_cost_scope in dashboard.js renderHighlights() to label filtered session highlight (20260809T092510Z-consume-session-cost-scope-in-dashboard-af6d) ([#475](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/475)) ([b5a9100](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/b5a9100eac668a08721309b42f8af7b92c311c09))
+
+
+### Bug Fixes
+
+* Implement GET /readyz readiness probe route (20260810T043440Z-implement-get-readyz-readiness-probe-rou-14bf) ([#486](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/486)) ([90db988](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/90db988cf92d02234cea8dbf2f96f4dfebd353a5))
+
+
+### Documentation
+
+* Document ?backend= on GET /api/highlights in _CHAT_SKILL docstring (20260810T025923Z-document-backend-on-get-api-highlights-i-fafe) ([#485](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/485)) ([6adbc39](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/6adbc393c4f7699bec4dbe0a3a007c484705fcbf))
+* Document ?backend= on GET /api/summary in _CHAT_SKILL docstring (20260809T093913Z-document-backend-on-get-api-summary-in-c-ac96) ([#483](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/483)) ([876f225](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/876f22574685ca437ca8edac7f0727960d6ebfe4))
+* Document /readyz in _CHAT_SKILL health table (20260809T151733Z-document-readyz-in-chat-skill-health-tab-06be) ([#484](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/484)) ([ade3a29](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/ade3a292000690ded22cf284311e0389b099b430))
+* Fix AGENT.md stale references to non-existent tests/conftest.py (20260807T092408Z-fix-agent-md-stale-references-to-non-exi-9a26) ([#480](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/480)) ([40cbcd8](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/40cbcd8ab5a6fadd580baa9e68a6816096e495c5))
+
 ## [0.4.0](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.3.1...v0.4.0) (2026-08-09)
 
 
