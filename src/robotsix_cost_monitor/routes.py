@@ -243,7 +243,7 @@ code `PROJECT_NOT_FOUND` — distinct from a valid-but-empty project and from
 
 | Endpoint | Description |
 |---|---|
-| `GET /api/summary` | Total cost, per-project totals, and a per-component rollup. |
+| `GET /api/summary` | Cost summary by project & component. Optional `?backend=`. |
 | `GET /api/components` | Discovered components and the projects each owns. |
 | `GET /api/projects` | All discovered projects (name + slug + owning component). |
 
