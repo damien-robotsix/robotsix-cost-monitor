@@ -265,7 +265,7 @@ code `PROJECT_NOT_FOUND` — distinct from a valid-but-empty project and from
 
 | Endpoint | Description |
 |---|---|
-| `GET /api/highlights` | Most expensive trace and session for the window. |
+| `GET /api/highlights` | Most expensive trace and session. Optional `?backend=`. |
 | `GET /api/reconcile` | Reconcile OpenRouter usage against Langfuse traced costs. |
 | `GET /api/reconcile/last` | Most recent reconciliation result. |
 
