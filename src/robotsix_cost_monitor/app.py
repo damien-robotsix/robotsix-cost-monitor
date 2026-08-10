@@ -286,8 +286,8 @@ def create_app(config: Config | None = None) -> FastAPI:
     # HTTP Basic auth — the dashboard has no other access control, so it must
     # be protected whenever it is reachable beyond loopback (e.g. via the
     # central-deploy gateway, which is an unauthenticated reverse proxy). When
-    # unconfigured the check is a no-op (local dev / SSH tunnel). /health is
-    # always exempt so the container healthcheck keeps working.
+    # unconfigured the check is a no-op (local dev / SSH tunnel). /health,
+    # /readyz, and /metrics are always exempt so container probes work.
     _auth = cfg.settings.auth
     _auth_user = _auth.username
     _auth_pass = _auth.password.get_secret_value()
@@ -303,7 +303,7 @@ def create_app(config: Config | None = None) -> FastAPI:
 
         @app.middleware("http")
         async def _basic_auth(request: Request, call_next: Any) -> Any:
-            if request.url.path in ("/health", "/metrics"):
+            if request.url.path in ("/health", "/readyz", "/metrics"):
                 return await call_next(request)
             header = request.headers.get("authorization", "")
             if header.startswith("Basic "):

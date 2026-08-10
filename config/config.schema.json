@@ -1,7 +1,7 @@
 {
   "$defs": {
     "AuthConfig": {
-      "description": "HTTP Basic auth for the dashboard.\n\nThe dashboard has no other access control, so when it is exposed through\nthe central-deploy gateway (an unauthenticated reverse proxy) this MUST\nbe set \u2014 otherwise the cost data is public. When either field is empty\nthe dashboard is served open (local dev / SSH-tunnel only). ``/health``\nis always exempt so the container healthcheck works.",
+      "description": "HTTP Basic auth for the dashboard.\n\nThe dashboard has no other access control, so when it is exposed through\nthe central-deploy gateway (an unauthenticated reverse proxy) this MUST\nbe set \u2014 otherwise the cost data is public. When either field is empty\nthe dashboard is served open (local dev / SSH-tunnel only). ``/health``,\n``/readyz`` and ``/metrics`` are always exempt so container probes work.",
       "properties": {
         "username": {
           "default": "",

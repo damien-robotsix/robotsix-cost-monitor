@@ -194,8 +194,52 @@ def register_exception_handlers(app: FastAPI) -> None:
 
 @router.get("/health")
 def health() -> dict[str, Any]:
-    """GET /health — health check returning status."""
+    """GET /health — liveness check (always 200 while the process is up)."""
     return {"status": "ok"}
+
+
+@router.get("/readyz")
+async def readyz(
+    request: Request,
+    service: CostService = Depends(get_service),
+) -> JSONResponse:
+    """GET /readyz — readiness check against upstream dependencies.
+
+    Probes every configured Langfuse project with a short timeout.  Returns:
+
+    - 200 ``{"status": "ready"}`` when all dependencies respond (or when no
+      projects are configured — nothing to probe means nothing is broken).
+    - 503 with a per-dependency status map when any critical dependency is
+      unreachable.
+    """
+    projects = service.projects()
+    if not projects:
+        return JSONResponse(status_code=200, content={"status": "ready"})
+
+    import asyncio
+
+    from .clients.models import RegistryProject
+
+    async def _probe(p: RegistryProject) -> tuple[str, bool]:
+        client = service._clients[p.slug]
+        ok = await client.check_health()
+        return (p.slug, ok)
+
+    results = dict(await asyncio.gather(*(_probe(p) for p in projects)))
+    all_ok = all(results.values())
+
+    if all_ok:
+        return JSONResponse(status_code=200, content={"status": "ready"})
+
+    return JSONResponse(
+        status_code=503,
+        content={
+            "status": "not ready",
+            "dependencies": {
+                slug: "ok" if ok else "unreachable" for slug, ok in results.items()
+            },
+        },
+    )
 
 
 # ---------------------------------------------------------------------------

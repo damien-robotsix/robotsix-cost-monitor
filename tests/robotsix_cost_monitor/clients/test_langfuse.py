@@ -10,6 +10,8 @@ import json
 from typing import Any
 from unittest.mock import Mock, patch
 
+import httpx
+import pytest
 import respx
 
 from robotsix_cost_monitor.clients.langfuse import LangfuseClient
@@ -794,3 +796,46 @@ async def test_agent_uses_custom_dimensions(respx_mock: respx.MockRouter) -> Non
         {"measure": "count", "aggregation": "count"},
     ]
     assert "timeDimension" not in query
+
+
+# ---------------------------------------------------------------------------
+# check_health
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_check_health_returns_true_on_2xx(
+    respx_mock: respx.MockRouter,
+) -> None:
+    """``check_health`` returns True when the Langfuse API responds 200."""
+    c = _client()
+    route = respx_mock.get(c._lf.url("/api/public/traces")).respond(
+        200, json={"data": []}
+    )
+    ok = await c.check_health(timeout=1.0)
+    assert ok is True
+    assert route.called
+
+
+@pytest.mark.asyncio
+async def test_check_health_returns_false_on_connection_error(
+    respx_mock: respx.MockRouter,
+) -> None:
+    """``check_health`` returns False on a connection error."""
+    c = _client()
+    respx_mock.get(c._lf.url("/api/public/traces")).mock(
+        side_effect=httpx.ConnectError("connection refused")
+    )
+    ok = await c.check_health(timeout=1.0)
+    assert ok is False
+
+
+@pytest.mark.asyncio
+async def test_check_health_returns_false_on_5xx(
+    respx_mock: respx.MockRouter,
+) -> None:
+    """``check_health`` returns False when Langfuse returns a server error."""
+    c = _client()
+    respx_mock.get(c._lf.url("/api/public/traces")).respond(503)
+    ok = await c.check_health(timeout=1.0)
+    assert ok is False

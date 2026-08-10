@@ -124,6 +124,7 @@ def _mock_client(**overrides: object) -> Mock:
         )
     """
     client = Mock()
+    object.__setattr__(client, "check_health", AsyncMock(return_value=True))
     object.__setattr__(client, "fetch_traces_window", AsyncMock(return_value=[]))
     object.__setattr__(client, "fetch_model_usage_window", AsyncMock(return_value=[]))
     object.__setattr__(client, "fetch_backend_cost_window", AsyncMock(return_value={}))
