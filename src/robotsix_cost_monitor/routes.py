@@ -198,6 +198,12 @@ def health() -> dict[str, Any]:
     return {"status": "ok"}
 
 
+@router.get("/readyz")
+def readyz() -> dict[str, Any]:
+    """GET /readyz — readiness probe returning status."""
+    return {"status": "ok"}
+
+
 # ---------------------------------------------------------------------------
 # Chat skill (robotsix-chat agent access point)
 # ---------------------------------------------------------------------------
