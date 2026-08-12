@@ -87,11 +87,12 @@ modules:
       - tests/robotsix_cost_monitor/test_reconcile.py
 
   - id: routes
-    description: HTTP route handlers (APIRouter) and exception handlers
+    description: HTTP route handlers (APIRouter), exception handlers, and chat-skill table validation
     paths:
       - src/robotsix_cost_monitor/routes.py
       - tests/robotsix_cost_monitor/test_routes.py
       - tests/robotsix_cost_monitor/test_config_routes.py
+      - scripts/validate_chat_skill_table.py
 
   - id: clients
     description: External API client sub-package (Langfuse, Registry) including typed httpx retry client
