@@ -38,7 +38,7 @@ lint = [
     "vulture>=2.11",
 ]
 docs = [
-    "mkdocs-material>=9",
+    "mkdocs-material>=9.7.7",
     "mkdocstrings[python]>=1.0.6",
 ]
 
