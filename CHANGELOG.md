@@ -65,6 +65,13 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
+## [0.5.1](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.5.0...v0.5.1) (2026-08-16)
+
+
+### Bug Fixes
+
+* CI red on main: 'JavaScript tests' job fails at npm audit --audit-level=high (high-severity JS dependency vulnerability) (20260816T213004Z-ci-red-on-main-javascript-tests-job-fail-a5e7) ([#498](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/498)) ([18804f5](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/18804f5c260446ef57ab8248bfc6a2fe2aa4adf7))
+
 ## [0.5.0](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.4.0...v0.5.0) (2026-08-10)
 
 
