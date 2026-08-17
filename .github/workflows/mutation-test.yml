@@ -3,10 +3,14 @@ on:
   schedule:
     - cron: '0 6 * * 2'
   workflow_dispatch:
+concurrency:
+  group: mutation-test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
   mutate:
+    name: Mutation test
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
@@ -33,4 +37,4 @@ jobs:
           path: html/
       - run: |
           SCORE=$(uv run mutmut results | tail -1 | grep -oP '\d+\.\d+' || echo "N/A")
-          echo "### Mutation score: ${SCORE}%" >> $GITHUB_STEP_SUMMARY
+          echo "### Mutation score: ${SCORE}%" >> "$GITHUB_STEP_SUMMARY"
