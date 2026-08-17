@@ -184,6 +184,7 @@ modules:
       - .github/workflows/dependabot-auto-merge.yml
       - .github/workflows/docs.yml
       - .github/workflows/lint-workflows.yml
+      - .github/workflows/mutation-test.yml
       - .github/workflows/release-please.yml
       - .github/workflows/release.yml
       - .github/workflows/sbom.yml

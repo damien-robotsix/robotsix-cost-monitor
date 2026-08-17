@@ -31,6 +31,7 @@ dev = [
     "robotsix-modules",
     "ruff>=0.16.2",
     "mypy>=2.3.0,<3",
+    "mutmut>=3.3.0",
 ]
 lint = [
     "ruff>=0.16.2",
@@ -118,3 +119,8 @@ pythonpath = ["."]
 addopts = ["--strict-markers", "--strict-config"]
 xfail_strict = true
 filterwarnings = ["error"]
+
+[tool.mutmut]
+source_paths = ["src/"]
+backup = false
+pytest_add_cli_args_test_selection = ["tests/"]
