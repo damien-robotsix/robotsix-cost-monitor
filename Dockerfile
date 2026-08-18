@@ -7,7 +7,7 @@
 FROM python:3.14-slim AS builder
 
 # Bring in the uv static binary (pinned to a released version for reproducibility).
-COPY --from=ghcr.io/astral-sh/uv:0.12.1 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /usr/local/bin/uv
 
 # git is needed to install git dependencies (robotsix-llmio, etc.)
 # during the uv pip install below.
