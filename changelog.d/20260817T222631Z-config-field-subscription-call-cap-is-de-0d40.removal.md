@@ -1,0 +1,1 @@
+Removed the `subscription_call_cap` field from `Settings` in `config.py`, along with its entries in the example config, JSON schema, and documentation. The field was declared but never consumed.
