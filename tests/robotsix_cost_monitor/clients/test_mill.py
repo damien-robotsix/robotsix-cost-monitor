@@ -6,6 +6,8 @@ from datetime import UTC, datetime, timedelta
 
 import httpx
 import pytest
+import respx
+from pydantic import SecretStr
 
 from robotsix_cost_monitor.clients.mill import (
     NON_TERMINAL_STATES,
@@ -27,7 +29,7 @@ class TestMillClient:
         """Build Settings with stuck-ticket detection enabled."""
         return Settings(
             mill_base_url=mill_base_url,
-            mill_api_key="test-key",  # noqa: S106
+            mill_api_key=SecretStr("test-key"),  # noqa: S106
             stuck_ticket_threshold_hours=threshold,
         )
 
@@ -60,7 +62,7 @@ class TestMillClient:
     # ------------------------------------------------------------------
 
     @pytest.mark.asyncio
-    async def test_no_stuck_tickets(self, respx_mock) -> None:
+    async def test_no_stuck_tickets(self, respx_mock: respx.MockRouter) -> None:
         """When all tickets are recently updated, returns empty list."""
         settings = self._settings()
         client = MillClient(settings=settings)
@@ -84,7 +86,7 @@ class TestMillClient:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_stuck_ticket_detected(self, respx_mock) -> None:
+    async def test_stuck_ticket_detected(self, respx_mock: respx.MockRouter) -> None:
         """A ticket updated beyond the threshold is flagged as stuck."""
         settings = self._settings(threshold=24)
         client = MillClient(settings=settings)
@@ -112,7 +114,7 @@ class TestMillClient:
         assert result[0].stuck_for_hours > 24
 
     @pytest.mark.asyncio
-    async def test_terminal_states_excluded(self, respx_mock) -> None:
+    async def test_terminal_states_excluded(self, respx_mock: respx.MockRouter) -> None:
         """Tickets in terminal states (CLOSED, DONE, etc.) are excluded."""
         settings = self._settings(threshold=1)
         client = MillClient(settings=settings)
@@ -146,7 +148,9 @@ class TestMillClient:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_http_error_raises_mill_api_error(self, respx_mock) -> None:
+    async def test_http_error_raises_mill_api_error(
+        self, respx_mock: respx.MockRouter
+    ) -> None:
         """When the mill API returns an error, raise MillAPIError (not []).
 
         A failed check must be distinguishable from a clean empty result so
@@ -164,7 +168,9 @@ class TestMillClient:
             await client.fetch_stuck_tickets()
 
     @pytest.mark.asyncio
-    async def test_network_error_raises_mill_api_error(self, respx_mock) -> None:
+    async def test_network_error_raises_mill_api_error(
+        self, respx_mock: respx.MockRouter
+    ) -> None:
         """A transport-level failure also raises MillAPIError with a cause."""
         settings = self._settings()
         client = MillClient(settings=settings)
@@ -178,7 +184,9 @@ class TestMillClient:
         assert isinstance(excinfo.value.__cause__, httpx.ConnectError)
 
     @pytest.mark.asyncio
-    async def test_non_json_response_raises_mill_api_error(self, respx_mock) -> None:
+    async def test_non_json_response_raises_mill_api_error(
+        self, respx_mock: respx.MockRouter
+    ) -> None:
         """A non-list payload is treated as a failed check, not "no tickets"."""
         settings = self._settings()
         client = MillClient(settings=settings)
@@ -191,7 +199,7 @@ class TestMillClient:
             await client.fetch_stuck_tickets()
 
     @pytest.mark.asyncio
-    async def test_api_key_sent_in_headers(self, respx_mock) -> None:
+    async def test_api_key_sent_in_headers(self, respx_mock: respx.MockRouter) -> None:
         """When mill_api_key is set, it is sent as X-API-Key header."""
         settings = self._settings()
         client = MillClient(settings=settings)

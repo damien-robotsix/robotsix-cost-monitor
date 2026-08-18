@@ -814,7 +814,7 @@ async def _run_one_stuck_check(mill: Mock, expected_gauge: float) -> None:
     finally:
         task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
-            await task
+            await asyncio.gather(task)
 
 
 @pytest.mark.asyncio

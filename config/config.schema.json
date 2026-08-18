@@ -120,7 +120,6 @@
         "mill_api_key": {
           "advanced": true,
           "default": "",
-          "description": "API key for authenticating to the robotsix-mill board API. When deployed by robotsix-central-deploy with the robotsix.deploy.access: \"agent\" label, leave empty \u2014 the DEPLOY_API_KEY environment variable is injected automatically at deploy time.",
           "format": "password",
           "title": "Mill Api Key",
           "type": "string",
