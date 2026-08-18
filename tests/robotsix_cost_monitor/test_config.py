@@ -15,6 +15,7 @@ from robotsix_cost_monitor.config import (
     Settings,
     data_dir,
     load_config,
+    resolve_registry_api_key,
 )
 
 # -- data_dir -----------------------------------------------------------
@@ -61,6 +62,25 @@ def test_settings_subscription_call_cap() -> None:
 
 def test_settings_data_dir_default() -> None:
     assert Settings().data_dir == Path(".data")
+
+
+# -- resolve_registry_api_key -------------------------------------------
+
+
+def test_resolve_registry_api_key_prefers_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """DEPLOY_API_KEY takes precedence over the config-file value."""
+    monkeypatch.setenv("DEPLOY_API_KEY", "injected-key")
+    settings = Settings(registry_api_key="config-key")
+    assert resolve_registry_api_key(settings) == "injected-key"
+
+
+def test_resolve_registry_api_key_falls_back_to_config(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When DEPLOY_API_KEY is unset, the config-file key is used."""
+    monkeypatch.delenv("DEPLOY_API_KEY", raising=False)
+    settings = Settings(registry_api_key="config-key")
+    assert resolve_registry_api_key(settings) == "config-key"
 
 
 # -- load_config --------------------------------------------------------

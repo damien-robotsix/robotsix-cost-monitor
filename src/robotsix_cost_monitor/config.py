@@ -43,7 +43,15 @@ class Settings(BaseModel):
     server_port: int = Field(default=8080, json_schema_extra={"advanced": True})
     # Central-deploy registry — projects are discovered at runtime.
     registry_base_url: str = ""
-    registry_api_key: SecretStr = SecretStr("")
+    registry_api_key: SecretStr = Field(
+        default=SecretStr(""),
+        description=(
+            "API key for authenticating to the central-deploy registry. When "
+            "deployed by robotsix-central-deploy with the robotsix.deploy.access: "
+            '"agent" label, leave empty — the DEPLOY_API_KEY environment variable '
+            "is injected automatically at deploy time."
+        ),
+    )
     # Seconds between registry re-polls (0 = only at startup + manual refresh).
     registry_poll_interval_seconds: int = Field(
         default=300, json_schema_extra={"advanced": True}
@@ -77,6 +85,20 @@ class Settings(BaseModel):
     log_format: str = Field(default="json", json_schema_extra={"advanced": True})
     # Minimum log level for all loggers.
     log_level: str = Field(default="INFO", json_schema_extra={"advanced": True})
+
+
+def resolve_registry_api_key(settings: Settings) -> str:
+    """Return the effective registry API key.
+
+    When deployed by robotsix-central-deploy with the ``robotsix.deploy.access:
+    "agent"`` label, the deploy API key is auto-injected as the
+    ``DEPLOY_API_KEY`` environment variable — no manual config needed.  Falls
+    back to ``settings.registry_api_key`` for local development.
+    """
+    env_val = os.environ.get("DEPLOY_API_KEY", "")
+    if env_val:
+        return env_val
+    return settings.registry_api_key.get_secret_value()
 
 
 class Config(BaseModel):
