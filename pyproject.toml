@@ -29,12 +29,12 @@ dev = [
     "pytest-cov>=6.1",
     "respx>=0.22",
     "robotsix-modules",
-    "ruff>=0.16.2",
+    "ruff>=0.16.3",
     "mypy>=2.3.0,<3",
     "mutmut>=3.3.0",
 ]
 lint = [
-    "ruff>=0.16.2",
+    "ruff>=0.16.3",
     "mypy>=2.3.0",
     "vulture>=2.11",
 ]
