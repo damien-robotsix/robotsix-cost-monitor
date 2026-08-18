@@ -83,6 +83,25 @@ class Settings(BaseModel):
     log_format: str = Field(default="json", json_schema_extra={"advanced": True})
     # Minimum log level for all loggers.
     log_level: str = Field(default="INFO", json_schema_extra={"advanced": True})
+    # Base URL of the robotsix-mill board API (e.g. "http://mill:8080").
+    # When empty, stuck-ticket detection is disabled.
+    mill_base_url: str = Field(default="", json_schema_extra={"advanced": True})
+    # API key for authenticating to the mill board API.  When deployed by
+    # robotsix-central-deploy with the robotsix.deploy.access: "agent" label,
+    # leave empty — the DEPLOY_API_KEY env var is used as a fallback.
+    mill_api_key: SecretStr = Field(
+        default=SecretStr(""),
+        json_schema_extra={"advanced": True, "writeOnly": True},
+    )
+    # Hours a ticket may remain in a non-terminal state before it is
+    # flagged as stuck.  0 disables stuck-ticket detection.
+    stuck_ticket_threshold_hours: int = Field(
+        default=48, json_schema_extra={"advanced": True}
+    )
+    # Seconds between stuck-ticket checks (default 600 = 10 minutes).
+    stuck_ticket_check_interval_seconds: int = Field(
+        default=600, json_schema_extra={"advanced": True}
+    )
 
 
 def resolve_registry_api_key(settings: Settings) -> str:
@@ -97,6 +116,20 @@ def resolve_registry_api_key(settings: Settings) -> str:
     if env_val:
         return env_val
     return settings.registry_api_key.get_secret_value()
+
+
+def resolve_mill_api_key(settings: Settings) -> str:
+    """Return the effective mill API key.
+
+    Follows the same convention as :func:`resolve_registry_api_key`: the
+    ``DEPLOY_API_KEY`` environment variable is the default when deployed by
+    robotsix-central-deploy.  Falls back to ``settings.mill_api_key`` for
+    local development.
+    """
+    env_val = os.environ.get("DEPLOY_API_KEY", "")
+    if env_val:
+        return env_val
+    return settings.mill_api_key.get_secret_value()
 
 
 class Config(BaseModel):

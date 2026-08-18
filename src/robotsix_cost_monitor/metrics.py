@@ -26,3 +26,13 @@ cache_warm_failure = Counter(
     "robotsix_cost_monitor_cache_warm_failure_total",
     "Total number of failed dashboard cache warm-ups.",
 )
+
+stuck_ticket_check_runs = Counter(
+    "robotsix_cost_monitor_stuck_ticket_check_runs_total",
+    "Total number of stuck-ticket check runs.",
+)
+
+stuck_ticket_count = Gauge(
+    "robotsix_cost_monitor_stuck_ticket_count",
+    "Number of tickets currently stuck in non-terminal states.",
+)

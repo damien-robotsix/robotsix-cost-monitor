@@ -40,6 +40,10 @@ project list in the config file.
 | `log_level` | `str` | `"INFO"` | Minimum log level for all loggers. Set to `"DEBUG"` for verbose diagnostics. |
 | `data_dir` | `str` | `".data"` | Directory for persistent runtime state (reconciliation snapshots). |
 | `auth` | `AuthConfig` | `{}` (empty = disabled) | HTTP Basic authentication credentials for the dashboard. When `username` and `password` are set, all endpoints except `/health` require HTTP Basic auth. When either is empty, the dashboard is served with no access control. |
+| `mill_base_url` | `str` | `""` | Base URL of the robotsix-mill board API (e.g. `http://mill:8080`). When empty, stuck-ticket detection is disabled. |
+| `mill_api_key` | `SecretStr` | `""` | API key for authenticating to the robotsix-mill board API. When deployed by robotsix-central-deploy with the `robotsix.deploy.access: "agent"` label, leave empty — the `DEPLOY_API_KEY` environment variable is used as a fallback. |
+| `stuck_ticket_threshold_hours` | `int` | `48` | Hours a ticket may remain in a non-terminal state before it is flagged as stuck. Set to `0` to disable stuck-ticket detection. |
+| `stuck_ticket_check_interval_seconds` | `int` | `600` | Seconds between stuck-ticket checks against the mill board. |
 
 ---
 
