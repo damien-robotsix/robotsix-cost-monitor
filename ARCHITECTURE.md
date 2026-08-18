@@ -20,6 +20,7 @@
 │   ├── aggregations.py         #   Pure cost-aggregation functions (no I/O)
 │   ├── clients/
 │   │   ├── langfuse.py         #   Self-contained async Langfuse REST client (httpx)
+│   │   ├── mill.py             #   robotsix-mill board API client (stuck-ticket detection)
 │   │   ├── registry.py         #   Central-deploy registry client for project discovery
 │   │   └── models.py           #   Shared client models (RegistryProject, etc.)
 │   └── web/                    #   Server-rendered dashboard UI
@@ -64,6 +65,9 @@
           │  • registry_poll_loop: re-queries the central-  │
           │    deploy registry to discover new/removed       │
           │    projects at runtime                          │
+          │  • stuck_ticket_loop: periodically queries the   │
+          │    mill board API for tickets stuck in non-      │
+          │    terminal states and logs warnings             │
           └────────────────────────────────────────────────┘
 ```
 
@@ -117,6 +121,7 @@ manager in `create_app()`) and cancelled on shutdown:
 | `_reconcile_loop` | `settings.reconcile_schedule_hours` | 24 h | Runs `reconcile_all()` for every project; stores result in `.data/reconcile/last.json` (powers the warning banner) |
 | `_cache_refresh_loop` | `settings.dashboard_refresh_interval_seconds` | 120 s | Periodically re-fetches dashboard aggregates so the cache stays warm; a one-shot `_warm_cache` also runs at startup, pre-fetching all dashboard window presets (1 h, 6 h, 1 d, 1 w) so window switches are cache hits from the first page load |
 | `_registry_poll_loop` | `settings.registry_poll_interval_seconds` | 300 s | Re-queries the central-deploy registry (`GET /fleet/langfuse`) to discover new or removed Langfuse projects without restarting the service; started only when `registry_poll_interval_seconds > 0` |
+| `_stuck_ticket_loop` | `settings.stuck_ticket_check_interval_seconds` | 600 s | Periodically queries the mill board `GET /tickets` for tickets in non-terminal states whose `updated_at` is older than `stuck_ticket_threshold_hours`; logs a warning per run with stuck-ticket details; sets `stuck_ticket_count` Prometheus gauge; on `MillAPIError` preserves the previous gauge value so outages do not silently clear alerting |
 
 - The cache-warm loop (**best-effort**) logs and discards failures — a cold
   cache is a performance problem, not a correctness one; the stale-while-

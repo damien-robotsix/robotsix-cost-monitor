@@ -65,8 +65,11 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
-## [0.5.1](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.5.0...v0.5.1) (2026-08-16)
+## [0.5.1] (2026-08-16)
 
+### Features
+
+* **stuck-tickets:** add mill board client, background loop, Prometheus metrics, and `GET /api/stuck-tickets` endpoint to detect tickets stuck in non-terminal states ([#](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/))
 
 ### Bug Fixes
 
