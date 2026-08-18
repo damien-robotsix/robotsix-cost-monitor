@@ -43,7 +43,15 @@ class Settings(BaseModel):
     server_port: int = Field(default=8080, json_schema_extra={"advanced": True})
     # Central-deploy registry — projects are discovered at runtime.
     registry_base_url: str = ""
-    registry_api_key: SecretStr = SecretStr("")
+    registry_api_key: SecretStr = Field(
+        default=SecretStr(""),
+        description=(
+            "API key for authenticating to the central-deploy registry. When "
+            "deployed by robotsix-central-deploy with the robotsix.deploy.access: "
+            '"agent" label, leave empty — the DEPLOY_API_KEY environment variable '
+            "is injected automatically at deploy time."
+        ),
+    )
     # Seconds between registry re-polls (0 = only at startup + manual refresh).
     registry_poll_interval_seconds: int = Field(
         default=300, json_schema_extra={"advanced": True}
