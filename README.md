@@ -65,6 +65,7 @@ uv run robotsix-cost-monitor reconcile [--project SLUG]
 | GET | `/api/reconcile` | `?project=<slug\|all>` | OpenRouter↔Langfuse reconciliation result |
 | GET | `/api/reconcile/last` | — | Most recent reconciliation result (powers the dashboard warning banner) |
 | POST | `/api/reconcile/run` | `?project=<slug>` | Run reconciliation for a specific project (returns JSON result) |
+| GET | `/api/stuck-tickets` | — | Tickets stuck in non-terminal states longer than the configured threshold (503 when mill API unreachable) |
 
 ## Architecture
 

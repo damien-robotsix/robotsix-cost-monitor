@@ -17,6 +17,10 @@
     "low_balance_threshold_usd": 5.0,
     "log_format": "json",
     "log_level": "INFO",
-    "data_dir": ".data"
+    "data_dir": ".data",
+    "mill_base_url": "",
+    "mill_api_key": "",
+    "stuck_ticket_threshold_hours": 48,
+    "stuck_ticket_check_interval_seconds": 600
   }
 }

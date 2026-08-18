@@ -110,6 +110,32 @@
           "default": "INFO",
           "title": "Log Level",
           "type": "string"
+        },
+        "mill_base_url": {
+          "advanced": true,
+          "default": "",
+          "title": "Mill Base Url",
+          "type": "string"
+        },
+        "mill_api_key": {
+          "advanced": true,
+          "default": "",
+          "format": "password",
+          "title": "Mill Api Key",
+          "type": "string",
+          "writeOnly": true
+        },
+        "stuck_ticket_threshold_hours": {
+          "advanced": true,
+          "default": 48,
+          "title": "Stuck Ticket Threshold Hours",
+          "type": "integer"
+        },
+        "stuck_ticket_check_interval_seconds": {
+          "advanced": true,
+          "default": 600,
+          "title": "Stuck Ticket Check Interval Seconds",
+          "type": "integer"
         }
       },
       "title": "Settings",

@@ -27,6 +27,7 @@ from robotsix_config import (
 from robotsix_http import ExternalHTTPError
 
 from .aggregations import BackendKind
+from .clients.mill import MillAPIError, MillClient
 from .config import Config
 from .exceptions import CostMonitorError
 from .reconcile import load_last_reconcile, reconcile_all, reconcile_project
@@ -441,6 +442,39 @@ async def reconcile(
 def reconcile_last(cfg: Config = Depends(get_config)) -> dict[str, Any]:
     """GET /api/reconcile/last — return the most recent reconciliation result."""
     return load_last_reconcile(cfg.settings)
+
+
+@router.get("/api/stuck-tickets")
+async def stuck_tickets(request: Request) -> list[dict[str, Any]]:
+    """GET /api/stuck-tickets — return tickets stuck in non-terminal states.
+
+    Fetches fresh results from the mill board on every call.  Returns an
+    empty list when stuck-ticket detection is disabled (no mill_base_url
+    or stuck_ticket_threshold_hours = 0).  Returns 503 when the mill
+    board API is unreachable — the caller must not treat that as "no
+    stuck tickets".
+    """
+    mill: MillClient = request.app.state.mill
+    try:
+        stuck = await mill.fetch_stuck_tickets()
+    except MillAPIError:
+        raise HTTPException(
+            status_code=503,
+            detail="mill board API unavailable; stuck-ticket state unknown",
+        ) from None
+    return [
+        {
+            "ticket_id": t.ticket_id,
+            "title": t.title,
+            "state": t.state,
+            "kind": t.kind,
+            "source": t.source,
+            "created_at": t.created_at,
+            "updated_at": t.updated_at,
+            "stuck_for_hours": t.stuck_for_hours,
+        }
+        for t in stuck
+    ]
 
 
 @router.get("/", response_class=HTMLResponse)

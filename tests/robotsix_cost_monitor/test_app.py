@@ -20,6 +20,7 @@ from pydantic import SecretStr
 from robotsix_cost_monitor.app import (
     _cache_refresh_loop,
     _reconcile_loop,
+    _stuck_ticket_loop,
     _warm_cache,
     add_correlation_id,
     create_app,
@@ -785,3 +786,95 @@ def test_lifespan_teardown_cancels_all_tasks() -> None:
     assert len(tasks_created) >= 4, f"expected ≥ 4 tasks, got {len(tasks_created)}"
     for task in tasks_created:
         assert task.done(), f"task {task.get_name()!r} was not done after teardown"
+
+
+# ---------------------------------------------------------------------------
+# stuck-ticket loop — gauge handling
+# ---------------------------------------------------------------------------
+
+
+async def _run_one_stuck_check(mill: Mock, expected_gauge: float) -> None:
+    """Run ``_stuck_ticket_loop`` for one iteration, asserting the gauge value.
+
+    The loop sleeps 3600s between checks; this helper cancels the task
+    after the first iteration and returns once the gauge matches.
+    """
+    from robotsix_cost_monitor.metrics import stuck_ticket_count
+
+    task = asyncio.create_task(_stuck_ticket_loop(mill, 3600))
+    try:
+        for _ in range(100):
+            if stuck_ticket_count._value.get() == expected_gauge:
+                return
+            await asyncio.sleep(0)
+        pytest.fail(
+            f"stuck_ticket_count never reached {expected_gauge} "
+            f"(got {stuck_ticket_count._value.get()})"
+        )
+    finally:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await asyncio.gather(task)
+
+
+@pytest.mark.asyncio
+async def test_stuck_ticket_loop_keeps_gauge_on_mill_api_error() -> None:
+    """A failed mill check must NOT reset stuck_ticket_count to zero.
+
+    Regression test: during a mill API outage the loop previously treated
+    the empty fallback list as a clean result and zeroed the gauge, which
+    would silently clear downstream stuck-ticket alerting.
+    """
+    from robotsix_cost_monitor.clients.mill import MillAPIError
+    from robotsix_cost_monitor.metrics import stuck_ticket_count
+
+    stuck_ticket_count.set(3)  # previous known state
+    mill = Mock()
+    mill.fetch_stuck_tickets = AsyncMock(side_effect=MillAPIError("mill down"))
+
+    await _run_one_stuck_check(mill, 3)
+
+    # The gauge still holds the previous value.
+    assert stuck_ticket_count._value.get() == 3
+
+
+@pytest.mark.asyncio
+async def test_stuck_ticket_loop_updates_gauge_on_success() -> None:
+    """A clean check still updates the gauge — stuck tickets raise it to N."""
+    from robotsix_cost_monitor.clients.mill import StuckTicket
+    from robotsix_cost_monitor.metrics import stuck_ticket_count
+
+    stuck_ticket_count.set(0)
+    mill = Mock()
+    mill.fetch_stuck_tickets = AsyncMock(
+        return_value=[
+            StuckTicket(
+                ticket_id="T1",
+                title="stuck draft",
+                state="draft",
+                kind="task",
+                source="user",
+                created_at="2026-08-16T00:00:00Z",
+                updated_at="2026-08-16T00:00:00Z",
+                stuck_for_hours=49.0,
+            )
+        ]
+    )
+
+    await _run_one_stuck_check(mill, 1)
+
+    assert stuck_ticket_count._value.get() == 1
+
+
+@pytest.mark.asyncio
+async def test_stuck_ticket_loop_zeroes_gauge_when_none_stuck() -> None:
+    """A clean empty check resets the gauge to zero."""
+    from robotsix_cost_monitor.metrics import stuck_ticket_count
+
+    stuck_ticket_count.set(4)
+    mill = Mock()
+    mill.fetch_stuck_tickets = AsyncMock(return_value=[])
+
+    await _run_one_stuck_check(mill, 0)
+
+    assert stuck_ticket_count._value.get() == 0

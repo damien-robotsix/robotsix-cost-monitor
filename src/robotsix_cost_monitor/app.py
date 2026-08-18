@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 
 from robotsix_cost_monitor import __version__
 
+from .clients.mill import MillAPIError, MillClient
 from .clients.registry import RegistryClient
 from .config import Config, load_config, resolve_registry_api_key
 from .metrics import cache_warm_failure, cache_warm_success
@@ -179,6 +180,52 @@ async def _cache_refresh_loop(
         await _warm_cache(cfg, service)
 
 
+async def _stuck_ticket_loop(mill: MillClient, interval_s: int) -> None:
+    """Periodically check the mill board for tickets stuck in non-terminal states.
+
+    Each run queries ``GET /tickets`` and logs a warning for every ticket
+    whose ``updated_at`` is older than ``stuck_ticket_threshold_hours``.
+    When the mill API is unreachable the gauge keeps its previous value —
+    a failed check must never reset ``stuck_ticket_count`` to zero,
+    otherwise downstream alerting would silently clear during outages.
+    """
+    from .metrics import stuck_ticket_check_runs, stuck_ticket_count
+
+    while True:
+        try:
+            stuck = await mill.fetch_stuck_tickets()
+            stuck_ticket_check_runs.inc()
+            if stuck:
+                stuck_ticket_count.set(len(stuck))
+                logger.warning(
+                    "stuck_ticket_check: %d tickets stuck in non-terminal state",
+                    len(stuck),
+                    stuck_tickets=[
+                        {
+                            "id": t.ticket_id,
+                            "title": t.title,
+                            "state": t.state,
+                            "stuck_for_hours": t.stuck_for_hours,
+                        }
+                        for t in stuck
+                    ],
+                )
+            else:
+                stuck_ticket_count.set(0)
+                logger.debug("stuck_ticket_check: no stuck tickets found")
+        except MillAPIError:
+            # The mill board API is unreachable — keep the previous gauge
+            # value so alerting does not miss real stuck tickets.  The
+            # underlying cause was already logged by MillClient.
+            logger.warning(
+                "stuck_ticket_check: mill API unavailable; "
+                "keeping previous stuck-ticket gauge value"
+            )
+        except Exception:
+            logger.exception("stuck_ticket_check failed")
+        await asyncio.sleep(interval_s)
+
+
 # ---------------------------------------------------------------------------
 # App factory
 # ---------------------------------------------------------------------------
@@ -201,6 +248,7 @@ def create_app(config: Config | None = None) -> FastAPI:
         api_key=resolve_registry_api_key(cfg.settings),
     )
     service = CostService(cfg, registry)
+    mill = MillClient(cfg.settings)
 
     @contextlib.asynccontextmanager
     async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -227,6 +275,14 @@ def create_app(config: Config | None = None) -> FastAPI:
                     await service.refresh_projects()
 
             tasks.append(asyncio.create_task(_registry_poll_loop()))
+        sti = cfg.settings.stuck_ticket_check_interval_seconds
+        if sti > 0 and cfg.settings.mill_base_url:
+            logger.info(
+                "starting stuck-ticket check loop (every %ss, threshold=%sh)",
+                sti,
+                cfg.settings.stuck_ticket_threshold_hours,
+            )
+            tasks.append(asyncio.create_task(_stuck_ticket_loop(mill, sti)))
         try:
             yield
         finally:
@@ -239,6 +295,7 @@ def create_app(config: Config | None = None) -> FastAPI:
     app = FastAPI(title="robotsix-cost-monitor", version=__version__, lifespan=lifespan)
     app.state.config = cfg
     app.state.service = service
+    app.state.mill = mill
 
     from prometheus_fastapi_instrumentator import Instrumentator
 
