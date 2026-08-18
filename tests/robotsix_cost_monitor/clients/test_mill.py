@@ -7,7 +7,11 @@ from datetime import UTC, datetime, timedelta
 import httpx
 import pytest
 
-from robotsix_cost_monitor.clients.mill import NON_TERMINAL_STATES, MillClient
+from robotsix_cost_monitor.clients.mill import (
+    NON_TERMINAL_STATES,
+    MillAPIError,
+    MillClient,
+)
 from robotsix_cost_monitor.config import Settings
 
 
@@ -142,8 +146,13 @@ class TestMillClient:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_http_error_returns_empty(self, respx_mock) -> None:
-        """When the mill API returns an error, return empty list gracefully."""
+    async def test_http_error_raises_mill_api_error(self, respx_mock) -> None:
+        """When the mill API returns an error, raise MillAPIError (not []).
+
+        A failed check must be distinguishable from a clean empty result so
+        the background loop can keep the previous gauge value instead of
+        resetting stuck_ticket_count to zero during an outage.
+        """
         settings = self._settings()
         client = MillClient(settings=settings)
 
@@ -151,12 +160,26 @@ class TestMillClient:
             status_code=500,
         )
 
-        result = await client.fetch_stuck_tickets()
-        assert result == []
+        with pytest.raises(MillAPIError):
+            await client.fetch_stuck_tickets()
 
     @pytest.mark.asyncio
-    async def test_non_json_response_returns_empty(self, respx_mock) -> None:
-        """When the mill API returns non-list JSON, return empty list."""
+    async def test_network_error_raises_mill_api_error(self, respx_mock) -> None:
+        """A transport-level failure also raises MillAPIError with a cause."""
+        settings = self._settings()
+        client = MillClient(settings=settings)
+
+        respx_mock.get("http://mill:8080/tickets").mock(
+            side_effect=httpx.ConnectError("connection refused"),
+        )
+
+        with pytest.raises(MillAPIError) as excinfo:
+            await client.fetch_stuck_tickets()
+        assert isinstance(excinfo.value.__cause__, httpx.ConnectError)
+
+    @pytest.mark.asyncio
+    async def test_non_json_response_raises_mill_api_error(self, respx_mock) -> None:
+        """A non-list payload is treated as a failed check, not "no tickets"."""
         settings = self._settings()
         client = MillClient(settings=settings)
 
@@ -164,8 +187,8 @@ class TestMillClient:
             json={"error": "not a list"},
         )
 
-        result = await client.fetch_stuck_tickets()
-        assert result == []
+        with pytest.raises(MillAPIError):
+            await client.fetch_stuck_tickets()
 
     @pytest.mark.asyncio
     async def test_api_key_sent_in_headers(self, respx_mock) -> None:

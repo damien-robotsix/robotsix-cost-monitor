@@ -18,6 +18,17 @@ from ..config import Settings, resolve_mill_api_key
 
 logger = structlog.get_logger(__name__)
 
+
+class MillAPIError(RuntimeError):
+    """The mill board API could not be queried (network or HTTP error).
+
+    Raised instead of returning an empty result so callers can tell a
+    *failed* check apart from a successful check that found nothing.
+    Callers must treat this as "unknown": preserve the last known
+    stuck-ticket state rather than overwriting it with an empty list.
+    """
+
+
 #: Non-terminal ticket states — tickets in any of these states are
 #: candidates for stuck-ticket detection.  Excludes terminal states
 #: (CLOSED, DONE, ANSWERED, EPIC_CLOSED).
@@ -108,8 +119,11 @@ class MillClient:
         whose ``updated_at`` is older than the configured threshold is
         flagged as stuck.
 
-        Returns an empty list when detection is disabled or when the
-        mill API is unreachable.
+        Returns an empty list when detection is disabled.  Raises
+        :class:`MillAPIError` when the mill API is unreachable, returns
+        an error status, or returns an unexpected payload — the caller
+        must then keep the previous results instead of treating the
+        check as a clean empty result.
         """
         if not self._enabled:
             return []
@@ -125,16 +139,21 @@ class MillClient:
             resp = await retry.get(url, headers=headers)
             resp.raise_for_status()
             tickets = resp.json()
-        except Exception:
+        except Exception as exc:
             logger.exception(
                 "mill stuck-ticket check failed — keeping previous results"
             )
-            return []
+            raise MillAPIError(
+                "mill board API unavailable — previous stuck-ticket results kept"
+            ) from exc
 
         stuck: list[StuckTicket] = []
         if not isinstance(tickets, list):
-            logger.warning("mill /tickets returned non-list: %s", type(tickets))
-            return stuck
+            logger.warning("mill /tickets returned non-list payload: %s", type(tickets))
+            raise MillAPIError(
+                "mill board API returned an unexpected payload — "
+                "previous stuck-ticket results kept"
+            )
 
         for raw in tickets:
             if not isinstance(raw, dict):
@@ -145,7 +164,7 @@ class MillClient:
             updated_raw = raw.get("updated_at", "")
             try:
                 updated = datetime.fromisoformat(updated_raw.replace("Z", "+00:00"))
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 continue
             if updated > cutoff:
                 continue
