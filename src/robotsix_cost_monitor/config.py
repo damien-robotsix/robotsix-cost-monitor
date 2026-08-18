@@ -29,20 +29,47 @@ class AuthConfig(BaseModel):
     is always exempt so the container healthcheck works.
     """
 
-    username: str = ""
-    password: SecretStr = SecretStr("")
+    username: str = Field(
+        default="",
+        description=(
+            "Dashboard HTTP Basic auth username. Empty means the dashboard is "
+            "served open."
+        ),
+    )
+    password: SecretStr = Field(
+        default=SecretStr(""),
+        description=(
+            "Dashboard HTTP Basic auth password. Empty means the dashboard is "
+            "served open."
+        ),
+    )
 
 
 class Settings(BaseModel):
     """Global dashboard settings — no per-project config (registry-driven)."""
 
-    # HTTP Basic auth — REQUIRED when exposed via the gateway (see AuthConfig).
-    auth: AuthConfig = Field(default_factory=AuthConfig)
-    # Bind address for the dashboard web server.
-    server_host: str = Field(default="0.0.0.0", json_schema_extra={"advanced": True})  # noqa: S104
-    server_port: int = Field(default=8080, json_schema_extra={"advanced": True})
-    # Central-deploy registry — projects are discovered at runtime.
-    registry_base_url: str = ""
+    auth: AuthConfig = Field(
+        default_factory=AuthConfig,
+        description=(
+            "HTTP Basic auth — REQUIRED when exposed via the gateway (see AuthConfig)."
+        ),
+    )
+    server_host: str = Field(
+        default="0.0.0.0",  # noqa: S104
+        json_schema_extra={"advanced": True},
+        description="Bind address for the dashboard web server.",
+    )
+    server_port: int = Field(
+        default=8080,
+        json_schema_extra={"advanced": True},
+        description="Port for the dashboard web server.",
+    )
+    registry_base_url: str = Field(
+        default="",
+        description=(
+            "Central-deploy registry base URL — projects are discovered at runtime."
+        ),
+    )
     registry_api_key: SecretStr = Field(
         default=SecretStr(""),
         description=(
@@ -52,55 +79,116 @@ class Settings(BaseModel):
             "is injected automatically at deploy time."
         ),
     )
-    # Seconds between registry re-polls (0 = only at startup + manual refresh).
     registry_poll_interval_seconds: int = Field(
-        default=300, json_schema_extra={"advanced": True}
+        default=300,
+        json_schema_extra={"advanced": True},
+        description=(
+            "Seconds between registry re-polls (0 = only at startup + manual refresh)."
+        ),
     )
-    default_window_hours: int = Field(default=168, json_schema_extra={"advanced": True})
-    cache_ttl_seconds: int = Field(default=60, json_schema_extra={"advanced": True})
-    # Background cache-refresh interval — keeps dashboard aggregates precomputed
-    # so the frontend never blocks on a live Langfuse fetch.  0 disables.
+    default_window_hours: int = Field(
+        default=168,
+        json_schema_extra={"advanced": True},
+        description="Default cost-aggregation window in hours (e.g. 168 = 7 days).",
+    )
+    cache_ttl_seconds: int = Field(
+        default=60,
+        json_schema_extra={"advanced": True},
+        description=(
+            "Seconds before cached Langfuse data is considered stale and re-fetched."
+        ),
+    )
     dashboard_refresh_interval_seconds: int = Field(
-        default=120, json_schema_extra={"advanced": True}
+        default=120,
+        json_schema_extra={"advanced": True},
+        description=(
+            "Background cache-refresh interval — keeps dashboard aggregates "
+            "precomputed so the frontend never blocks on a live Langfuse "
+            "fetch. 0 disables."
+        ),
     )
     reconcile_tolerance_usd: float = Field(
-        default=1.0, json_schema_extra={"advanced": True}
+        default=1.0,
+        json_schema_extra={"advanced": True},
+        description=(
+            "Maximum allowed difference in USD between provider cost and traced "
+            "cost before reconciliation is flagged as out of tolerance."
+        ),
     )
-    # Auto-run reconciliation every N hours (0 disables; default daily). The
-    # stored result drives the dashboard warning banner.
     reconcile_schedule_hours: float = Field(
-        default=24.0, json_schema_extra={"advanced": True}
+        default=24.0,
+        json_schema_extra={"advanced": True},
+        description=(
+            "Auto-run reconciliation every N hours (0 disables; default daily). "
+            "The stored result drives the dashboard warning banner."
+        ),
     )
-    # OpenRouter account remaining-balance threshold in USD. When the remaining
-    # balance drops below this value a warning is logged and surfaced in the
-    # dashboard. Set to 0 to disable the low-balance check.
+    subscription_call_cap: int = Field(
+        default=0,
+        json_schema_extra={"advanced": True},
+        description=(
+            "Per-day subscription call cap for volume-vs-cap monitoring; "
+            "0 = disabled/unknown."
+        ),
+    )
     low_balance_threshold_usd: float = Field(
-        default=5.0, json_schema_extra={"advanced": True}
+        default=5.0,
+        json_schema_extra={"advanced": True},
+        description=(
+            "OpenRouter account remaining-balance threshold in USD. When the "
+            "remaining balance drops below this value a warning is logged and "
+            "surfaced in the dashboard. Set to 0 to disable the low-balance "
+            "check."
+        ),
     )
-    # Runtime data directory for persistence (.data by default; /data in containers).
-    data_dir: Path = Field(default=Path(".data"), json_schema_extra={"advanced": True})
-    # Structured log output format: "console" or "json".
-    log_format: str = Field(default="json", json_schema_extra={"advanced": True})
-    # Minimum log level for all loggers.
-    log_level: str = Field(default="INFO", json_schema_extra={"advanced": True})
-    # Base URL of the robotsix-mill board API (e.g. "http://mill:8080").
-    # When empty, stuck-ticket detection is disabled.
-    mill_base_url: str = Field(default="", json_schema_extra={"advanced": True})
-    # API key for authenticating to the mill board API.  When deployed by
-    # robotsix-central-deploy with the robotsix.deploy.access: "agent" label,
-    # leave empty — the DEPLOY_API_KEY env var is used as a fallback.
+    data_dir: Path = Field(
+        default=Path(".data"),
+        json_schema_extra={"advanced": True},
+        description=(
+            "Runtime data directory for persistence (.data by default; /data in "
+            "containers)."
+        ),
+    )
+    log_format: str = Field(
+        default="json",
+        json_schema_extra={"advanced": True},
+        description='Structured log output format: "console" or "json".',
+    )
+    log_level: str = Field(
+        default="INFO",
+        json_schema_extra={"advanced": True},
+        description="Minimum log level for all loggers.",
+    )
+    mill_base_url: str = Field(
+        default="",
+        json_schema_extra={"advanced": True},
+        description=(
+            'Base URL of the robotsix-mill board API (e.g. "http://mill:8080"). '
+            "When empty, stuck-ticket detection is disabled."
+        ),
+    )
     mill_api_key: SecretStr = Field(
         default=SecretStr(""),
         json_schema_extra={"advanced": True, "writeOnly": True},
+        description=(
+            "API key for authenticating to the mill board API. When deployed by "
+            'robotsix-central-deploy with the robotsix.deploy.access: "agent" '
+            "label, leave empty — the DEPLOY_API_KEY env var is used as a "
+            "fallback."
+        ),
     )
-    # Hours a ticket may remain in a non-terminal state before it is
-    # flagged as stuck.  0 disables stuck-ticket detection.
     stuck_ticket_threshold_hours: int = Field(
-        default=48, json_schema_extra={"advanced": True}
+        default=48,
+        json_schema_extra={"advanced": True},
+        description=(
+            "Hours a ticket may remain in a non-terminal state before it is "
+            "flagged as stuck. 0 disables stuck-ticket detection."
+        ),
     )
-    # Seconds between stuck-ticket checks (default 600 = 10 minutes).
     stuck_ticket_check_interval_seconds: int = Field(
-        default=600, json_schema_extra={"advanced": True}
+        default=600,
+        json_schema_extra={"advanced": True},
+        description=("Seconds between stuck-ticket checks (default 600 = 10 minutes)."),
     )
 
 
