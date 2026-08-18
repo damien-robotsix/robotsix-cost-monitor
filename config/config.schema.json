@@ -1,7 +1,7 @@
 {
   "$defs": {
     "AuthConfig": {
-      "description": "HTTP Basic auth for the dashboard.\n\nThe dashboard has no other access control, so when it is exposed through\nthe central-deploy gateway (an unauthenticated reverse proxy) this MUST\nbe set — otherwise the cost data is public. When either field is empty\nthe dashboard is served open (local dev / SSH-tunnel only). ``/health``\nis always exempt so the container healthcheck works.",
+      "description": "HTTP Basic auth for the dashboard.\n\nThe dashboard has no other access control, so when it is exposed through\nthe central-deploy gateway (an unauthenticated reverse proxy) this MUST\nbe set \u2014 otherwise the cost data is public. When either field is empty\nthe dashboard is served open (local dev / SSH-tunnel only). ``/health``\nis always exempt so the container healthcheck works.",
       "properties": {
         "username": {
           "default": "",
@@ -22,11 +22,11 @@
       "type": "object"
     },
     "Settings": {
-      "description": "Global dashboard settings — no per-project config (registry-driven).",
+      "description": "Global dashboard settings \u2014 no per-project config (registry-driven).",
       "properties": {
         "auth": {
           "$ref": "#/$defs/AuthConfig",
-          "description": "HTTP Basic auth — REQUIRED when exposed via the gateway (see AuthConfig)."
+          "description": "HTTP Basic auth \u2014 REQUIRED when exposed via the gateway (see AuthConfig)."
         },
         "server_host": {
           "advanced": true,
@@ -44,13 +44,13 @@
         },
         "registry_base_url": {
           "default": "",
-          "description": "Central-deploy registry base URL — projects are discovered at runtime.",
+          "description": "Central-deploy registry base URL \u2014 projects are discovered at runtime.",
           "title": "Registry Base Url",
           "type": "string"
         },
         "registry_api_key": {
           "default": "",
-          "description": "API key for authenticating to the central-deploy registry. When deployed by robotsix-central-deploy with the robotsix.deploy.access: \"agent\" label, leave empty — the DEPLOY_API_KEY environment variable is injected automatically at deploy time.",
+          "description": "API key for authenticating to the central-deploy registry. When deployed by robotsix-central-deploy with the robotsix.deploy.access: \"agent\" label, leave empty \u2014 the DEPLOY_API_KEY environment variable is injected automatically at deploy time.",
           "format": "password",
           "title": "Registry Api Key",
           "type": "string",
@@ -80,7 +80,7 @@
         "dashboard_refresh_interval_seconds": {
           "advanced": true,
           "default": 120,
-          "description": "Background cache-refresh interval — keeps dashboard aggregates precomputed so the frontend never blocks on a live Langfuse fetch. 0 disables.",
+          "description": "Background cache-refresh interval \u2014 keeps dashboard aggregates precomputed so the frontend never blocks on a live Langfuse fetch. 0 disables.",
           "title": "Dashboard Refresh Interval Seconds",
           "type": "integer"
         },
@@ -144,7 +144,7 @@
         "mill_api_key": {
           "advanced": true,
           "default": "",
-          "description": "API key for authenticating to the mill board API. When deployed by robotsix-central-deploy with the robotsix.deploy.access: \"agent\" label, leave empty — the DEPLOY_API_KEY env var is used as a fallback.",
+          "description": "API key for authenticating to the mill board API. When deployed by robotsix-central-deploy with the robotsix.deploy.access: \"agent\" label, leave empty \u2014 the DEPLOY_API_KEY env var is used as a fallback.",
           "format": "password",
           "title": "Mill Api Key",
           "type": "string",
@@ -169,7 +169,7 @@
       "type": "object"
     }
   },
-  "description": "Top-level config: registry-driven project discovery + global settings.\n\nProject credentials are discovered at runtime from the central-deploy\nregistry — there is no hardcoded project list.",
+  "description": "Top-level config: registry-driven project discovery + global settings.\n\nProject credentials are discovered at runtime from the central-deploy\nregistry \u2014 there is no hardcoded project list.",
   "properties": {
     "settings": {
       "$ref": "#/$defs/Settings"

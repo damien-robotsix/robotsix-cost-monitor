@@ -163,7 +163,7 @@ class Settings(BaseModel):
         default="",
         json_schema_extra={"advanced": True},
         description=(
-            "Base URL of the robotsix-mill board API (e.g. \"http://mill:8080\"). "
+            'Base URL of the robotsix-mill board API (e.g. "http://mill:8080"). '
             "When empty, stuck-ticket detection is disabled."
         ),
     )
@@ -172,7 +172,7 @@ class Settings(BaseModel):
         json_schema_extra={"advanced": True, "writeOnly": True},
         description=(
             "API key for authenticating to the mill board API. When deployed by "
-            "robotsix-central-deploy with the robotsix.deploy.access: \"agent\" "
+            'robotsix-central-deploy with the robotsix.deploy.access: "agent" '
             "label, leave empty — the DEPLOY_API_KEY env var is used as a "
             "fallback."
         ),
@@ -188,9 +188,7 @@ class Settings(BaseModel):
     stuck_ticket_check_interval_seconds: int = Field(
         default=600,
         json_schema_extra={"advanced": True},
-        description=(
-            "Seconds between stuck-ticket checks (default 600 = 10 minutes)."
-        ),
+        description=("Seconds between stuck-ticket checks (default 600 = 10 minutes)."),
     )
 
 
