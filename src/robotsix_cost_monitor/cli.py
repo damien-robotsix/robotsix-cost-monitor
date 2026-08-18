@@ -10,7 +10,7 @@ import sys
 import uvicorn
 
 from .clients.registry import RegistryClient
-from .config import load_config
+from .config import load_config, resolve_registry_api_key
 from .reconcile import reconcile_all, reconcile_project
 from .service import CostService
 
@@ -51,7 +51,7 @@ def main(argv: list[str] | None = None) -> int:
     cfg = load_config()
     registry = RegistryClient(
         base_url=cfg.settings.registry_base_url,
-        api_key=cfg.settings.registry_api_key.get_secret_value(),
+        api_key=resolve_registry_api_key(cfg.settings),
     )
     if args.cmd == "summary":
         svc = CostService(cfg, registry)

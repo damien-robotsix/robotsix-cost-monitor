@@ -79,6 +79,20 @@ class Settings(BaseModel):
     log_level: str = Field(default="INFO", json_schema_extra={"advanced": True})
 
 
+def resolve_registry_api_key(settings: Settings) -> str:
+    """Return the effective registry API key.
+
+    When deployed by robotsix-central-deploy with the ``robotsix.deploy.access:
+    "agent"`` label, the deploy API key is auto-injected as the
+    ``DEPLOY_API_KEY`` environment variable — no manual config needed.  Falls
+    back to ``settings.registry_api_key`` for local development.
+    """
+    env_val = os.environ.get("DEPLOY_API_KEY", "")
+    if env_val:
+        return env_val
+    return settings.registry_api_key.get_secret_value()
+
+
 class Config(BaseModel):
     """Top-level config: registry-driven project discovery + global settings.
 

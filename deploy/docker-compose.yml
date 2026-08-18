@@ -24,6 +24,10 @@ services:
       # must match the cost_monitor_config mount below; central-deploy resolves
       # the volume from it and writes config.json there on every config save.
       robotsix.deploy.config-target: "/home/app/config/config.json"
+      # Opt-in to auto-provisioned deploy API key — central-deploy injects
+      # DEPLOY_API_KEY into the container environment at deploy time, so
+      # no manual registry_api_key config is needed.
+      robotsix.deploy.access: "agent"
     ports:
       - "8099:8080"
     environment:

@@ -44,6 +44,7 @@
         },
         "registry_api_key": {
           "default": "",
+          "description": "API key for authenticating to the central-deploy registry. When deployed with robotsix.deploy.access: agent, leave empty — central-deploy injects DEPLOY_API_KEY automatically.",
           "format": "password",
           "title": "Registry Api Key",
           "type": "string",

@@ -28,7 +28,7 @@ project list in the config file.
 | `server_host` | `str` | `"0.0.0.0"` | Host address the dashboard web server binds to. Overridable via `serve --host`. |
 | `server_port` | `int` | `8080` | TCP port the dashboard web server listens on. Overridable via `serve --port`. |
 | `registry_base_url` | `str` | `""` | Base URL of the central-deploy registry API. Required for project discovery. |
-| `registry_api_key` | `SecretStr` | `""` | API key for authenticating to the central-deploy registry. |
+| `registry_api_key` | `SecretStr` | `""` | API key for authenticating to the central-deploy registry. When deployed by robotsix-central-deploy with the `robotsix.deploy.access: "agent"` label, leave empty — the `DEPLOY_API_KEY` environment variable is injected automatically at deploy time. For local development, set a real key in the config file. |
 | `registry_poll_interval_seconds` | `int` | `300` | Seconds between registry re-polls for project discovery. Set to `0` to only fetch at startup and on manual refresh. |
 | `default_window_hours` | `int` | `168` | Default time window (in hours) for dashboard cost aggregations (7 days). |
 | `cache_ttl_seconds` | `int` | `60` | How long per-trace cost results are cached before re-fetching from Langfuse. |
@@ -58,6 +58,7 @@ project list in the config file.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `ROBOTSIX_CONFIG_FILE` | `config/config.json` | Path to the JSON configuration file (relative to repository root). |
+| `DEPLOY_API_KEY` | *(unset)* | Deploy API key auto-injected by robotsix-central-deploy when the component declares the `agent` deploy-access setting. Used as the registry API key when `settings.registry_api_key` is empty. |
 
 Log format, log level, and data directory are now configured via `settings.log_format`,
 `settings.log_level`, and `settings.data_dir` in the config file rather than environment

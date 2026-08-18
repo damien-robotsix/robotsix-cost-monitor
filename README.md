@@ -26,6 +26,12 @@ uv run robotsix-cost-monitor serve --host 127.0.0.1 --port 8099
 # open http://127.0.0.1:8099
 ```
 
+When deployed by robotsix-central-deploy, the deploy API key used to reach the
+registry is injected automatically as `DEPLOY_API_KEY` (the deploy manifest
+declares the `agent` deploy-access setting) — no manual `registry_api_key`
+provisioning is needed. Set `registry_base_url` in the config to the
+central-deploy registry URL; leave `registry_api_key` empty.
+
 Each project needs a Langfuse `public_key` / `secret_key` / `base_url`. Add an
 `openrouter_key` per project to enable reconciliation. The real config file
 (`config/config.json`) is gitignored; `config/config.example.json` is the
