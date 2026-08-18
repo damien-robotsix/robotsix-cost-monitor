@@ -71,8 +71,6 @@ class Settings(BaseModel):
     reconcile_schedule_hours: float = Field(
         default=24.0, json_schema_extra={"advanced": True}
     )
-    # Per-day subscription call cap for volume-vs-cap monitoring; 0 = disabled/unknown.
-    subscription_call_cap: int = Field(default=0, json_schema_extra={"advanced": True})
     # OpenRouter account remaining-balance threshold in USD. When the remaining
     # balance drops below this value a warning is logged and surfaced in the
     # dashboard. Set to 0 to disable the low-balance check.
