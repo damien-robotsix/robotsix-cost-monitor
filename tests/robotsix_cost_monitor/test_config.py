@@ -49,15 +49,9 @@ def test_settings_defaults() -> None:
     assert s.cache_ttl_seconds == 60
     assert s.reconcile_tolerance_usd == 1.0
     assert s.reconcile_schedule_hours == 24.0
-    assert s.subscription_call_cap == 0
     assert s.log_format == "json"
     assert s.log_level == "INFO"
     assert s.data_dir == Path(".data")
-
-
-def test_settings_subscription_call_cap() -> None:
-    s = Settings(subscription_call_cap=5000)
-    assert s.subscription_call_cap == 5000
 
 
 def test_settings_data_dir_default() -> None:

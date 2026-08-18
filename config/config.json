@@ -14,7 +14,6 @@
     "dashboard_refresh_interval_seconds": 120,
     "reconcile_tolerance_usd": 1.0,
     "reconcile_schedule_hours": 24.0,
-    "subscription_call_cap": 0,
     "low_balance_threshold_usd": 5.0,
     "log_format": "json",
     "log_level": "INFO",

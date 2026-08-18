@@ -86,12 +86,6 @@
           "title": "Reconcile Schedule Hours",
           "type": "number"
         },
-        "subscription_call_cap": {
-          "advanced": true,
-          "default": 0,
-          "title": "Subscription Call Cap",
-          "type": "integer"
-        },
         "low_balance_threshold_usd": {
           "advanced": true,
           "default": 5.0,

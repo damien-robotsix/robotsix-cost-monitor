@@ -91,7 +91,6 @@ def _proj(
 
 def _config(
     ttl: int = 10,
-    subscription_call_cap: int = 0,
     data_dir: Path | None = None,
     registry_base_url: str = "",
     **settings_kwargs: Any,
@@ -99,7 +98,6 @@ def _config(
     """Build a ``Config`` with optional Settings overrides."""
     merged: dict[str, Any] = {
         "cache_ttl_seconds": ttl,
-        "subscription_call_cap": subscription_call_cap,
         "registry_base_url": registry_base_url,
     }
     if data_dir is not None:
@@ -142,7 +140,7 @@ def _mock_client(**overrides: object) -> Mock:
 def _svc(*projects: RegistryProject, **config_kwargs: Any) -> CostService:
     """CostService whose LangfuseClient instances are all mocks.
 
-    ``config_kwargs`` are forwarded to ``_config`` (e.g. ``subscription_call_cap``).
+    ``config_kwargs`` are forwarded to ``_config`` (e.g. ``cache_ttl_seconds``).
     """
     cfg = _config(**config_kwargs)
     registry = Mock(spec=RegistryClient)

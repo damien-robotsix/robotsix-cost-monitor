@@ -55,7 +55,7 @@ Config                       # top-level: settings
       registry_api_key, registry_poll_interval_seconds,
       default_window_hours, cache_ttl_seconds,
       dashboard_refresh_interval_seconds, reconcile_tolerance_usd,
-      reconcile_schedule_hours, subscription_call_cap,
+      reconcile_schedule_hours,
       low_balance_threshold_usd, data_dir, log_format, log_level
 ```
 

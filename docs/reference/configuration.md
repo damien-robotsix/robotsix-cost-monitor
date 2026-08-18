@@ -35,7 +35,6 @@ project list in the config file.
 | `dashboard_refresh_interval_seconds` | `int` | `120` | Interval (seconds) between background dashboard cache-refresh runs that keep cost aggregates precomputed so the frontend never blocks on a live Langfuse fetch. Set to `0` to disable the periodic refresh loop. |
 | `reconcile_tolerance_usd` | `float` | `1.0` | Maximum allowed drift (USD) between OpenRouter and Langfuse costs before reconciliation is flagged. |
 | `reconcile_schedule_hours` | `float` | `24.0` | Interval in hours between automatic reconciliation runs. Set to `0` to disable scheduled reconciliation. |
-| `subscription_call_cap` | `int` | `0` | Per-day cap on subscription-triggered calls. Set to `0` to disable the cap. |
 | `low_balance_threshold_usd` | `float` | `5.0` | OpenRouter account remaining-balance threshold in USD. When the remaining balance drops below this value during reconciliation, a warning is logged and a "low bal" pill is shown in the dashboard. Set to `0` to disable the low-balance check. |
 | `log_format` | `str` | `"json"` | Structured log output format. `"json"` for production ingestion; `"console"` for coloured human-readable output. |
 | `log_level` | `str` | `"INFO"` | Minimum log level for all loggers. Set to `"DEBUG"` for verbose diagnostics. |
