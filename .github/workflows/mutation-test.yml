@@ -28,13 +28,8 @@ jobs:
           cache-python: true
           python-version: "3.14"
       - run: uv sync --locked --group dev
-      - run: uv run mutmut run --no-progress || true
-      - run: uv run mutmut report
-      - run: uv run mutmut html
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: mutmut-html-report
-          path: html/
+      - run: uv run mutmut run || true
+      - run: uv run mutmut results
       - run: |
           SCORE=$(uv run mutmut results | tail -1 | grep -oP '\d+\.\d+' || echo "N/A")
           echo "### Mutation score: ${SCORE}%" >> "$GITHUB_STEP_SUMMARY"
