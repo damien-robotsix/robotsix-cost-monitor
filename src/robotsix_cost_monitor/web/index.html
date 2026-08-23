@@ -8,10 +8,10 @@
   <link rel="stylesheet" href="/static/dashboard.css" />
 </head>
 <body>
-  <header>
-    <h1>cost monitor</h1>
-    <div class="controls">
-      <a href="/settings" class="nav-link">settings</a>
+  <div id="appshell-root"></div>
+
+  <main>
+    <div class="controls-bar">
       <label>project
         <select id="project"><option value="all">all components</option></select>
       </label>
@@ -27,11 +27,8 @@
         </select>
       </label>
       <button id="refresh" title="refresh">↻</button>
-
     </div>
-  </header>
 
-  <main>
     <div id="recon-banner" class="banner" hidden></div>
     <section class="cards" id="summary-cards"></section>
 
@@ -67,6 +64,16 @@
   </main>
 
   <footer><span id="status"></span></footer>
+  <script type="module">
+    import { mountAppShell } from "/static/robotsix-ui/vanilla.js";
+    mountAppShell(document.getElementById("appshell-root"), {
+      brand: "cost monitor",
+      navItems: [
+        { label: "Dashboard", href: "/", active: true, icon: "📊" },
+        { label: "Settings", href: "/settings", icon: "⚙️" }
+      ]
+    });
+  </script>
   <script type="module" src="/static/dashboard.js"></script>
 </body>
 </html>
