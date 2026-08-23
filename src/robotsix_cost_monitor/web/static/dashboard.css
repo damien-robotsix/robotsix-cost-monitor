@@ -33,43 +33,19 @@
   --bad: var(--rsu-color-error);
 }
 
-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border);
-  background: var(--panel);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-header h1 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: .5px;
-}
-.controls {
+/* Filter controls bar — sits at the top of <main>, below the AppShell. */
+.controls-bar {
   display: flex;
   gap: 14px;
   align-items: center;
+  margin-bottom: 18px;
 }
-.controls label {
+.controls-bar label {
   color: var(--muted);
   font-size: 12px;
   display: flex;
   gap: 6px;
   align-items: center;
-}
-.nav-link {
-  color: var(--accent);
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 500;
-}
-.nav-link:hover {
-  text-decoration: underline;
 }
 select,
 button {
@@ -107,7 +83,7 @@ main {
   color: var(--muted);
   font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: .5px;
+  letter-spacing: 0.5px;
 }
 .card .value {
   font-size: 26px;
@@ -130,7 +106,7 @@ main {
   font-size: 13px;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: .5px;
+  letter-spacing: 0.5px;
 }
 .panel-head {
   display: flex;
@@ -248,6 +224,13 @@ main {
 .recon-row:last-child {
   border-bottom: none;
 }
+.muted {
+  color: var(--muted);
+}
+.ok {
+  color: #6ee7b7;
+  font-size: 12px;
+}
 .recon-row .ok {
   color: var(--good);
 }
@@ -285,9 +268,6 @@ canvas {
   display: block;
 }
 
-.muted {
-  color: var(--muted);
-}
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
@@ -325,10 +305,6 @@ canvas {
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
-}
-.ok {
-  color: #6ee7b7;
-  font-size: 12px;
 }
 .bad {
   color: #ff8a8a;

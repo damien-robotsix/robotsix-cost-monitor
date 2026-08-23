@@ -7,15 +7,17 @@
   <link rel="stylesheet" href="/static/robotsix-ui/style.css" />
 </head>
 <body>
-  <header>
-    <h1>settings</h1>
-    <div class="controls">
-      <a href="/" class="nav-link">← dashboard</a>
-    </div>
-  </header>
+  <div id="appshell-root"></div>
   <div id="settings-root"></div>
   <script type="module">
-    import { mountConfigPanel } from "/static/robotsix-ui/vanilla.js";
+    import { mountAppShell, mountConfigPanel } from "/static/robotsix-ui/vanilla.js";
+    mountAppShell(document.getElementById("appshell-root"), {
+      brand: "cost monitor",
+      navItems: [
+        { label: "Dashboard", href: "/", icon: "📊" },
+        { label: "Settings", href: "/settings", active: true, icon: "⚙️" }
+      ]
+    });
     mountConfigPanel(document.getElementById("settings-root"), { title: "Settings" });
   </script>
 </body>

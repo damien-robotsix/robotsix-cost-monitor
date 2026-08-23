@@ -178,8 +178,21 @@ def test_index_served() -> None:
     r = _empty_app().get("/")
     assert r.status_code == 200
     assert "cost monitor" in r.text
+    # The AppShell is mounted into this container element.
+    assert 'id="appshell-root"' in r.text
     # The dashboard renders the last reconcile into this element on load.
     assert 'id="recon-when"' in r.text
+
+
+def test_settings_served() -> None:
+    r = _empty_app().get("/settings")
+    assert r.status_code == 200
+    assert "settings" in r.text.lower()
+    # The AppShell and ConfigPanel are mounted on the settings page.
+    assert 'id="appshell-root"' in r.text
+    assert 'id="settings-root"' in r.text
+    assert "mountAppShell" in r.text
+    assert "mountConfigPanel" in r.text
 
 
 def test_reconcile_last_served_from_disk(
