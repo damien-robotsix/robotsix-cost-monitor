@@ -1,4 +1,4 @@
-import { $, API, QS, esc, fmt, getJSON, setStatus } from './shared.js';
+import { $, API, esc, fmt, getJSON, QS, setStatus } from './shared.js';
 
 /**
  * @typedef {object} ProjectInfo
@@ -318,7 +318,7 @@ export function renderReconcile(rows) {
 export function renderReconBanner(last) {
   const el = $('recon-banner');
   if (!el) return;
-  if (!last || last.status !== 'warning') {
+  if (last?.status !== 'warning') {
     el.hidden = true;
     return;
   }

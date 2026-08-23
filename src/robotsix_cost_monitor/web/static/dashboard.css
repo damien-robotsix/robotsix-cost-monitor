@@ -83,7 +83,7 @@ main {
   color: var(--muted);
   font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: .5px;
+  letter-spacing: 0.5px;
 }
 .card .value {
   font-size: 26px;
@@ -106,7 +106,7 @@ main {
   font-size: 13px;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: .5px;
+  letter-spacing: 0.5px;
 }
 .panel-head {
   display: flex;
@@ -224,6 +224,13 @@ main {
 .recon-row:last-child {
   border-bottom: none;
 }
+.muted {
+  color: var(--muted);
+}
+.ok {
+  color: #6ee7b7;
+  font-size: 12px;
+}
 .recon-row .ok {
   color: var(--good);
 }
@@ -261,9 +268,6 @@ canvas {
   display: block;
 }
 
-.muted {
-  color: var(--muted);
-}
 .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12px;
@@ -301,10 +305,6 @@ canvas {
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
-}
-.ok {
-  color: #6ee7b7;
-  font-size: 12px;
 }
 .bad {
   color: #ff8a8a;
