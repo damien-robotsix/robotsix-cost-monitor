@@ -65,6 +65,15 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
+## [0.6.0](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.5.1...v0.6.0) (2026-08-23)
+
+
+### Features
+
+* Adopt the shared AppShell navigation and align @robotsix/ui to v0.1.40 (cost-monitor) (20260823T113727Z-adopt-the-shared-appshell-navigation-and-d106) ([#515](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/515)) ([97790f3](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/97790f3daa38f3eb9a604f42d300ad99182ddf86))
+* Config field subscription_call_cap is declared but never consumed — remove or implement the volume-vs-cap monitoring logic (20260817T222631Z-config-field-subscription-call-cap-is-de-0d40) ([#506](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/506)) ([84556d7](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/84556d7dd7ee36fa6e1f49c3529b17f60e2eea8b))
+* Cost-monitor should detect and report stalled pending tickets (20260816T203446Z-cost-monitor-should-detect-and-report-st-35e7) ([#508](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/508)) ([492cc2b](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/492cc2b36284a3b4f2a6f2a18bd2e03023e2d7fb))
+
 ## [0.5.1] (2026-08-16)
 
 ### Features
