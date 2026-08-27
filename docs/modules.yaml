@@ -199,6 +199,7 @@ modules:
     description: robotsix-mill periodic task definitions and mill configuration
     paths:
       - .robotsix-mill/config.yaml
+      - .robotsix-mill/periodic/agent_check.yaml
       - .robotsix-mill/periodic/audit.yaml
       - .robotsix-mill/periodic/bc_check.yaml
       - .robotsix-mill/periodic/changelog_autofill.yaml
