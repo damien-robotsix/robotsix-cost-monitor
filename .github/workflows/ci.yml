@@ -54,27 +54,20 @@ jobs:
         with:
           fail-on-severity: moderate
 
-  dependency-hygiene:
-    name: Dependency hygiene
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    env:
-      UV_CACHE_DIR: .cache/uv
-      UV_MALWARE_CHECK: "1"
-    steps:
-      - uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          egress-policy: audit
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-        with:
-          enable-cache: true
-          cache-python: true
-          python-version: "3.14"
-      - run: uv sync --locked --all-extras
-      - run: uv run --with deptry deptry .
+  python-ci:
+    name: Python CI
+    # Minimal permissions: only need to read repository contents
+    permissions:
+      contents: read
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-ci.yml@a6378accaf26c75b12fac324c3056255647c107b # main
+    with:
+      python-version: "3.14"
+      install-extras: ""
+      cov-package: "robotsix_cost_monitor"
+      coverage-threshold: "80"
+      run-deptry: true
+      run-audit: true
+      run-bandit: true
 
   module-validation:
     name: Module taxonomy validation
@@ -139,55 +132,6 @@ jobs:
         with:
           persist-credentials: false
       - run: python3 scripts/validate_chat_skill_table.py
-
-  vulnerability-audit:
-    name: Vulnerability audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    env:
-      UV_CACHE_DIR: .cache/uv
-      UV_MALWARE_CHECK: "1"
-    steps:
-      - uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          egress-policy: audit
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-        with:
-          enable-cache: true
-          cache-python: false
-      - run: uv sync --locked
-      - run: uv audit --frozen
-
-  ci:
-    name: CI (Python tests)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      security-events: write  # for SARIF upload (reserved; not used in air-gapped CI)
-    env:
-      UV_CACHE_DIR: .cache/uv
-      UV_MALWARE_CHECK: "1"
-    steps:
-      - uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          egress-policy: audit
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-        with:
-          enable-cache: true
-          cache-python: true
-          python-version: "3.14"
-      - run: uv sync --locked --group dev
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run mypy src/ tests/
-      - run: uv run pytest --cov=robotsix_cost_monitor --cov-report=term-missing
 
   dead-code:
     name: Dead code detection
