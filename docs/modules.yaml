@@ -177,6 +177,7 @@ modules:
   - id: github-config
     description: GitHub templates, Dependabot config, and CI/CD workflows
     paths:
+      - .github/actions/python-setup/action.yml
       - .github/ISSUE_TEMPLATE/bug_report.yml
       - .github/ISSUE_TEMPLATE/config.yml
       - .github/ISSUE_TEMPLATE/feature_request.yml
