@@ -55,7 +55,7 @@ class Settings(BaseModel):
         ),
     )
     server_host: str = Field(
-        default="0.0.0.0",  # noqa: S104
+        default="0.0.0.0",  # noqa: S104  # nosec B104
         json_schema_extra={"advanced": True},
         description="Bind address for the dashboard web server.",
     )
