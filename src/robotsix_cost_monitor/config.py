@@ -54,8 +54,12 @@ class Settings(BaseModel):
             "HTTP Basic auth — REQUIRED when exposed via the gateway (see AuthConfig)."
         ),
     )
+    # Binding every interface is deliberate: the dashboard serves from inside a
+    # container behind the central-deploy gateway, and a service that binds
+    # 127.0.0.1 there is unreachable through it — the container's own
+    # healthcheck still passes, so it fails as a 502 rather than a crash.
     server_host: str = Field(
-        default="0.0.0.0",  # noqa: S104  # nosec B104
+        default="0.0.0.0",  # noqa: S104  # nosec B104 - see above
         json_schema_extra={"advanced": True},
         description="Bind address for the dashboard web server.",
     )

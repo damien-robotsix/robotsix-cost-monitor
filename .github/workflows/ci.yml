@@ -56,41 +56,20 @@ jobs:
 
   python-ci:
     name: Python CI
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    env:
-      UV_CACHE_DIR: .cache/uv
-      UV_MALWARE_CHECK: "1"
-    steps:
-      - uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
-        with:
-          egress-policy: audit
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
-        with:
-          enable-cache: true
-          cache-python: true
-          python-version: "3.14"
-      - run: uv sync --locked
-      - name: deptry (dependency hygiene)
-        run: uv run --with deptry deptry .
-      - name: Dependency audit (CVE scan)
-        run: |
-          if uv audit --help >/dev/null 2>&1; then
-            uv audit --frozen --preview
-          else
-            uv export --frozen --no-hashes | grep -v '^-e \.' | uv run --with pip-audit pip-audit -r /dev/stdin
-          fi
-      - run: uv run ruff check --output-format=github .
-      - run: uv run ruff format --check --diff .
-      - run: uv run mypy src/ --strict
-      - name: Bandit (security SAST)
-        run: uv run --with 'bandit[toml]' bandit -c pyproject.toml -r src/ --severity-level medium
-      - run: uv run --with pytest-xdist --with pytest-cov pytest tests/ -n auto --dist loadscope -x --tb=long --cov=robotsix_cost_monitor --cov-fail-under=80 --cov-report=term-missing
+    # Pin must be at/after robotsix-github-workflows#77, which reverted the
+    # `./.github/actions/python-setup` composite action: a relative `uses:`
+    # inside a reusable workflow resolves against the CALLER's checkout, so
+    # pins in the 042c0c2..#77 range fail with "Can't find 'action.yml' ...
+    # under .github/actions/python-setup" for every consumer repo.
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-ci.yml@513c343db7ee0164e60bf31412d5fcf9af17417b # main
+    with:
+      python-version: "3.14"
+      install-extras: ""
+      cov-package: "robotsix_cost_monitor"
+      coverage-threshold: "80"
+      run-deptry: true
+      run-audit: true
+      run-bandit: true
 
   module-validation:
     name: Module taxonomy validation
