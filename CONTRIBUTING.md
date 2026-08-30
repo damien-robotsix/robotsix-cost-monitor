@@ -73,11 +73,7 @@ hook.
    ```
 
 3. Push and open a PR. CI will run the full matrix.
-4. If you touched files outside `tests/`, `.github/`, or `CHANGELOG.md`,
-   add a changelog entry under `## [Unreleased]` with the appropriate
-   category header (`### Added`, `### Changed`, `### Fixed`, etc.) in
-   `CHANGELOG.md`. Release-please will later categorize and move entries
-   into versioned sections.
+4. Commit subjects and PR titles must be conventional (`feat:`/`fix:`/`chore:`/`docs:`/`refactor:`/`test:`/`ci:`); release-please generates `CHANGELOG.md` automatically. Do **not** manually edit `CHANGELOG.md` — it is managed entirely by release-please.
 
 ## Git-dependency upgrade process
 
