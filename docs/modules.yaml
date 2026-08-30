@@ -145,7 +145,6 @@ modules:
       - AGENT.md
       - ARCHITECTURE.md
       - CHANGELOG.md
-      - changelog.d/*.md
       - release-please-config.json
       - .release-please-manifest.json
       - CONTRIBUTING.md
@@ -167,10 +166,6 @@ modules:
       - uv.lock
       - vitest.config.js
       - vulture_whitelist.py
-      # Glob rather than one entry per fragment: every towncrier newsfragment
-      # would otherwise need a manual registration, which is a whole class of
-      # busywork tickets. robotsix-auto-mail moved to a glob for this reason.
-      - changelog.d/*.md
       - checklist_results.md
       - docs/modules.yaml
 
@@ -202,7 +197,6 @@ modules:
       - .robotsix-mill/periodic/agent_check.yaml
       - .robotsix-mill/periodic/audit.yaml
       - .robotsix-mill/periodic/bc_check.yaml
-      - .robotsix-mill/periodic/changelog_autofill.yaml
       - .robotsix-mill/periodic/credit_balance.yaml
       - .robotsix-mill/periodic/completeness_check.yaml
       - .robotsix-mill/periodic/copy_paste.yaml

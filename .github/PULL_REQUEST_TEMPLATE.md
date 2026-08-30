@@ -12,4 +12,3 @@
 - [ ] Tests cover the new behaviour, and `uv run pytest` passes locally
 - [ ] `uv run ruff check . && uv run ruff format --check .` passes
 - [ ] `uv run mypy src/` passes (no new type errors)
-- [ ] If the change affects runtime behaviour, I added a changelog entry under `## [Unreleased]` with the appropriate category header (`### Added`, `### Changed`, `### Fixed`, etc.) in `CHANGELOG.md`
