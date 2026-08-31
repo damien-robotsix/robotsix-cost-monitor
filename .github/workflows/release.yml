@@ -20,7 +20,7 @@ jobs:
       contents: read
       id-token: write  # generate provenance attestation OIDC token
       attestations: write  # write build provenance attestation
-    uses: ./.github/workflows/sbom.yml
+    uses: $/sbom.yml
     with:
       attest: true
 
