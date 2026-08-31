@@ -23,6 +23,7 @@ from .config import Config, load_config, resolve_registry_api_key
 from .metrics import cache_warm_failure, cache_warm_success
 from .reconcile import reconcile_all
 from .routes import register_exception_handlers, router
+from .routes_config import router as config_router
 from .service import CostService
 
 _WEB = Path(__file__).resolve().parent / "web"
@@ -386,6 +387,7 @@ def create_app(config: Config | None = None) -> FastAPI:
 
     register_exception_handlers(app)
     app.include_router(router)
+    app.include_router(config_router)
 
     if (_WEB / "static").is_dir():
         app.mount("/static", StaticFiles(directory=_WEB / "static"), name="static")
