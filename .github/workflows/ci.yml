@@ -162,7 +162,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      SKIP: ruff,ruff-format,mypy,vulture,detect-secrets,uv-lock-check,config-schema,conventional-pre-commit,markdownlint-cli2,hadolint,codespell
+      SKIP: ruff,ruff-format,mypy,vulture,detect-secrets,uv-lock-check,config-schema,conventional-pre-commit,markdownlint-cli2,hadolint,codespell,actionlint
     steps:
       - uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
         with:
@@ -212,7 +212,7 @@ jobs:
         with:
           enable-cache: true
           cache-python: true
-      - run: uvx zizmor@1.27.0 --min-severity medium .github/workflows/
+      - run: uvx zizmor@1.30.0 --min-severity medium .github/workflows/
 
   sbom:
     name: Generate SBOM
@@ -220,7 +220,7 @@ jobs:
     permissions:
       contents: read
       actions: read  # download build artifacts from prior jobs
-    uses: ./.github/workflows/sbom.yml
+    uses: $/.github/workflows/sbom.yml
     with:
       attest: false
 
