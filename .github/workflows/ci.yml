@@ -220,7 +220,7 @@ jobs:
     permissions:
       contents: read
       actions: read  # download build artifacts from prior jobs
-    uses: $/.github/workflows/sbom.yml
+    uses: ./.github/workflows/sbom.yml
     with:
       attest: false
 
