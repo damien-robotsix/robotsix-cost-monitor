@@ -65,6 +65,13 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
+## [0.6.1](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.6.0...v0.6.1) (2026-09-03)
+
+
+### Documentation
+
+* Document frontend CI requirements and troubleshooting for developers (20260831T132119Z-document-frontend-ci-requirements-and-tr-3c00) ([#526](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/526)) ([437928a](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/437928acae0031234e6f3800c94163caa23f3e67))
+
 ## [0.6.0](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.5.1...v0.6.0) (2026-08-23)
 
 
