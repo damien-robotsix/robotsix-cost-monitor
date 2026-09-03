@@ -118,7 +118,14 @@ testpaths = ["tests"]
 pythonpath = ["."]
 addopts = ["--strict-markers", "--strict-config"]
 xfail_strict = true
-filterwarnings = ["error"]
+filterwarnings = [
+    "error",
+    # Starlette's TestClient accesses the deprecated ``anyio.abc.BlockingPortal``
+    # re-export, which emits a DeprecationWarning on newer anyio releases. This
+    # originates in third-party code and is out of our control, so downgrade it
+    # from an error to an ignore.
+    "ignore:.*BlockingPortal.*:DeprecationWarning",
+]
 
 [tool.mutmut]
 source_paths = ["src/"]
