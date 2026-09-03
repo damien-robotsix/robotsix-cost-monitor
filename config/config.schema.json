@@ -29,14 +29,12 @@
           "description": "HTTP Basic auth \u2014 REQUIRED when exposed via the gateway (see AuthConfig)."
         },
         "server_host": {
-          "advanced": true,
           "default": "0.0.0.0",
           "description": "Bind address for the dashboard web server.",
           "title": "Server Host",
           "type": "string"
         },
         "server_port": {
-          "advanced": true,
           "default": 8080,
           "description": "Port for the dashboard web server.",
           "title": "Server Port",
@@ -57,63 +55,54 @@
           "writeOnly": true
         },
         "registry_poll_interval_seconds": {
-          "advanced": true,
           "default": 300,
           "description": "Seconds between registry re-polls (0 = only at startup + manual refresh).",
           "title": "Registry Poll Interval Seconds",
           "type": "integer"
         },
         "default_window_hours": {
-          "advanced": true,
           "default": 168,
           "description": "Default cost-aggregation window in hours (e.g. 168 = 7 days).",
           "title": "Default Window Hours",
           "type": "integer"
         },
         "cache_ttl_seconds": {
-          "advanced": true,
           "default": 60,
           "description": "Seconds before cached Langfuse data is considered stale and re-fetched.",
           "title": "Cache Ttl Seconds",
           "type": "integer"
         },
         "dashboard_refresh_interval_seconds": {
-          "advanced": true,
           "default": 120,
           "description": "Background cache-refresh interval \u2014 keeps dashboard aggregates precomputed so the frontend never blocks on a live Langfuse fetch. 0 disables.",
           "title": "Dashboard Refresh Interval Seconds",
           "type": "integer"
         },
         "reconcile_tolerance_usd": {
-          "advanced": true,
           "default": 1.0,
           "description": "Maximum allowed difference in USD between provider cost and traced cost before reconciliation is flagged as out of tolerance.",
           "title": "Reconcile Tolerance Usd",
           "type": "number"
         },
         "reconcile_schedule_hours": {
-          "advanced": true,
           "default": 24.0,
           "description": "Auto-run reconciliation every N hours (0 disables; default daily). The stored result drives the dashboard warning banner.",
           "title": "Reconcile Schedule Hours",
           "type": "number"
         },
         "subscription_call_cap": {
-          "advanced": true,
           "default": 0,
           "description": "Per-day subscription call cap for volume-vs-cap monitoring; 0 = disabled/unknown.",
           "title": "Subscription Call Cap",
           "type": "integer"
         },
         "low_balance_threshold_usd": {
-          "advanced": true,
           "default": 5.0,
           "description": "OpenRouter account remaining-balance threshold in USD. When the remaining balance drops below this value a warning is logged and surfaced in the dashboard. Set to 0 to disable the low-balance check.",
           "title": "Low Balance Threshold Usd",
           "type": "number"
         },
         "data_dir": {
-          "advanced": true,
           "default": ".data",
           "description": "Runtime data directory for persistence (.data by default; /data in containers).",
           "format": "path",
@@ -121,28 +110,24 @@
           "type": "string"
         },
         "log_format": {
-          "advanced": true,
           "default": "json",
           "description": "Structured log output format: \"console\" or \"json\".",
           "title": "Log Format",
           "type": "string"
         },
         "log_level": {
-          "advanced": true,
           "default": "INFO",
           "description": "Minimum log level for all loggers.",
           "title": "Log Level",
           "type": "string"
         },
         "mill_base_url": {
-          "advanced": true,
           "default": "",
           "description": "Base URL of the robotsix-mill board API (e.g. \"http://mill:8080\"). When empty, stuck-ticket detection is disabled.",
           "title": "Mill Base Url",
           "type": "string"
         },
         "mill_api_key": {
-          "advanced": true,
           "default": "",
           "description": "API key for authenticating to the mill board API. When deployed by robotsix-central-deploy with the robotsix.deploy.access: \"agent\" label, leave empty \u2014 the DEPLOY_API_KEY env var is used as a fallback.",
           "format": "password",
@@ -151,14 +136,12 @@
           "writeOnly": true
         },
         "stuck_ticket_threshold_hours": {
-          "advanced": true,
           "default": 48,
           "description": "Hours a ticket may remain in a non-terminal state before it is flagged as stuck. 0 disables stuck-ticket detection.",
           "title": "Stuck Ticket Threshold Hours",
           "type": "integer"
         },
         "stuck_ticket_check_interval_seconds": {
-          "advanced": true,
           "default": 600,
           "description": "Seconds between stuck-ticket checks (default 600 = 10 minutes).",
           "title": "Stuck Ticket Check Interval Seconds",
