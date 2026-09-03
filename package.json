@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.9",
-    "@robotsix/ui": "github:damien-robotsix/robotsix-ui#v0.1.33",
+    "@robotsix/ui": "github:damien-robotsix/robotsix-ui#v0.1.48",
     "@vitest/coverage-v8": "4.1.11",
     "jsdom": "30.0.1",
     "typescript": "7.0.2",
