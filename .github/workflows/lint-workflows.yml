@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   lint-workflows:
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/lint-workflows.yml@293d6295e4200fc0ee4a6ded19dc2f098c652869  # main
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/lint-workflows.yml@6d737634940626eed0bec995c8e462892730e610  # main
     permissions:
       contents: read
     with:
