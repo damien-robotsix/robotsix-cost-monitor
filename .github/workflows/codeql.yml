@@ -13,7 +13,7 @@ permissions:
 jobs:
   codeql:
     name: CodeQL analysis
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/codeql.yml@86dae89b637dad27ddba0aaa5f9430e083288365  # main
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/codeql.yml@6d737634940626eed0bec995c8e462892730e610  # main
     permissions:
       # security-events: write needed to upload CodeQL SARIF results
       contents: read
