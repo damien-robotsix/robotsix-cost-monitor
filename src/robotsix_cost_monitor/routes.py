@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, NamedTuple, cast
 
 import structlog
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from robotsix_http import ExternalHTTPError
@@ -82,10 +82,20 @@ def resolve_hours(
 
 
 def project_window(
+    response: Response,
     project: str = Depends(resolve_project),
     hours: int = Depends(resolve_hours),
 ) -> ProjectWindow:
-    """Composite dependency: validated project slug + resolved window hours."""
+    """Composite dependency: validated project slug + resolved window hours.
+
+    Advertises the resolved window on every windowed endpoint via the
+    ``X-Effective-Hours`` response header, so a caller can always tell which
+    window was actually used — the requested value, the config default (when
+    ``hours`` is omitted), or the clamped ceiling — without inferring it from
+    the payload.  Dict-shaped endpoints additionally echo it in-body as
+    ``effective_hours``.
+    """
+    response.headers["X-Effective-Hours"] = str(hours)
     return ProjectWindow(project=project, hours=hours)
 
 
@@ -217,8 +227,8 @@ and no valid credentials are supplied.  `/health` is always exempt.
 ## Read endpoints
 
 All read endpoints accept an optional `?project=<scope>` query parameter
-(default `all`) and an optional `?hours=<n>` window (default 168 h, capped
-at 168).
+(default `all`) and an optional `?hours=<n>` time window (see
+[Time window](#time-window) below).
 
 `<scope>` resolves at either level:
 
@@ -235,6 +245,32 @@ config is monitored automatically, so do not assume a fixed list; call
 An unmatched `<scope>` (stale or mistyped slug) returns `404` with error
 code `PROJECT_NOT_FOUND` — distinct from a valid-but-empty project and from
 `?project=all` which always returns `200`.
+
+## Time window
+
+Every windowed endpoint accepts `?hours=<n>`, the number of hours of history
+to report on:
+
+- **Default (omitted or `hours=0`)** — the server's configured default
+  window is used (currently **168 h** = 7 days).
+- **Ceiling** — the maximum accepted window is **168 h**. A request for
+  `hours` **greater than 168** is *rejected*, not silently clamped: the
+  response is `422` with error code `VALIDATION_ERROR` and a field-level
+  message naming the limit. `hours` below `0` is rejected the same way.
+- **Config-default clamping** — only the *server-side* default is clamped to
+  the 168 h ceiling if an operator misconfigures it; a client-supplied value
+  is always either honoured (0–168) or rejected.
+
+To remove any ambiguity about which window was applied, every windowed
+response advertises the resolved value:
+
+- **`X-Effective-Hours`** response header — present on *all* windowed
+  endpoints (including the list-shaped breakdowns and trends).
+- **`effective_hours`** JSON field — additionally included in the body of
+  the object-shaped endpoints (`GET /api/summary`, `GET /api/highlights`).
+
+Read the effective window from either place rather than inferring it from
+trend bucket sizes.
 
 ### Cost summaries
 
@@ -338,6 +374,7 @@ async def summary(
 ) -> dict[str, Any]:
     """GET /api/summary — total cost and per-project totals for the window."""
     result = await service.summary(pw.project, pw.hours, backend)
+    result["effective_hours"] = pw.hours
     lu = service.last_updated
     if lu is not None:
         result["last_updated"] = lu.isoformat()
@@ -411,7 +448,9 @@ async def highlights(
     Accepts an optional ``backend`` query parameter to filter results to
     a specific backend (e.g. ``openrouter``).  Defaults to ``all``.
     """
-    return await service.highlights(pw.project, pw.hours, backend)
+    result = await service.highlights(pw.project, pw.hours, backend)
+    result["effective_hours"] = pw.hours
+    return result
 
 
 @router.get("/api/reconcile")

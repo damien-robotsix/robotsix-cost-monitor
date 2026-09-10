@@ -499,6 +499,96 @@ def test_highlights_with_backend(client: TestClient) -> None:
     client.app.state.service.highlights.assert_called_once_with("all", 24, "openrouter")  # type: ignore[attr-defined]
 
 
+def test_summary_body_includes_effective_hours(client: TestClient) -> None:
+    """The summary body echoes the resolved window as ``effective_hours``."""
+    r = client.get("/api/summary?project=all&hours=24")
+    assert r.status_code == 200
+    assert r.json()["effective_hours"] == 24
+
+
+def test_summary_effective_hours_defaults_to_config(client: TestClient) -> None:
+    """Omitting ``hours`` resolves to the config default in ``effective_hours``."""
+    r = client.get("/api/summary?project=all")
+    assert r.status_code == 200
+    assert r.json()["effective_hours"] == 168
+
+
+def test_highlights_body_includes_effective_hours(client: TestClient) -> None:
+    r = client.get("/api/highlights?hours=48")
+    assert r.status_code == 200
+    assert r.json()["effective_hours"] == 48
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/summary?hours=24",
+        "/api/by-agent?hours=24",
+        "/api/by-model?hours=24",
+        "/api/backend-trend?hours=24",
+        "/api/trend?hours=24",
+        "/api/highlights?hours=24",
+    ],
+)
+def test_windowed_endpoints_advertise_effective_hours_header(
+    client: TestClient, path: str
+) -> None:
+    """Every windowed endpoint (list- or dict-shaped) sets X-Effective-Hours."""
+    r = client.get(path)
+    assert r.status_code == 200
+    assert r.headers["X-Effective-Hours"] == "24"
+
+
+def test_effective_hours_header_reports_default(client: TestClient) -> None:
+    """When ``hours`` is omitted the header reports the resolved config default."""
+    r = client.get("/api/by-agent")
+    assert r.status_code == 200
+    assert r.headers["X-Effective-Hours"] == "168"
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/summary?hours=169",
+        "/api/by-agent?hours=169",
+        "/api/trend?hours=200000",
+    ],
+)
+def test_hours_above_ceiling_is_rejected_not_clamped(
+    client: TestClient, path: str
+) -> None:
+    """A window above the 168 h ceiling is rejected with a clear 422 error."""
+    r = client.get(path)
+    assert r.status_code == 422
+    body = r.json()
+    assert body["error"]["code"] == "VALIDATION_ERROR"
+    details = body["error"]["details"]
+    assert details[0]["field"] == "query → hours"
+    # The message names the ceiling so the caller knows the limit.
+    assert "168" in details[0]["message"]
+    # The service is never called for a rejected request.
+    client.app.state.service.summary.assert_not_called()  # type: ignore[attr-defined]
+
+
+def test_negative_hours_is_rejected(client: TestClient) -> None:
+    r = client.get("/api/summary?hours=-1")
+    assert r.status_code == 422
+    assert r.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_chat_skill_documents_time_window(client: TestClient) -> None:
+    """The chat-skill doc explains default, ceiling, clamping and feedback."""
+    body = client.get("/chat-skill").text
+    assert "## Time window" in body
+    # Default window is stated explicitly.
+    assert "168" in body
+    # Rejection (not silent clamping) of over-ceiling requests is documented.
+    assert "VALIDATION_ERROR" in body
+    # The feedback mechanisms are documented.
+    assert "X-Effective-Hours" in body
+    assert "effective_hours" in body
+
+
 def test_reconcile_unknown_project_returns_404() -> None:
     """Unknown project slug returns 404 with PROJECT_NOT_FOUND."""
     from robotsix_cost_monitor.exceptions import ProjectNotFoundError
