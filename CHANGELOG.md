@@ -65,6 +65,20 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
+## [0.7.0](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.6.1...v0.7.0) (2026-09-04)
+
+
+### Features
+
+* cost-monitor API: respect or reject hours query parameter with explicit validation (20260904T185151Z-cost-monitor-api-respect-or-reject-hours-6d2c) ([#544](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/544)) ([a38034f](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/a38034fc8310a3a649d168a6411f807ca464a9af))
+
+## [0.6.1](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.6.0...v0.6.1) (2026-09-03)
+
+
+### Documentation
+
+* Document frontend CI requirements and troubleshooting for developers (20260831T132119Z-document-frontend-ci-requirements-and-tr-3c00) ([#526](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/526)) ([437928a](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/437928acae0031234e6f3800c94163caa23f3e67))
+
 ## [0.6.0](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.5.1...v0.6.0) (2026-08-23)
 
 
