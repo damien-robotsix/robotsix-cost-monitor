@@ -10,4 +10,4 @@ jobs:
     permissions:
       contents: read
       security-events: write  # upload vulnerability scan results to the Security tab
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/scan-container.yml@5fdc956e980cfb70ea36e33bc670a0376750dec6  # main
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/scan-container.yml@6d737634940626eed0bec995c8e462892730e610  # main
