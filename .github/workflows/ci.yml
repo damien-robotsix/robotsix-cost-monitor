@@ -193,7 +193,7 @@ jobs:
     # Minimal permissions: only need to read the repository
     permissions:
       contents: read
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/baseline-check.yml@a6378accaf26c75b12fac324c3056255647c107b # main
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/baseline-check.yml@6d737634940626eed0bec995c8e462892730e610 # main
     with:
       has-docker: true
 
