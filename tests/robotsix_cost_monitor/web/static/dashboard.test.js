@@ -381,7 +381,7 @@ describe('loadProjects', () => {
   async function withComponents(components, assert) {
     fixture('<select id="project"></select>');
     const origFetch = globalThis.fetch;
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => components });
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: components }) });
     try {
       await loadProjects();
       assert(/** @type {HTMLSelectElement} */ (document.getElementById('project')));
@@ -762,13 +762,13 @@ describe('refresh', () => {
       if (url.includes('/api/by-agent')) {
         return Promise.resolve({
           ok: true,
-          json: async () => [],
+          json: async () => ({ items: [], total: 0, offset: 0, limit: 100, has_more: false }),
         });
       }
       if (url.includes('/api/by-model')) {
         return Promise.resolve({
           ok: true,
-          json: async () => [],
+          json: async () => ({ items: [], total: 0, offset: 0, limit: 100, has_more: false }),
         });
       }
       if (url.includes('/api/highlights')) {

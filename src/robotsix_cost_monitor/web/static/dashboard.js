@@ -103,7 +103,8 @@ const qs = () =>
  * @returns {Promise<void>}
  */
 export async function loadProjects() {
-  const components = await getJSON(API.COMPONENTS);
+  const page = await getJSON(API.COMPONENTS);
+  const components = page.items;
   const sel = $('project');
   for (const c of components) {
     if (c.projects.length > 1) {
@@ -402,13 +403,16 @@ export async function refresh() {
       backend === 'all'
         ? `${API.TREND}${qs()}`
         : `${API.BACKEND_TREND}${qs()}&${QS.BACKEND}=${encodeURIComponent(backend)}`;
-    const [s, trend, agents, models, hi] = await Promise.all([
+    const [s, trend, agentsPage, modelsPage, hi] = await Promise.all([
       getJSON(`${API.SUMMARY}${qs()}&${QS.BACKEND}=${encodeURIComponent(backend)}`),
       getJSON(trendPath),
       getJSON(`${API.BY_AGENT}${qs()}&${QS.BACKEND}=${encodeURIComponent(backend)}`),
       getJSON(`${API.BY_MODEL}${qs()}`),
       getJSON(`${API.HIGHLIGHTS}${qs()}&${QS.BACKEND}=${encodeURIComponent(backend)}`),
     ]);
+    // /api/by-agent and /api/by-model return a paginated envelope.
+    const agents = agentsPage.items;
+    const models = modelsPage.items;
     populateBackends(models);
     const modelRows =
       backend === 'all'
