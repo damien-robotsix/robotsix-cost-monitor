@@ -8,21 +8,28 @@ import logging
 import logging.config
 from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import structlog
 from asgi_correlation_id import correlation_id
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
+from robotsix_http.fastapi import (
+    DomainError,
+    create_health_router,
+    domain_error_handler,
+    register_exception_handlers,
+)
 
 from robotsix_cost_monitor import __version__
 
 from .clients.mill import MillAPIError, MillClient
 from .clients.registry import RegistryClient
 from .config import Config, load_config, resolve_registry_api_key
+from .exceptions import CostMonitorError
 from .metrics import cache_warm_failure, cache_warm_success
 from .reconcile import reconcile_all
-from .routes import register_exception_handlers, router
+from .routes import router
 from .routes_config import router as config_router
 from .service import CostService
 
@@ -36,6 +43,34 @@ def add_correlation_id(
     if request_id := correlation_id.get(None):
         event_dict["request_id"] = request_id
     return event_dict
+
+
+async def _cost_monitor_error_handler(request: Request, exc: Exception) -> Response:
+    """Render a typed :class:`CostMonitorError` via the canonical envelope.
+
+    Maps the domain exception onto :class:`robotsix_http.fastapi.DomainError`
+    so its ``status_code`` / ``error_code`` drive the shared
+    ``{"error": {"code", "detail"}}`` envelope built by
+    :func:`robotsix_http.fastapi.domain_error_handler`.
+    """
+    err = cast(CostMonitorError, exc)
+    return await domain_error_handler(
+        request,
+        DomainError(err.detail, code=err.error_code, status_code=err.status_code),
+    )
+
+
+def register_error_handlers(app: FastAPI) -> None:
+    """Wire the shared exception-handler suite plus the domain-error adapter.
+
+    Delegates the standard handlers (validation, ``HTTPException``,
+    ``ExternalHTTPError``, catch-all) to
+    :func:`robotsix_http.fastapi.register_exception_handlers`, then registers
+    :func:`_cost_monitor_error_handler` so the typed :class:`CostMonitorError`
+    hierarchy keeps its status/code mapping.
+    """
+    register_exception_handlers(app)
+    app.add_exception_handler(CostMonitorError, _cost_monitor_error_handler)
 
 
 def _configure_logging(log_format: str = "json", log_level: str = "INFO") -> None:
@@ -354,7 +389,6 @@ def create_app(config: Config | None = None) -> FastAPI:
         import binascii
         import hmac
 
-        from fastapi import Request
         from fastapi.responses import PlainTextResponse
 
         _expected = f"{_auth_user}:{_auth_pass}"
@@ -385,7 +419,8 @@ def create_app(config: Config | None = None) -> FastAPI:
             "— safe only on loopback; do not expose via the gateway"
         )
 
-    register_exception_handlers(app)
+    register_error_handlers(app)
+    app.include_router(create_health_router())
     app.include_router(router)
     app.include_router(config_router)
 

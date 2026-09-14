@@ -1,8 +1,11 @@
-"""HTTP route handlers (APIRouter) and exception handlers.
+"""HTTP route handlers (APIRouter).
 
 All route handlers that were previously inline inside ``create_app`` now live
 here, using FastAPI dependency injection to obtain ``Config`` and ``CostService``
 from ``app.state``.
+
+Exception handling and the ``/health`` route are provided by the shared
+:mod:`robotsix_http.fastapi` bootstrap and wired up in :mod:`.app`.
 """
 
 from __future__ import annotations
@@ -10,21 +13,16 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, NamedTuple, cast
 
-import structlog
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query, Request, Response
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
-from robotsix_http import ExternalHTTPError
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi.responses import HTMLResponse, PlainTextResponse
 
 from .aggregations import BackendKind
 from .clients.mill import MillAPIError, MillClient
 from .config import Config
-from .exceptions import CostMonitorError
 from .reconcile import load_last_reconcile, reconcile_all, reconcile_project
 from .service import CostService
 
 _WEB = Path(__file__).resolve().parent / "web"
-logger = structlog.get_logger(__name__)
 
 router = APIRouter()
 
@@ -100,103 +98,8 @@ def project_window(
 
 
 # ---------------------------------------------------------------------------
-# Exception handlers
-# ---------------------------------------------------------------------------
-
-
-async def validation_handler(
-    request: Request, exc: RequestValidationError
-) -> JSONResponse:
-    """Return a consistent 422 envelope with field-level errors."""
-    errors = [
-        {
-            "field": " → ".join(str(loc) for loc in e["loc"] if loc != "body"),
-            "message": e["msg"],
-            "code": e.get("type", "validation_error"),
-        }
-        for e in exc.errors()
-    ]
-    return JSONResponse(
-        status_code=422,
-        content={"error": {"code": "VALIDATION_ERROR", "details": errors}},
-    )
-
-
-async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    """Wrap HTTPException in a consistent JSON envelope."""
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"error": {"code": "HTTP_ERROR", "detail": exc.detail}},
-    )
-
-
-async def cost_monitor_error_handler(
-    request: Request, exc: CostMonitorError
-) -> JSONResponse:
-    """Return a typed cost-monitor error in the consistent JSON envelope."""
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"error": {"code": exc.error_code, "detail": exc.detail}},
-    )
-
-
-async def external_http_error_handler(
-    request: Request, exc: ExternalHTTPError
-) -> JSONResponse:
-    """Return a typed error for robotsix-http exceptions.
-
-    Derives the error code from the exception type so the response
-    envelope matches :func:`cost_monitor_error_handler`.
-    """
-    from robotsix_http import (
-        ExternalAuthError,
-        ExternalRateLimitError,
-        ExternalServiceError,
-    )
-
-    if isinstance(exc, ExternalAuthError):
-        code = "EXTERNAL_AUTH_ERROR"
-    elif isinstance(exc, ExternalRateLimitError):
-        code = "RATE_LIMITED"
-    elif isinstance(exc, ExternalServiceError):
-        code = "EXTERNAL_SERVICE_ERROR"
-    else:
-        code = "EXTERNAL_SERVICE_ERROR"
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"error": {"code": code, "detail": str(exc)}},
-    )
-
-
-async def unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
-    """Catch-all: log the full traceback, return sanitized 500."""
-    logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
-    return JSONResponse(
-        status_code=500,
-        content={
-            "error": {"code": "INTERNAL_ERROR", "detail": "Internal Server Error"}
-        },
-    )
-
-
-def register_exception_handlers(app: FastAPI) -> None:
-    """Wire the exception handlers onto *app*."""
-    app.add_exception_handler(RequestValidationError, validation_handler)  # type: ignore[arg-type]
-    app.add_exception_handler(HTTPException, http_exception_handler)  # type: ignore[arg-type]
-    app.add_exception_handler(CostMonitorError, cost_monitor_error_handler)  # type: ignore[arg-type]
-    app.add_exception_handler(ExternalHTTPError, external_http_error_handler)
-    app.add_exception_handler(Exception, unhandled_handler)
-
-
-# ---------------------------------------------------------------------------
 # Route handlers (was inside create_app)
 # ---------------------------------------------------------------------------
-
-
-@router.get("/health")
-def health() -> dict[str, Any]:
-    """GET /health — health check returning status."""
-    return {"status": "ok"}
 
 
 @router.get("/readyz")
@@ -255,7 +158,7 @@ to report on:
   window is used (currently **168 h** = 7 days).
 - **Ceiling** — the maximum accepted window is **168 h**. A request for
   `hours` **greater than 168** is *rejected*, not silently clamped: the
-  response is `422` with error code `VALIDATION_ERROR` and a field-level
+  response is `422` with error code `validation_error` and a field-level
   message naming the limit. `hours` below `0` is rejected the same way.
 - **Config-default clamping** — only the *server-side* default is clamped to
   the 168 h ceiling if an operator misconfigures it; a client-supplied value

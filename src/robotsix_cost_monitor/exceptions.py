@@ -38,7 +38,7 @@ class CostMonitorError(Exception):
         super().__init__(self.detail)
 
 
-class ExternalServiceError(CostMonitorError, _ExternalServiceError):  # type: ignore[misc]
+class ExternalServiceError(CostMonitorError, _ExternalServiceError):
     """An external API (Langfuse, OpenRouter) returned an error.
 
     Transient failures (timeout, 5xx, 429) should be retried; terminal
@@ -52,7 +52,7 @@ class ExternalServiceError(CostMonitorError, _ExternalServiceError):  # type: ig
         detail: str = "",
         *,
         status_code: int | None = None,
-        response: object | None = None,
+        response: httpx.Response | None = None,
     ) -> None:
         """Initialise from a detail string, optionally with an HTTP response.
 
@@ -87,14 +87,14 @@ class ExternalServiceError(CostMonitorError, _ExternalServiceError):  # type: ig
             )
 
 
-class ExternalAuthError(ExternalServiceError, _ExternalAuthError):  # type: ignore[misc]
+class ExternalAuthError(ExternalServiceError, _ExternalAuthError):
     """Bad API key or credentials — NOT retriable."""
 
     status_code = 502  # gateway shows as service-available-but-bad-credentials
     error_code = "EXTERNAL_AUTH_ERROR"
 
 
-class ExternalRateLimitError(ExternalServiceError, _ExternalRateLimitError):  # type: ignore[misc]
+class ExternalRateLimitError(ExternalServiceError, _ExternalRateLimitError):
     """429 rate limit — retriable with backoff."""
 
     status_code = 429

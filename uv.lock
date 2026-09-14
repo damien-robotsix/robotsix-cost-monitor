@@ -1171,7 +1171,7 @@ dependencies = [
     { name = "prometheus-fastapi-instrumentator" },
     { name = "pydantic" },
     { name = "robotsix-config" },
-    { name = "robotsix-http" },
+    { name = "robotsix-http", extra = ["fastapi"] },
     { name = "robotsix-llmio" },
     { name = "secure" },
     { name = "structlog" },
@@ -1208,7 +1208,7 @@ requires-dist = [
     { name = "prometheus-fastapi-instrumentator", specifier = ">=7.1" },
     { name = "pydantic", specifier = ">=2.10" },
     { name = "robotsix-config", git = "https://github.com/damien-robotsix/robotsix-config.git?rev=feabed320883760ec0f449469870d45f73d87194" },
-    { name = "robotsix-http", git = "https://github.com/damien-robotsix/robotsix-http.git?rev=4cf79993f07c0d56e50cf02af816058144beacb9" },
+    { name = "robotsix-http", extras = ["fastapi"], git = "https://github.com/damien-robotsix/robotsix-http.git?rev=a2f764de21f21bbcc386724c5085d803026fe35f" },
     { name = "robotsix-llmio", git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=2fd2be4dcf7f0a44e91012fd1167517e5e09180e" },
     { name = "secure", specifier = ">=2.0.1" },
     { name = "structlog", specifier = ">=24.1" },
@@ -1238,10 +1238,15 @@ lint = [
 
 [[package]]
 name = "robotsix-http"
-version = "0.1.dev4+g4cf79993f"
-source = { git = "https://github.com/damien-robotsix/robotsix-http.git?rev=4cf79993f07c0d56e50cf02af816058144beacb9#4cf79993f07c0d56e50cf02af816058144beacb9" }
+version = "0.4.0"
+source = { git = "https://github.com/damien-robotsix/robotsix-http.git?rev=a2f764de21f21bbcc386724c5085d803026fe35f#a2f764de21f21bbcc386724c5085d803026fe35f" }
 dependencies = [
     { name = "httpx" },
+]
+
+[package.optional-dependencies]
+fastapi = [
+    { name = "fastapi" },
 ]
 
 [[package]]
