@@ -381,7 +381,9 @@ describe('loadProjects', () => {
   async function withComponents(components, assert) {
     fixture('<select id="project"></select>');
     const origFetch = globalThis.fetch;
-    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: components }) });
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ items: components }) });
     try {
       await loadProjects();
       assert(/** @type {HTMLSelectElement} */ (document.getElementById('project')));
