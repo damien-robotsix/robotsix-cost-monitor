@@ -11,6 +11,7 @@ import logging
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
+import httpx
 import pytest
 import structlog
 from asgi_correlation_id import correlation_id
@@ -25,6 +26,7 @@ from robotsix_cost_monitor.app import (
     add_correlation_id,
     create_app,
 )
+from robotsix_cost_monitor.clients.mill import MillClient
 from robotsix_cost_monitor.config import Config, Settings, load_config
 from robotsix_cost_monitor.metrics import cache_warm_failure, cache_warm_success
 
@@ -820,6 +822,64 @@ def test_lifespan_teardown_closes_mill_client() -> None:
             pass
 
     mock_mill.close.assert_awaited_once()
+
+
+def test_lifespan_teardown_releases_real_httpx_client() -> None:
+    """Integration: a *real* ``MillClient``'s underlying ``httpx.AsyncClient``
+    is actually released during lifespan teardown.
+
+    Unlike ``test_lifespan_teardown_closes_mill_client`` (which mocks the
+    client), this drives the real ``MillClient.close()`` path and asserts the
+    lazily-created transport is closed and the holder reset to ``None``.
+    """
+    cfg = Config(settings=Settings())
+    mock_service = _make_mock_service()
+
+    mill = MillClient(cfg.settings)
+    # Force the lazy HTTP transport into existence so we have something to
+    # observe being closed. ``httpx.AsyncClient.__init__`` needs no event loop.
+    mill._http = httpx.AsyncClient(timeout=30.0)
+    http = mill._http
+    assert not http.is_closed
+
+    with (
+        patch("robotsix_cost_monitor.app.CostService", return_value=mock_service),
+        patch("robotsix_cost_monitor.app.MillClient", return_value=mill),
+        patch("robotsix_cost_monitor.app._warm_cache", AsyncMock()),
+    ):
+        app = create_app(cfg)
+        with TestClient(app) as _client:
+            pass
+
+    assert http.is_closed, "underlying httpx.AsyncClient was not released"
+    assert mill._http is None
+
+
+def test_lifespan_teardown_releases_httpx_client_on_error() -> None:
+    """The underlying ``httpx.AsyncClient`` is released even when the app
+    context exits via an exception — cleanup lives in a ``finally`` block, so
+    an error path must not leak the transport.
+    """
+    cfg = Config(settings=Settings())
+    mock_service = _make_mock_service()
+
+    mill = MillClient(cfg.settings)
+    mill._http = httpx.AsyncClient(timeout=30.0)
+    http = mill._http
+    assert not http.is_closed
+
+    with (
+        patch("robotsix_cost_monitor.app.CostService", return_value=mock_service),
+        patch("robotsix_cost_monitor.app.MillClient", return_value=mill),
+        patch("robotsix_cost_monitor.app._warm_cache", AsyncMock()),
+    ):
+        app = create_app(cfg)
+        with pytest.raises(RuntimeError, match="boom"):
+            with TestClient(app) as _client:
+                raise RuntimeError("boom")
+
+    assert http.is_closed, "underlying httpx.AsyncClient leaked on error path"
+    assert mill._http is None
 
 
 # ---------------------------------------------------------------------------
