@@ -57,7 +57,13 @@ allow-direct-references = true
 robotsix-modules = { git = "https://github.com/damien-robotsix/robotsix-modules.git" }
 
 [tool.uv]
-constraint-dependencies = ["pydantic-settings>=2.14.2"]
+constraint-dependencies = [
+    "pydantic-settings>=2.14.2",
+    # Transitive via genai-prices (robotsix-llmio); pin above the versions
+    # affected by PYSEC-2026-3844/3845/3846/3847/3848/3849.
+    "httpx2>=2.12.0",
+    "httpcore2>=2.10.0",
+]
 exclude-newer = "3 days"
 
 [tool.ruff]
