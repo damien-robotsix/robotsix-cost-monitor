@@ -62,6 +62,16 @@ RUN uv export --frozen --no-emit-project --no-hashes > requirements.txt \
 # ---------------------------------------------------------------------------
 FROM python:3.14-slim AS runtime
 
+# Apply available OS security updates on top of the pinned base tag. The tag
+# can lag behind Debian point releases that patch fixable CRITICAL CVEs in
+# base packages (e.g. perl-base CVE-2026-13221 / CVE-2026-42496 / CVE-2026-8376,
+# fixed in 5.40.1-6+deb13u1). The Release pipeline's Trivy gate fails the build
+# on fixable CRITICALs (severity=CRITICAL, ignore-unfixed), so refresh the
+# package set at build time rather than waiting for a base-image rebuild.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy the prebuilt virtual environment (deps + project) from the builder stage.
 COPY --from=builder /opt/venv /opt/venv
 
