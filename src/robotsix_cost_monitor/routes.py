@@ -175,20 +175,25 @@ response advertises the resolved value:
 Read the effective window from either place rather than inferring it from
 trend bucket sizes.
 
+### Pagination
+
+List-shaped endpoints (`GET /api/components`, `GET /api/projects`,
+`GET /api/by-agent`, `GET /api/by-model`) accept `?offset=` & `?limit=`.
+
 ### Cost summaries
 
 | Endpoint | Description |
 |---|---|
 | `GET /api/summary` | Cost summary by project & component. Optional `?backend=`. |
-| `GET /api/components` | Discovered components and the projects each owns. Paginated via `?offset=` & `?limit=`. |
-| `GET /api/projects` | All discovered projects (name + slug + owning component). Paginated via `?offset=` & `?limit=`. |
+| `GET /api/components` | Discovered components and the projects each owns. |
+| `GET /api/projects` | All discovered projects (name + slug + owning component). |
 
 ### Per-agent / per-model breakdowns
 
 | Endpoint | Description |
 |---|---|
-| `GET /api/by-agent` | Cost breakdown by agent name. Optional `?backend=`. Paginated via `?offset=` & `?limit=`. |
-| `GET /api/by-model` | Cost breakdown by model. Paginated via `?offset=` & `?limit=`. |
+| `GET /api/by-agent` | Cost breakdown by agent name. Optional `?backend=`. |
+| `GET /api/by-model` | Cost breakdown by model. |
 
 ### Trends
 
