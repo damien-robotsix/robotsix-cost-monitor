@@ -185,15 +185,15 @@ List-shaped endpoints (`GET /api/components`, `GET /api/projects`,
 | Endpoint | Description |
 |---|---|
 | `GET /api/summary` | Cost summary by project & component. Optional `?backend=`. |
-| `GET /api/components` | Discovered components and the projects each owns. |
-| `GET /api/projects` | All discovered projects (name + slug + owning component). |
+| `GET /api/components` | Components + owning projects. Paged `?offset=`/`?limit=`. |
+| `GET /api/projects` | Discovered projects. Paged `?offset=`/`?limit=`. |
 
 ### Per-agent / per-model breakdowns
 
 | Endpoint | Description |
 |---|---|
-| `GET /api/by-agent` | Cost breakdown by agent name. Optional `?backend=`. |
-| `GET /api/by-model` | Cost breakdown by model. |
+| `GET /api/by-agent` | By agent. Optional `?backend=`. Paged `?offset=`/`?limit=`. |
+| `GET /api/by-model` | By model. Paged `?offset=`/`?limit=`. |
 
 ### Trends
 
