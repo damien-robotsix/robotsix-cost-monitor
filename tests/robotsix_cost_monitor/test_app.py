@@ -801,6 +801,27 @@ def test_lifespan_teardown_cancels_all_tasks() -> None:
         assert task.done(), f"task {task.get_name()!r} was not done after teardown"
 
 
+def test_lifespan_teardown_closes_mill_client() -> None:
+    """The ``MillClient`` is explicitly closed during lifespan teardown so the
+    underlying ``httpx.AsyncClient`` is released rather than left to the GC.
+    """
+    cfg = Config(settings=Settings())
+    mock_service = _make_mock_service()
+    mock_mill = Mock()
+    mock_mill.close = AsyncMock()
+
+    with (
+        patch("robotsix_cost_monitor.app.CostService", return_value=mock_service),
+        patch("robotsix_cost_monitor.app.MillClient", return_value=mock_mill),
+        patch("robotsix_cost_monitor.app._warm_cache", AsyncMock()),
+    ):
+        app = create_app(cfg)
+        with TestClient(app) as _client:
+            pass
+
+    mock_mill.close.assert_awaited_once()
+
+
 # ---------------------------------------------------------------------------
 # stuck-ticket loop — gauge handling
 # ---------------------------------------------------------------------------
