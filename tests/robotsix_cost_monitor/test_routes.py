@@ -278,7 +278,13 @@ def test_chat_skill_no_credentials_leaked(client: TestClient) -> None:
 def test_projects_returns_slug(client: TestClient) -> None:
     r = client.get("/api/projects")
     assert r.status_code == 200
-    assert r.json() == [{"name": "Demo", "slug": "demo", "component": ""}]
+    assert r.json() == {
+        "items": [{"name": "Demo", "slug": "demo", "component": ""}],
+        "total": 1,
+        "offset": 0,
+        "limit": 100,
+        "has_more": False,
+    }
 
 
 def test_components_returns_list_of_dicts(client: TestClient) -> None:
@@ -286,9 +292,13 @@ def test_components_returns_list_of_dicts(client: TestClient) -> None:
     r = client.get("/api/components")
     assert r.status_code == 200
     body = r.json()
-    assert isinstance(body, list)
-    assert len(body) >= 1
-    for entry in body:
+    assert body["total"] == len(body["items"])
+    assert body["offset"] == 0
+    assert body["limit"] == 100
+    items = body["items"]
+    assert isinstance(items, list)
+    assert len(items) >= 1
+    for entry in items:
         assert isinstance(entry, dict)
         assert "component" in entry
         assert "projects" in entry
@@ -337,6 +347,39 @@ def test_by_model_defaults(client: TestClient) -> None:
     r = client.get("/api/by-model?hours=24")
     assert r.status_code == 200
     client.app.state.service.by_model.assert_called_once_with("all", 24)  # type: ignore[attr-defined]
+
+
+def test_by_agent_pagination_envelope(client: TestClient) -> None:
+    """/api/by-agent applies offset/limit and reports total/has_more."""
+    rows = [{"name": f"agent-{i}", "cost": float(i)} for i in range(5)]
+    client.app.state.service.by_agent = AsyncMock(return_value=rows)  # type: ignore[attr-defined]
+    r = client.get("/api/by-agent?hours=24&offset=1&limit=2")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["items"] == rows[1:3]
+    assert body["total"] == 5
+    assert body["offset"] == 1
+    assert body["limit"] == 2
+    assert body["has_more"] is True
+
+
+def test_by_agent_pagination_last_page_has_no_more(client: TestClient) -> None:
+    """When the window reaches the end of the set, has_more is False."""
+    rows = [{"name": f"agent-{i}", "cost": float(i)} for i in range(3)]
+    client.app.state.service.by_agent = AsyncMock(return_value=rows)  # type: ignore[attr-defined]
+    r = client.get("/api/by-agent?hours=24&offset=2&limit=10")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["items"] == rows[2:]
+    assert body["total"] == 3
+    assert body["has_more"] is False
+
+
+def test_pagination_params_are_validated(client: TestClient) -> None:
+    """Out-of-range offset/limit are rejected with 422."""
+    assert client.get("/api/by-agent?offset=-1").status_code == 422
+    assert client.get("/api/by-agent?limit=0").status_code == 422
+    assert client.get("/api/by-agent?limit=1001").status_code == 422
 
 
 def test_backend_trend_defaults(client: TestClient) -> None:
@@ -621,7 +664,7 @@ def test_by_agent_response_shape(client: TestClient) -> None:
 
     r = client.get("/api/by-agent?hours=24")
     assert r.status_code == 200
-    body = r.json()
+    body = r.json()["items"]
     assert isinstance(body, list)
     for row in body:
         assert isinstance(row, dict)
@@ -649,7 +692,7 @@ def test_by_model_response_shape(client: TestClient) -> None:
 
     r = client.get("/api/by-model?hours=24")
     assert r.status_code == 200
-    body = r.json()
+    body = r.json()["items"]
     assert isinstance(body, list)
     for row in body:
         assert isinstance(row, dict)

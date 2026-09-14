@@ -141,7 +141,7 @@ def test_unknown_project_across_endpoints() -> None:
 
 def test_by_agent_and_trend_empty() -> None:
     c = _empty_app()
-    assert c.get("/api/by-agent?hours=24").json() == []
+    assert c.get("/api/by-agent?hours=24").json()["items"] == []
     assert len(c.get("/api/trend?hours=24&buckets=12").json()) == 12
 
 
@@ -150,7 +150,7 @@ def test_by_agent_accepts_backend_param() -> None:
     c = _empty_app()
     r = c.get("/api/by-agent?hours=24&backend=openrouter")
     assert r.status_code == 200
-    assert r.json() == []
+    assert r.json()["items"] == []
 
 
 def test_by_agent_backend_all_is_default() -> None:
@@ -165,7 +165,7 @@ def test_by_agent_backend_all_is_default() -> None:
 def test_by_model_empty() -> None:
     r = _empty_app().get("/api/by-model?hours=24")
     assert r.status_code == 200
-    assert r.json() == []
+    assert r.json()["items"] == []
 
 
 def test_backend_trend_empty() -> None:

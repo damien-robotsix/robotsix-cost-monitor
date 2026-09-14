@@ -175,20 +175,25 @@ response advertises the resolved value:
 Read the effective window from either place rather than inferring it from
 trend bucket sizes.
 
+### Pagination
+
+List-shaped endpoints (`GET /api/components`, `GET /api/projects`,
+`GET /api/by-agent`, `GET /api/by-model`) accept `?offset=` & `?limit=`.
+
 ### Cost summaries
 
 | Endpoint | Description |
 |---|---|
 | `GET /api/summary` | Cost summary by project & component. Optional `?backend=`. |
-| `GET /api/components` | Discovered components and the projects each owns. |
-| `GET /api/projects` | All discovered projects (name + slug + owning component). |
+| `GET /api/components` | Components + owning projects. Paged `?offset=`/`?limit=`. |
+| `GET /api/projects` | Discovered projects. Paged `?offset=`/`?limit=`. |
 
 ### Per-agent / per-model breakdowns
 
 | Endpoint | Description |
 |---|---|
-| `GET /api/by-agent` | Cost breakdown by agent name. Optional `?backend=`. |
-| `GET /api/by-model` | Cost breakdown by model. |
+| `GET /api/by-agent` | By agent. Optional `?backend=`. Paged `?offset=`/`?limit=`. |
+| `GET /api/by-model` | By model. Paged `?offset=`/`?limit=`. |
 
 ### Trends
 
@@ -232,28 +237,45 @@ def chat_skill() -> str:
     return _CHAT_SKILL
 
 
+def _paginate(items: list[dict[str, Any]], offset: int, limit: int) -> dict[str, Any]:
+    """Wrap a full result set in a standard offset/limit pagination envelope."""
+    total = len(items)
+    return {
+        "items": items[offset : offset + limit],
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "has_more": offset + limit < total,
+    }
+
+
 @router.get("/api/projects")
 async def projects(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
     service: CostService = Depends(get_service),
-) -> list[dict[str, str]]:
-    """GET /api/projects — list all discovered projects with name and slug."""
-    return [
+) -> dict[str, Any]:
+    """GET /api/projects — discovered projects with name and slug (paginated)."""
+    results = [
         {"name": p.name, "slug": p.slug, "component": p.component_id}
         for p in service.projects()
     ]
+    return _paginate(results, offset, limit)
 
 
 @router.get("/api/components")
 async def components(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
     service: CostService = Depends(get_service),
-) -> list[dict[str, Any]]:
-    """GET /api/components — discovered components and the projects they own.
+) -> dict[str, Any]:
+    """GET /api/components — components and the projects they own (paginated).
 
     Drives the dashboard's selector.  Everything here comes from registry
     discovery, so a newly onboarded component with a Langfuse config appears
     without any change to this service.
     """
-    return [
+    results = [
         {
             "component": component_id,
             "projects": [
@@ -267,6 +289,7 @@ async def components(
         }
         for component_id, projects_ in service.components().items()
     ]
+    return _paginate(results, offset, limit)
 
 
 @router.get("/api/summary")
@@ -304,20 +327,26 @@ async def refresh_cache(
 @router.get("/api/by-agent")
 async def by_agent(
     backend: str = Query("all"),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
     pw: ProjectWindow = Depends(project_window),
     service: CostService = Depends(get_service),
-) -> list[dict[str, Any]]:
-    """GET /api/by-agent — cost breakdown by agent name for a project and window."""
-    return await service.by_agent(pw.project, pw.hours, backend)
+) -> dict[str, Any]:
+    """GET /api/by-agent — cost breakdown by agent name (paginated)."""
+    results = await service.by_agent(pw.project, pw.hours, backend)
+    return _paginate(results, offset, limit)
 
 
 @router.get("/api/by-model")
 async def by_model(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
     pw: ProjectWindow = Depends(project_window),
     service: CostService = Depends(get_service),
-) -> list[dict[str, Any]]:
-    """GET /api/by-model — cost breakdown by model for a project and window."""
-    return await service.by_model(pw.project, pw.hours)
+) -> dict[str, Any]:
+    """GET /api/by-model — cost breakdown by model (paginated)."""
+    results = await service.by_model(pw.project, pw.hours)
+    return _paginate(results, offset, limit)
 
 
 @router.get("/api/backend-trend")

@@ -51,14 +51,15 @@ uv run robotsix-cost-monitor reconcile [--project SLUG]
 | -------- | ------ | ------------------ | ---------- |
 | GET | `/health` | — | `{"status":"ok","projects":["…"]}` |
 | GET | `/metrics` | — | Prometheus scrape endpoint (counters/gauges for reconcile runs, cache warm-ups, etc.) |
-| GET | `/chat-skill` | — | Markdown skill document for the robotsix-chat agent (base URL, read endpoints, auth, safety) |
+| GET | `/chat-skill` | — | Markdown skill document for the robotsix-chat agent (base URL, read endpoints, auth, safety, pagination) |
 | GET | `/` | — | Dashboard HTML page |
-| GET | `/api/projects` | — | List of configured projects (`name`, `slug`) |
+| GET | `/api/projects` | `?offset=<N>&limit=<N>` | List of configured projects (`name`, `slug`). Paginated: returns `{items, total, offset, limit, has_more}`. |
+| GET | `/api/components` | `?offset=<N>&limit=<N>` | Discovered components and the projects they own. Paginated: returns `{items, total, offset, limit, has_more}`. |
 | GET | `/api/summary` | `?project=<slug\|all>&hours=<N>&backend=<all\|backend>` | Total cost, per-project totals, and per-component rollup (includes ISO-8601 `last_updated` when cached data is available). Optional `backend` filter (e.g. `openrouter`) restricts costs to that backend. |
 | POST | `/api/refresh` | — | Invalidate all caches and force a fresh Langfuse fetch on the next dashboard request |
-| GET | `/api/by-agent` | `?project=<slug\|all>&hours=<N>&backend=<all\|backend>` | Cost breakdown by agent name |
+| GET | `/api/by-agent` | `?project=<slug\|all>&hours=<N>&backend=<all\|backend>&offset=<N>&limit=<N>` | Cost breakdown by agent name. Paginated: returns `{items, total, offset, limit, has_more}`. |
 | GET | `/api/by-agent-segmented` | `?project=<slug\|all>&hours=<N>` | Agent costs segmented by model and backend |
-| GET | `/api/by-model` | `?project=<slug\|all>&hours=<N>` | Cost breakdown by model |
+| GET | `/api/by-model` | `?project=<slug\|all>&hours=<N>&offset=<N>&limit=<N>` | Cost breakdown by model. Paginated: returns `{items, total, offset, limit, has_more}`. |
 | GET | `/api/backend-trend` | `?project=<slug\|all>&hours=<N>&backend=<all\|backend>` | Cost trend per backend |
 | GET | `/api/trend` | `?project=<slug\|all>&hours=<N>&buckets=<1-200>` | Bucketed cost-over-time trend series |
 | GET | `/api/highlights` | `?project=<slug\|all>&hours=<N>&backend=<all\|backend>` | Most expensive trace and session for the window |
