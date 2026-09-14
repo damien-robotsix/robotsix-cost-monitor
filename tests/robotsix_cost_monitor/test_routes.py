@@ -1,21 +1,30 @@
-"""Unit tests for route helpers, dependency providers, exception handlers,
-and route-handler edge cases from ``src/robotsix_cost_monitor/routes.py``.
+"""Unit tests for route helpers, dependency providers, and route-handler edge
+cases from ``src/robotsix_cost_monitor/routes.py``.
 
 These tests avoid importing ``create_app`` (which transitively requires the
 optional ``robotsix-llmio`` package). Instead, they build a minimal FastAPI
-app directly, mount the router from ``routes``, and wire the exception handlers.
+app directly, mount the router from ``routes``, and wire the shared exception
+handlers from ``robotsix_http.fastapi`` (plus the ``CostMonitorError`` adapter)
+exactly as ``create_app`` does.
 """
 
 from __future__ import annotations
 
-import json
 import sys
+from typing import cast
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.exceptions import RequestValidationError
+from fastapi import FastAPI, Request, Response
 from fastapi.testclient import TestClient
+from robotsix_http.fastapi import (
+    DomainError,
+    create_health_router,
+    domain_error_handler,
+    register_exception_handlers,
+)
+
+from robotsix_cost_monitor.exceptions import CostMonitorError
 
 # ---------------------------------------------------------------------------
 # Mock the optional ``robotsix-llmio`` package before importing
@@ -49,11 +58,7 @@ from robotsix_cost_monitor.routes import (  # noqa: E402
     _window,
     get_config,
     get_service,
-    http_exception_handler,
-    register_exception_handlers,
     router,
-    unhandled_handler,
-    validation_handler,
 )
 from tests.robotsix_cost_monitor.helpers import _config, _proj  # noqa: E402
 
@@ -93,13 +98,23 @@ def _make_request(app: FastAPI) -> Request:
     return Request(scope)
 
 
+async def _cost_monitor_error_handler(request: Request, exc: Exception) -> Response:
+    """Mirror ``app._cost_monitor_error_handler``: map onto ``DomainError``."""
+    err = cast(CostMonitorError, exc)
+    return await domain_error_handler(
+        request,
+        DomainError(err.detail, code=err.error_code, status_code=err.status_code),
+    )
+
+
 def _client(
     cfg: Config | None = None,
     service: object | None = None,
     **test_client_kwargs: object,
 ) -> TestClient:
     """Build a TestClient against a minimal FastAPI app that mounts the
-    production router and exception handlers.
+    production router, the shared health router, and the shared exception
+    handlers.
 
     ``app.state.config`` and ``app.state.service`` are populated from the
     arguments so that ``Depends(get_config)`` / ``Depends(get_service)``
@@ -112,6 +127,8 @@ def _client(
     app.state.config = cfg or _config()
     app.state.service = service if service is not None else Mock()
     register_exception_handlers(app)
+    app.add_exception_handler(CostMonitorError, _cost_monitor_error_handler)
+    app.include_router(create_health_router())
     app.include_router(router)
     return TestClient(app, **test_client_kwargs)  # type: ignore[arg-type]
 
@@ -170,157 +187,6 @@ def test_window_clamps_oversized_config_default() -> None:
     """
     cfg = _config(default_window_hours=10_000)
     assert _window(0, cfg) == MAX_WINDOW_HOURS
-
-
-# ---------------------------------------------------------------------------
-# validation_handler
-# ---------------------------------------------------------------------------
-
-
-def _validation_error() -> RequestValidationError:
-    """Build a minimal RequestValidationError with one field error."""
-    return RequestValidationError(
-        errors=[
-            {
-                "loc": ("body", "hours"),
-                "msg": "ensure this value is greater than or equal to 0",
-                "type": "value_error.number.not_ge",
-            }
-        ]
-    )
-
-
-async def test_validation_handler_returns_422() -> None:
-    req = _make_request(FastAPI())
-    exc = _validation_error()
-    resp = await validation_handler(req, exc)
-    assert resp.status_code == 422
-    body = json.loads(resp.body)  # type: ignore[arg-type]
-    assert body["error"]["code"] == "VALIDATION_ERROR"
-
-
-async def test_validation_handler_includes_field_details() -> None:
-    req = _make_request(FastAPI())
-    exc = _validation_error()
-    resp = await validation_handler(req, exc)
-    body = json.loads(resp.body)  # type: ignore[arg-type]
-    details = body["error"]["details"]
-    assert len(details) == 1
-    assert details[0]["field"] == "hours"
-    assert details[0]["message"] == "ensure this value is greater than or equal to 0"
-    assert details[0]["code"] == "value_error.number.not_ge"
-
-
-async def test_validation_handler_strips_body_from_field_path() -> None:
-    """The ``body`` loc segment is stripped from the human-readable field name."""
-    req = _make_request(FastAPI())
-    exc = RequestValidationError(
-        errors=[{"loc": ("body", "project", "slug"), "msg": "X", "type": "T"}]
-    )
-    resp = await validation_handler(req, exc)
-    body = json.loads(resp.body)  # type: ignore[arg-type]
-    assert body["error"]["details"][0]["field"] == "project → slug"
-
-
-async def test_validation_handler_missing_type_defaults_to_validation_error() -> None:
-    """When ``type`` is absent from the error dict, code defaults to
-    ``"validation_error"``.
-    """
-    req = _make_request(FastAPI())
-    exc = RequestValidationError(errors=[{"loc": ("body",), "msg": "bad"}])
-    resp = await validation_handler(req, exc)
-    body = json.loads(resp.body)  # type: ignore[arg-type]
-    assert body["error"]["details"][0]["code"] == "validation_error"
-
-
-# ---------------------------------------------------------------------------
-# http_exception_handler
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.parametrize(
-    "status_code,detail",
-    [
-        (404, "Unknown project slug: nope"),
-        (500, "boom"),
-    ],
-    ids=["404", "500"],
-)
-async def test_http_exception_handler(status_code: int, detail: str) -> None:
-    req = _make_request(FastAPI())
-    exc = HTTPException(status_code=status_code, detail=detail)
-    resp = await http_exception_handler(req, exc)
-    assert resp.status_code == status_code
-    body = json.loads(resp.body)  # type: ignore[arg-type]
-    assert body["error"]["code"] == "HTTP_ERROR"
-    assert body["error"]["detail"] == detail
-
-
-# ---------------------------------------------------------------------------
-# unhandled_handler
-# ---------------------------------------------------------------------------
-
-
-async def test_unhandled_handler_returns_500_sanitized() -> None:
-    req = _make_request(FastAPI())
-    exc = ValueError("secret key leaked")
-    resp = await unhandled_handler(req, exc)
-    assert resp.status_code == 500
-    body = json.loads(resp.body)  # type: ignore[arg-type]
-    assert body["error"]["code"] == "INTERNAL_ERROR"
-    assert body["error"]["detail"] == "Internal Server Error"
-
-
-async def test_unhandled_handler_logs_exception() -> None:
-    """The handler must log the full exception (without leaking details to the
-    HTTP response).  After the structlog→stdlib bridge, ``logger.exception()``
-    propagates to stdlib — verify via a structlog capturing handler.
-
-    The routes module uses ``structlog.get_logger(__name__)`` which is a lazy
-    proxy — ``capture_logs`` reconfigures structlog temporarily and the proxy
-    picks it up on the next call.
-    """
-    import structlog
-
-    req = _make_request(FastAPI())
-    exc = RuntimeError("test bug")
-
-    with structlog.testing.capture_logs() as cap_logs:
-        await unhandled_handler(req, exc)
-
-    assert len(cap_logs) >= 1
-    event = cap_logs[-1]
-    assert "Unhandled exception" in event["event"]
-    assert event.get("exc_info") is not None
-
-
-# ---------------------------------------------------------------------------
-# register_exception_handlers
-# ---------------------------------------------------------------------------
-
-
-def test_register_exception_handlers_wires_all_five() -> None:
-    app = MagicMock(spec=FastAPI)
-    register_exception_handlers(app)
-    assert app.add_exception_handler.call_count == 5
-    calls = [(c[0][0], c[0][1]) for c in app.add_exception_handler.call_args_list]
-    # exception class → handler function
-    from fastapi.exceptions import RequestValidationError as RVE
-    from robotsix_http import ExternalHTTPError
-
-    from robotsix_cost_monitor.exceptions import CostMonitorError
-    from robotsix_cost_monitor.routes import (
-        cost_monitor_error_handler,
-        external_http_error_handler,
-    )
-
-    assert calls == [
-        (RVE, validation_handler),
-        (HTTPException, http_exception_handler),
-        (CostMonitorError, cost_monitor_error_handler),
-        (ExternalHTTPError, external_http_error_handler),
-        (Exception, unhandled_handler),
-    ]
 
 
 # ---------------------------------------------------------------------------
@@ -561,11 +427,11 @@ def test_hours_above_ceiling_is_rejected_not_clamped(
     r = client.get(path)
     assert r.status_code == 422
     body = r.json()
-    assert body["error"]["code"] == "VALIDATION_ERROR"
-    details = body["error"]["details"]
-    assert details[0]["field"] == "query → hours"
+    assert body["error"]["code"] == "validation_error"
+    detail = body["error"]["detail"]
+    assert detail[0]["loc"][-1] == "hours"
     # The message names the ceiling so the caller knows the limit.
-    assert "168" in details[0]["message"]
+    assert "168" in detail[0]["msg"]
     # The service is never called for a rejected request.
     client.app.state.service.summary.assert_not_called()  # type: ignore[attr-defined]
 
@@ -573,7 +439,7 @@ def test_hours_above_ceiling_is_rejected_not_clamped(
 def test_negative_hours_is_rejected(client: TestClient) -> None:
     r = client.get("/api/summary?hours=-1")
     assert r.status_code == 422
-    assert r.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert r.json()["error"]["code"] == "validation_error"
 
 
 def test_chat_skill_documents_time_window(client: TestClient) -> None:
@@ -583,7 +449,7 @@ def test_chat_skill_documents_time_window(client: TestClient) -> None:
     # Default window is stated explicitly.
     assert "168" in body
     # Rejection (not silent clamping) of over-ceiling requests is documented.
-    assert "VALIDATION_ERROR" in body
+    assert "validation_error" in body
     # The feedback mechanisms are documented.
     assert "X-Effective-Hours" in body
     assert "effective_hours" in body
@@ -615,14 +481,15 @@ def test_index_returns_html() -> None:
 
 
 def test_invalid_query_param_type_validation_envelope() -> None:
-    """Pass a string where an integer is expected → 422 with VALIDATION_ERROR."""
+    """Pass a string where an integer is expected → 422 with validation_error."""
     r = _client().get("/api/summary?hours=abc")
     assert r.status_code == 422
     body = r.json()
-    assert body["error"]["code"] == "VALIDATION_ERROR"
-    assert len(body["error"]["details"]) >= 1
-    fields = [d["field"] for d in body["error"]["details"]]
-    assert any("hours" in f for f in fields)
+    assert body["error"]["code"] == "validation_error"
+    detail = body["error"]["detail"]
+    assert len(detail) >= 1
+    locs = [d.get("loc", []) for d in detail]
+    assert any("hours" in loc for loc in locs)
 
 
 def test_unknown_project_returns_404() -> None:
@@ -648,7 +515,7 @@ def test_internal_error_returns_sanitized_envelope() -> None:
     )
     assert r.status_code == 500
     body = r.json()
-    assert body["error"]["code"] == "INTERNAL_ERROR"
+    assert body["error"]["code"] == "internal_error"
     assert body["error"]["detail"] == "Internal Server Error"
 
 
