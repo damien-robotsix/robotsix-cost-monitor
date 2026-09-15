@@ -65,6 +65,13 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
+## [0.8.0](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.7.0...v0.8.0) (2026-09-14)
+
+
+### Features
+
+* Add offset/limit pagination to unbounded list API endpoints (20260914T101629Z-add-offset-limit-pagination-to-unbounded-670d) ([#553](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/553)) ([cc2cecc](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/cc2cecc215901c8fdc08ade65fa93a992e5d7c2a))
+
 ## [0.7.0](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.6.1...v0.7.0) (2026-09-04)
 
 
