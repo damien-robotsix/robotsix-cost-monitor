@@ -18,10 +18,10 @@
     "postcss": "8.5.25"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.9",
+    "@biomejs/biome": "2.5.14",
     "@robotsix/ui": "github:damien-robotsix/robotsix-ui#v0.1.48",
     "@vitest/coverage-v8": "4.1.11",
-    "jsdom": "30.0.1",
+    "jsdom": "30.1.0",
     "typescript": "7.0.2",
     "vitest": "4.1.11"
   }
