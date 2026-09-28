@@ -157,6 +157,33 @@ jobs:
       - run: uv sync --locked --group lint
       - run: uv run vulture --min-confidence 80 --ignore-decorators "@field_validator,@model_validator" src/ tests/ vulture_whitelist.py
 
+  performance:
+    name: Performance benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      UV_CACHE_DIR: .cache/uv
+      UV_MALWARE_CHECK: "1"
+    steps:
+      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          cache-python: true
+          python-version: "3.14"
+      - run: uv sync --locked
+      - name: Run performance benchmarks
+        # Establishes a response-time baseline for the dashboard's hot-path
+        # endpoints. No committed baseline exists yet, so this run only exercises
+        # the benchmarks (regression comparison via --benchmark-compare can be
+        # enabled once a baseline artifact is stored).
+        run: uv run pytest tests/ -v -m benchmark --benchmark-min-rounds=5
+
   pre-commit:
     name: Pre-commit hooks
     runs-on: ubuntu-latest
