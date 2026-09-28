@@ -80,16 +80,6 @@ class TTLCache[K, V]:
             evicted, _ = self._store.popitem(last=False)
             self._pending.discard(evicted)
 
-    @property
-    def last_updated(self) -> float | None:
-        """Most recent ``time.monotonic()`` when any entry was refreshed.
-
-        ``None`` when the cache has never been populated.
-        """
-        if not self._store:
-            return None
-        return max(entry[2] for entry in self._store.values())
-
     async def get_or_fetch(self, key: K, fetch_fn: Callable[[], Awaitable[V]]) -> V:
         """Fresh → serve, stale → serve + bg refresh, cold → block."""
         now = time.monotonic()
