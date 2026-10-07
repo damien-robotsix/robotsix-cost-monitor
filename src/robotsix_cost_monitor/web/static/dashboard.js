@@ -185,7 +185,7 @@ export function renderSummary(s, backend, modelRows) {
   $('summary-cards').innerHTML = cards
     .map(
       (c) =>
-        `<div class="card"><div class="label">${esc(c.label)}</div>` +
+        `<div class="rsu-card"><div class="label">${esc(c.label)}</div>` +
         `<div class="value">${esc(c.value)}</div><div class="sub">${esc(c.sub)}</div></div>`,
     )
     .join('');

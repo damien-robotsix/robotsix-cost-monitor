@@ -10,50 +10,55 @@
 <body>
   <div id="appshell-root"></div>
 
-  <main>
-    <div class="controls-bar">
-      <label>project
+  <main class="rsu-page">
+    <div class="rsu-form rsu-form--inline" id="controls">
+      <div class="rsu-field">
+        <label class="rsu-field-label" for="project">project</label>
         <select id="project"><option value="all">all components</option></select>
-      </label>
-      <label>backend
+      </div>
+      <div class="rsu-field">
+        <label class="rsu-field-label" for="backend">backend</label>
         <select id="backend"><option value="all">all backends</option></select>
-      </label>
-      <label>window
+      </div>
+      <div class="rsu-field">
+        <label class="rsu-field-label" for="window">window</label>
         <select id="window">
           <option value="1">1h</option>
           <option value="6">6h</option>
           <option value="24">1d</option>
           <option value="168" selected>1w</option>
         </select>
-      </label>
-      <button id="refresh" title="refresh">↻</button>
+      </div>
+      <div class="rsu-form-actions">
+        <button id="refresh" title="refresh">↻</button>
+      </div>
     </div>
 
     <div id="recon-banner" class="banner" hidden></div>
-    <section class="cards" id="summary-cards"></section>
+    <section class="rsu-page-grid" id="summary-cards"></section>
 
-    <section class="panel">
+    <section class="rsu-card">
       <h2>cost over time</h2>
       <canvas id="trend" height="120"></canvas>
     </section>
 
     <section class="grid">
-      <div class="panel">
+      <div class="rsu-card">
         <h2>cost by agent / stage</h2>
         <div id="by-agent" class="bars"></div>
       </div>
-      <div class="panel">
+      <div class="rsu-card">
         <h2>cost by model</h2>
         <div id="by-model" class="bars"></div>
       </div>
     </section>
 
-    <section class="panel">
+    <section class="rsu-card">
       <h2>highlights</h2>
       <div id="highlights"></div>
     </section>
 
-    <section class="panel">
+    <section class="rsu-card">
       <div class="panel-head">
         <h2>OpenRouter ↔ Langfuse reconciliation</h2>
         <span id="recon-when" class="muted"></span>
