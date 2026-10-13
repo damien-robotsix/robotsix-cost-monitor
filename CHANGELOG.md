@@ -65,6 +65,13 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
+## [0.8.1](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.8.0...v0.8.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* **ci:** bump bump.yml pin to ghwf 81726d29 (App token scoped to the repo NAME) ([#581](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/581)) ([568a476](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/568a4766b49b1c876ce671aebff6a7125c32d76a))
+
 ## [0.8.0](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.7.0...v0.8.0) (2026-09-14)
 
 
