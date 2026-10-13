@@ -23,7 +23,7 @@ jobs:
     permissions:
       contents: write       # push the bump branch
       pull-requests: write  # create the bump PR
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/bump.yml@22e105fb6a2aab771e25996b1b18fc5c3cd4dd17  # main
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/bump.yml@81726d2956d523951cf4eda71ca5c1148467ba78  # main
     with:
       bump-mode: deps
       packages: robotsix-config robotsix-http robotsix-llmio
