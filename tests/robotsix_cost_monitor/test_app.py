@@ -14,16 +14,15 @@ from unittest.mock import AsyncMock, Mock, patch
 import httpx
 import pytest
 import structlog
-from asgi_correlation_id import correlation_id
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
+from robotsix_llmio.logging import bind_correlation_id
 
 from robotsix_cost_monitor.app import (
     _cache_refresh_loop,
     _reconcile_loop,
     _stuck_ticket_loop,
     _warm_cache,
-    add_correlation_id,
     create_app,
 )
 from robotsix_cost_monitor.clients.mill import MillClient
@@ -363,52 +362,32 @@ async def test_reconcile_loop_cancellation() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_add_correlation_id_injects_request_id() -> None:
-    """``add_correlation_id`` adds ``request_id`` when the asgi-correlation-id
-    context variable is set.
-    """
-    cid = "test-req-123"
-    correlation_id.set(cid)
-    try:
-        event = add_correlation_id(Mock(), "", {})
-        assert event["request_id"] == cid
-    finally:
-        correlation_id.set(None)
-
-
-def test_add_correlation_id_noop_when_not_set() -> None:
-    """``add_correlation_id`` leaves the event dict unchanged when no
-    correlation ID is active.
-    """
-    correlation_id.set(None)
-    event = add_correlation_id(Mock(), "", {"message": "hello"})
-    assert "request_id" not in event
-    assert event["message"] == "hello"
-
-
-def test_access_log_contains_request_id() -> None:
-    """Verify the ``ProcessorFormatter`` bridge injects ``request_id`` into
-    formatted JSON output for stdlib log records (e.g. uvicorn access logs).
+def test_access_log_contains_correlation_id() -> None:
+    """Verify the ``robotsix_llmio.setup_structlog`` bridge renders a bound
+    correlation id into formatted JSON output for foreign stdlib log records
+    (e.g. uvicorn access logs).
 
     The test constructs a ``LogRecord`` manually and formats it through the
-    ``ProcessorFormatter`` configured by ``_configure_logging``, simulating
-    what happens when a third-party logger (like uvicorn) emits a record.
+    ``ProcessorFormatter`` wired onto the root logger by ``create_app`` (via
+    ``setup_structlog(correlation_id=True)``), simulating what happens when a
+    third-party logger (like uvicorn) emits a record.
     """
     cfg = Config()
     create_app(cfg)
 
-    # Steal the ProcessorFormatter from the root logger's configured handler.
+    # Steal the structlog ProcessorFormatter from the root logger's bridge
+    # handler (ignore any handler pytest may have attached to the root logger).
     root = logging.getLogger()
     formatter = None
     for h in root.handlers:
-        if hasattr(h, "formatter") and h.formatter is not None:
+        if isinstance(h.formatter, structlog.stdlib.ProcessorFormatter):
             formatter = h.formatter
             break
     assert formatter is not None, "ProcessorFormatter not found on root handlers"
 
-    # Set a correlation ID so add_correlation_id can pick it up.
+    # Bind a correlation id so the contextvars merge processor picks it up.
     cid = "req-test-456"
-    correlation_id.set(cid)
+    bind_correlation_id(cid)
     try:
         # Build a mock LogRecord as if uvicorn.access emitted it.
         record = logging.LogRecord(
@@ -422,9 +401,11 @@ def test_access_log_contains_request_id() -> None:
         )
         formatted = formatter.format(record)
         parsed = json.loads(formatted)
-        assert parsed.get("request_id") == cid, f"missing request_id in {parsed}"
+        assert parsed.get("correlation_id") == cid, (
+            f"missing correlation_id in {parsed}"
+        )
     finally:
-        correlation_id.set(None)
+        bind_correlation_id(None)
 
 
 def test_log_level_debug_shows_debug_events() -> None:
