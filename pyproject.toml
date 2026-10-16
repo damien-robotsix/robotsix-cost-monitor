@@ -15,8 +15,8 @@ dependencies = [
     "pydantic>=2.10",
     "structlog>=24.1",
     "robotsix-config @ git+https://github.com/damien-robotsix/robotsix-config.git@feabed320883760ec0f449469870d45f73d87194",
-    "robotsix-http[fastapi] @ git+https://github.com/damien-robotsix/robotsix-http.git@a2f764de21f21bbcc386724c5085d803026fe35f",
-    "robotsix-llmio @ git+https://github.com/damien-robotsix/robotsix-llmio.git@2fd2be4dcf7f0a44e91012fd1167517e5e09180e",
+    "robotsix-http[fastapi] @ git+https://github.com/damien-robotsix/robotsix-http.git@4bf6c1e317ccdf4f2e2764ad05c97a456b1ca0a1",
+    "robotsix-llmio @ git+https://github.com/damien-robotsix/robotsix-llmio.git@e5fab362fcb77780778ede87290c721013c9086d",
 ]
 
 [project.scripts]
