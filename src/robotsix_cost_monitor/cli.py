@@ -44,7 +44,7 @@ def main(argv: list[str] | None = None) -> int:
             host=host,
             port=port,
             factory=True,
-            log_config=None,  # keep the structlog config applied by setup_structlog() in create_app
+            log_config=None,  # keep structlog config from create_app
         )
         return 0
 
