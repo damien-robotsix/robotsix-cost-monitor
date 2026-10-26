@@ -43,20 +43,30 @@ def _snapshot_path(slug: str, settings: Settings | None = None) -> Path:
     return _state_dir(settings) / f"{slug}.json"
 
 
-def _atomic_write_text(path: Path, text: str) -> None:
+def _atomic_write_text(path: Path, text: str, root: Path | None = None) -> None:
     """Write *text* to *path* atomically (temp file + fsync + ``os.replace``).
 
     A crash mid-write leaves the previous file content intact instead of a
     truncated file. The temp file lives in the same directory so
     ``os.replace`` stays on one filesystem (atomic on POSIX).
+
+    *path* must resolve inside *root* (default: its own parent directory);
+    otherwise ``ValueError`` is raised so a crafted slug such as ``../x``
+    cannot escape the state directory.
     """
-    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name, suffix=".tmp")
+    base = os.path.realpath(root if root is not None else path.parent)
+    target = os.path.realpath(path)
+    if not target.startswith(base + os.sep):
+        raise ValueError(f"refusing to write outside {base!r}")
+    fd, tmp = tempfile.mkstemp(
+        dir=os.path.dirname(target), prefix=os.path.basename(target), suffix=".tmp"
+    )
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(text)
             fh.flush()
             os.fsync(fh.fileno())
-        os.replace(tmp, path)
+        os.replace(tmp, target)
     except BaseException:
         with contextlib.suppress(OSError):
             os.unlink(tmp)
@@ -75,6 +85,7 @@ def _save_snapshot(
     _atomic_write_text(
         _snapshot_path(slug, settings),
         json.dumps({"cumulative": cumulative, "at": at.isoformat()}),
+        root=_state_dir(settings),
     )
 
 
@@ -280,7 +291,11 @@ async def reconcile_all(config: Config, service: CostService) -> dict[str, Any]:
         "tolerance_usd": config.settings.reconcile_tolerance_usd,
         "results": results,
     }
-    _atomic_write_text(_last_path(config.settings), json.dumps(out, indent=2))
+    _atomic_write_text(
+        _last_path(config.settings),
+        json.dumps(out, indent=2),
+        root=_state_dir(config.settings),
+    )
     return out
 
 
