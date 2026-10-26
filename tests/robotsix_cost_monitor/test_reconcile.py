@@ -596,3 +596,43 @@ class TestFetchCreditsRemaining:
         with self._patch_get({}):
             balance = await _fetch_credits("sk-or-test")
         assert balance == {"total_credits": 0.0, "total_usage": 0.0, "remaining": 0.0}
+
+
+# ---------------------------------------------------------------------------
+# Atomic state-file writes
+# ---------------------------------------------------------------------------
+def test_save_snapshot_atomic_on_replace_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        "robotsix_cost_monitor.reconcile.data_dir", lambda settings=None: tmp_path
+    )
+    settings = _settings(data_dir=tmp_path)
+    first_at = datetime(2026, 1, 1, tzinfo=UTC)
+    _save_snapshot("demo", 12.5, first_at, settings)
+    snap_path = tmp_path / "reconcile" / "demo.json"
+    original = snap_path.read_text()
+
+    def _boom(*_args: Any, **_kwargs: Any) -> None:
+        raise OSError("simulated crash during replace")
+
+    monkeypatch.setattr("robotsix_cost_monitor.reconcile.os.replace", _boom)
+    with pytest.raises(OSError, match="simulated crash"):
+        _save_snapshot("demo", 99.0, first_at + timedelta(hours=1), settings)
+
+    assert snap_path.read_text() == original
+    assert _load_snapshot("demo", settings) == {
+        "cumulative": 12.5,
+        "at": first_at.isoformat(),
+    }
+    assert list((tmp_path / "reconcile").glob("*.tmp")) == []
+
+
+def test_atomic_write_text_replaces_content(tmp_path: Path) -> None:
+    from robotsix_cost_monitor.reconcile import _atomic_write_text
+
+    target = tmp_path / "last.json"
+    target.write_text("old")
+    _atomic_write_text(target, json.dumps({"status": "ok"}))
+    assert json.loads(target.read_text()) == {"status": "ok"}
+    assert list(tmp_path.glob("*.tmp")) == []

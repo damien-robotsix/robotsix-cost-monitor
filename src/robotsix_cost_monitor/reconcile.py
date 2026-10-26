@@ -11,6 +11,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import os
+import tempfile
 import time
 from collections.abc import Awaitable
 from datetime import UTC, datetime
@@ -41,6 +43,26 @@ def _snapshot_path(slug: str, settings: Settings | None = None) -> Path:
     return _state_dir(settings) / f"{slug}.json"
 
 
+def _atomic_write_text(path: Path, text: str) -> None:
+    """Write *text* to *path* atomically (temp file + fsync + ``os.replace``).
+
+    A crash mid-write leaves the previous file content intact instead of a
+    truncated file. The temp file lives in the same directory so
+    ``os.replace`` stays on one filesystem (atomic on POSIX).
+    """
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=path.name, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
+
+
 def _load_snapshot(
     slug: str, settings: Settings | None = None
 ) -> dict[str, Any] | None:
@@ -50,8 +72,9 @@ def _load_snapshot(
 def _save_snapshot(
     slug: str, cumulative: float, at: datetime, settings: Settings | None = None
 ) -> None:
-    _snapshot_path(slug, settings).write_text(
-        json.dumps({"cumulative": cumulative, "at": at.isoformat()})
+    _atomic_write_text(
+        _snapshot_path(slug, settings),
+        json.dumps({"cumulative": cumulative, "at": at.isoformat()}),
     )
 
 
@@ -257,7 +280,7 @@ async def reconcile_all(config: Config, service: CostService) -> dict[str, Any]:
         "tolerance_usd": config.settings.reconcile_tolerance_usd,
         "results": results,
     }
-    _last_path(config.settings).write_text(json.dumps(out, indent=2))
+    _atomic_write_text(_last_path(config.settings), json.dumps(out, indent=2))
     return out
 
 
