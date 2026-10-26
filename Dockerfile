@@ -20,8 +20,10 @@ ENV UV_LINK_MODE=copy \
 
 WORKDIR /app
 
-# Create the self-contained virtual environment up front.
-RUN python -m venv /opt/venv
+# Create the self-contained virtual environment up front. uv installs into it,
+# so it does not need its own pip (whose bundled SBOM lists vendored
+# msgpack/urllib3/setuptools that Trivy flags as fixable HIGH CVEs).
+RUN python -m venv --without-pip /opt/venv
 ENV VIRTUAL_ENV=/opt/venv \
     PATH="/opt/venv/bin:$PATH"
 
@@ -68,9 +70,15 @@ FROM python:3.14-slim AS runtime
 # fixed in 5.40.1-6+deb13u1). The Release pipeline's Trivy gate fails the build
 # on fixable CRITICALs (severity=CRITICAL, ignore-unfixed), so refresh the
 # package set at build time rather than waiting for a base-image rebuild.
+#
+# Also drop the base image's pip: nothing in the runtime image installs
+# packages, and pip's bundled SBOM reports vendored msgpack/urllib3/setuptools
+# versions with fixable HIGH CVEs that fail the pre-merge Trivy gate.
 RUN apt-get update \
     && apt-get upgrade -y \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && python -m pip uninstall -y pip \
+    && rm -f /usr/local/bin/pip /usr/local/bin/pip3*
 
 # Copy the prebuilt virtual environment (deps + project) from the builder stage.
 COPY --from=builder /opt/venv /opt/venv
