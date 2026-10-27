@@ -44,7 +44,7 @@ modules:
     description: JSON config models + loader (config/config.json), example config, JSON schema, and schema generation script
     paths:
       - src/robotsix_cost_monitor/config.py
-      - tests/robotsix_cost_monitor/test_config.py
+      - tests/robotsix_cost_monitor/config/test_config.py
       - config/config.json
       - config/config.example.json
       - config/config.schema.json
