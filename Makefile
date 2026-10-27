@@ -22,7 +22,7 @@ test-langfuse:
 	uv run pytest -q \
 		tests/robotsix_cost_monitor/clients/test_langfuse.py \
 		tests/robotsix_cost_monitor/clients/test_registry.py \
-		tests/robotsix_cost_monitor/test_routes.py \
+		tests/robotsix_cost_monitor/routes/test_routes.py \
 		tests/robotsix_cost_monitor/test_reconcile.py \
 		tests/robotsix_cost_monitor/test_aggregations.py
 
