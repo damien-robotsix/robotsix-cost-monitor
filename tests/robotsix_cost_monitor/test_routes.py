@@ -252,6 +252,7 @@ def test_chat_skill_returns_200_with_markdown(client: TestClient) -> None:
         "GET /api/highlights",
         "GET /api/reconcile",
         "GET /api/reconcile/last",
+        "GET /api/stuck-tickets",
         "GET /health",
     ):
         assert ep in body, f"Missing endpoint: {ep}"
@@ -262,6 +263,38 @@ def test_chat_skill_returns_200_with_markdown(client: TestClient) -> None:
     assert "sk-lf-" not in body
     assert "pk-lf-" not in body
     assert "secret" not in body.lower()
+
+
+#: GET routes on ``routes.router`` intentionally left out of the chat skill:
+#: the skill document itself and the browser-facing HTML pages.
+_CHAT_SKILL_EXCLUDED_GET_ROUTES = frozenset({"/chat-skill", "/", "/settings"})
+
+
+def test_chat_skill_documents_every_get_route(client: TestClient) -> None:
+    """Every GET route on the router is in the skill doc (or explicitly excluded)."""
+    from fastapi.routing import APIRoute
+
+    body = client.get("/chat-skill").text
+    get_paths = {
+        r.path for r in router.routes if isinstance(r, APIRoute) and "GET" in r.methods
+    }
+    assert get_paths, "no GET routes found on router"
+    missing = sorted(
+        p
+        for p in get_paths - _CHAT_SKILL_EXCLUDED_GET_ROUTES
+        if f"`GET {p}`" not in body
+    )
+    assert not missing, f"GET routes missing from _CHAT_SKILL: {missing}"
+
+
+def test_chat_skill_stuck_tickets_and_reconcile_safety(client: TestClient) -> None:
+    """Stuck-tickets 503 semantics and reconcile side effects are documented."""
+    body = client.get("/chat-skill").text
+    assert "`GET /api/stuck-tickets`" in body
+    assert "unknown, not zero" in body
+    safety = body.split("## Safety", 1)[1]
+    assert "`GET /api/reconcile`" in safety
+    assert "`POST /api/refresh`" in safety
 
 
 def test_chat_skill_no_credentials_leaked(client: TestClient) -> None:
