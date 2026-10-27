@@ -65,6 +65,18 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
+## [0.8.2](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.8.1...v0.8.2) (2026-10-27)
+
+
+### Bug Fixes
+
+* Write reconciliation state files atomically (temp file + os.replace) (20261026T125032Z-write-reconciliation-state-files-atomica-4022) ([#594](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/594)) ([68ac14c](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/68ac14c2d53ea256fa8355f3232fd830410a6368))
+
+
+### Documentation
+
+* Update chat-skill document to cover stuck-tickets and reconcile-run endpoints (20261027T011908Z-update-chat-skill-document-to-cover-stuc-ed06) ([#598](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/598)) ([d264b69](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/d264b69b9a4e7a3da63837d5945855d9dc5b41f2))
+
 ## [0.8.1](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.8.0...v0.8.1) (2026-10-13)
 
 
