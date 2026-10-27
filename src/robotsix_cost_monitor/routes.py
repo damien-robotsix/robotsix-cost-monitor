@@ -207,8 +207,19 @@ List-shaped endpoints (`GET /api/components`, `GET /api/projects`,
 | Endpoint | Description |
 |---|---|
 | `GET /api/highlights` | Most expensive trace and session. Optional `?backend=`. |
-| `GET /api/reconcile` | Reconcile OpenRouter usage against Langfuse traced costs. |
+| `GET /api/reconcile` | Run reconciliation now (writes snapshots — see Safety). |
 | `GET /api/reconcile/last` | Most recent reconciliation result. |
+
+### Stuck tickets
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/stuck-tickets` | Mill tickets stuck in non-terminal states. 503 = unknown. |
+
+`GET /api/stuck-tickets` queries the mill board live on every call.  An
+empty list means no stuck tickets (or detection is disabled).  A `503`
+means the mill board is unreachable: the stuck-ticket state is
+**unknown, not zero** — never report it as "no stuck tickets".
 
 ### Health
 
@@ -219,15 +230,25 @@ List-shaped endpoints (`GET /api/components`, `GET /api/projects`,
 
 ## Safety
 
-**Mutating endpoints** — these change server state (invalidate caches).
-The chat agent MUST ask for explicit operator confirmation before
-calling any of them:
+**Mutating endpoints** — these change server state (invalidate caches,
+persist reconciliation snapshots, call the OpenRouter API).  The chat
+agent MUST ask for explicit operator confirmation before calling any of
+them:
 
 | Endpoint | What it does |
 |---|---|
 | `POST /api/refresh` | Invalidate all caches; next request fetches fresh data. |
+| `GET /api/reconcile` | Fetch OpenRouter usage; overwrite reconciliation snapshots. |
 
-All read endpoints (`GET`) are safe and require no confirmation.
+Every other read endpoint (`GET`) is safe and requires no confirmation.
+To inspect reconciliation without side effects, use
+`GET /api/reconcile/last`.
+
+There is no `POST /api/reconcile/run` endpoint; reconciliation runs on
+the server's schedule or via `GET /api/reconcile` above.
+
+`GET /metrics` (Prometheus scrape) and the HTML pages (`/`, `/settings`)
+are operator/browser-facing and intentionally not part of this skill.
 """
 
 
