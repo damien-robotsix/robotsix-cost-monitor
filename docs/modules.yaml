@@ -169,6 +169,7 @@ modules:
       - vulture_whitelist.py
       - checklist_results.md
       - docs/modules.yaml
+      - tests/conftest.py
 
   - id: github-config
     description: GitHub templates, Dependabot config, and CI/CD workflows
