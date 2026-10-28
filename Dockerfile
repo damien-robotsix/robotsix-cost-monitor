@@ -10,9 +10,11 @@ FROM python:3.14-slim AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /usr/local/bin/uv
 
 # git is needed to install git dependencies (robotsix-llmio, etc.)
-# during the uv pip install below.
+# during the uv pip install below. Versions are pinned for the Debian trixie
+# base of python:3.14-slim (hadolint DL3008); the wildcard suffix allows
+# Debian patch/security revisions. Bump when the base moves to a new release.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git \
+    && apt-get install -y --no-install-recommends git=1:2.47.3-* \
     && rm -rf /var/lib/apt/lists/*
 
 ENV UV_LINK_MODE=copy \
@@ -39,7 +41,7 @@ COPY src ./src
 # Node is already available at this point (the base python:3.14-slim image
 # does not ship npm; we add it here).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends npm \
+    && apt-get install -y --no-install-recommends npm=9.2.0~ds1-* \
     && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts \
@@ -110,7 +112,7 @@ EXPOSE 8080
 
 # Probe the in-container /health route using only the Python stdlib.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/health').status==200 else 1)"
+    CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/health').status==200 else 1)"]
 
 ENTRYPOINT ["robotsix-cost-monitor"]
 CMD ["serve", "--host", "0.0.0.0", "--port", "8080"]

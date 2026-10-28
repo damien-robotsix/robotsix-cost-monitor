@@ -198,6 +198,19 @@ jobs:
       security-events: write  # upload Trivy SARIF results to Code Scanning
     uses: damien-robotsix/robotsix-github-workflows/.github/workflows/docker-pr-scan.yml@92c11fd2be7a9ce80bd60208616271326e0fb08a # main
 
+  # Static Dockerfile lint (hadolint) on every PR and push. This is the CI
+  # gate for Dockerfile lint; the pre-commit hadolint hook stays in the
+  # pre-commit job's SKIP list (local developer feedback only) so the two do
+  # not double-run.
+  lint-dockerfile:
+    name: Lint Dockerfiles
+    permissions:
+      contents: read  # check out the repo to lint the Dockerfiles
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/lint-dockerfile.yml@47523e8aa2d34d41da060d29b57f75ab262cb840 # v1.4.0
+    with:
+      dockerfiles: "Dockerfile Dockerfile.dev"
+      failure-threshold: warning
+
   workflow-audit:
     name: Workflow audit
     runs-on: ubuntu-latest
