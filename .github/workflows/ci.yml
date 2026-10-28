@@ -52,7 +52,7 @@ jobs:
     # inside a reusable workflow resolves against the CALLER's checkout, so
     # pins in the 042c0c2..#77 range fail with "Can't find 'action.yml' ...
     # under .github/actions/python-setup" for every consumer repo.
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-ci.yml@513c343db7ee0164e60bf31412d5fcf9af17417b # main
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-ci.yml@271b8509760efe549183cb5d1735d3cd754dafd1 # main 2026-10-28
     with:
       python-version: "3.14"
       install-extras: ""
