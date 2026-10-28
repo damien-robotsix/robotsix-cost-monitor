@@ -57,9 +57,12 @@ jobs:
       # TODO(2026-11-15): interim pin to 3.14.5 to unblock the xdist worker
       # crash in test_get_config_returns_app_state_config (CI run
       # 40632182984, Python 3.14.8). Root cause still open; tests/conftest.py
-      # enables faulthandler for a fault trace. Follow-up: add env/extra-args
+      # enables faulthandler for a fault trace. Suspected C extensions not yet
+      # built/validated against 3.14.8: uvloop 0.22.1, pydantic-core, orjson.
+      # Unpin (revert to "3.14") once the faulthandler trace identifies the
+      # culprit and it is bumped or fixed. Follow-up: add env/extra-args
       # (PYTHONFAULTHANDLER=1, `-n 0`) support to python-ci.yml upstream in
-      # robotsix-github-workflows, then revert this pin to "3.14".
+      # robotsix-github-workflows.
       python-version: "3.14.5"
       install-extras: ""
       cov-package: "robotsix_cost_monitor"
