@@ -65,6 +65,19 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
+## [0.8.3](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.8.2...v0.8.3) (2026-10-28)
+
+
+### Bug Fixes
+
+* ci_fix: out-of-scope CI failure — Python CI / Tests (20261028T031128Z-ci-fix-out-of-scope-ci-failure-python-ci-b5c7) ([#605](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/605)) ([690f768](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/690f768d31a53baf625e068f0d0361dafa3604f0))
+
+
+### Documentation
+
+* Correct stale Python 3.14.8 root-cause claim in tests/conftest.py faulthandler comment (20261028T075513Z-correct-stale-python-3-14-8-root-cause-c-1268) ([#608](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/608)) ([e6d2f35](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/e6d2f35168d6c2d4730c28b6341568ae825b3c50))
+* Reference CI run 40632182984 in tests/conftest.py faulthandler comment (20261028T054829Z-reference-ci-run-40632182984-in-tests-co-a32b) ([#607](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/607)) ([86a5c77](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/86a5c77123b285a76ee5beb7b6e62571b5f19559))
+
 ## [0.8.2](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.8.1...v0.8.2) (2026-10-27)
 
 
