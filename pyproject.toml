@@ -27,6 +27,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-asyncio>=0.24",
     "pytest-cov>=6.1",
+    "pytest-xdist>=3.6",
     "respx>=0.22",
     "robotsix-modules",
     "ruff>=0.16.3",
@@ -119,6 +120,7 @@ known_first_party = ["robotsix_cost_monitor"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = ["--strict-markers", "--strict-config"]
@@ -130,6 +132,12 @@ filterwarnings = [
     # originates in third-party code and is out of our control, so downgrade it
     # from an error to an ignore.
     "ignore:.*BlockingPortal.*:DeprecationWarning",
+    # anyio's pytest plugin imports the deprecated ``_pytest.python.CallSpec2``,
+    # which newer pytest flags with a PytestRemovedIn10Warning at plugin-load
+    # time. Third-party code with no fixed anyio release yet; match on the
+    # message only so the filter stays valid on pytest versions that lack the
+    # warning class.
+    "ignore:.*CallSpec2.*",
 ]
 
 [tool.mutmut]
