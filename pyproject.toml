@@ -130,6 +130,12 @@ filterwarnings = [
     # originates in third-party code and is out of our control, so downgrade it
     # from an error to an ignore.
     "ignore:.*BlockingPortal.*:DeprecationWarning",
+    # anyio's pytest plugin imports the deprecated ``_pytest.python.CallSpec2``,
+    # which newer pytest flags with a PytestRemovedIn10Warning at plugin-load
+    # time. Third-party code with no fixed anyio release yet; match on the
+    # message only so the filter stays valid on pytest versions that lack the
+    # warning class.
+    "ignore:.*CallSpec2.*",
 ]
 
 [tool.mutmut]
