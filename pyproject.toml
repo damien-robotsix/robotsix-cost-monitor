@@ -119,6 +119,7 @@ known_first_party = ["robotsix_cost_monitor"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = ["--strict-markers", "--strict-config"]
