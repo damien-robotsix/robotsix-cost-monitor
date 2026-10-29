@@ -79,7 +79,9 @@ class TestFetchProjects:
             assert projects[0].name == "robotsix-chat"
             assert projects[0].slug == "robotsix-chat"
             assert projects[0].langfuse_public_key == "pk-chat-abc123"
-            assert projects[0].langfuse_secret_key == "sk-chat-xyz789"
+            assert (
+                projects[0].langfuse_secret_key.get_secret_value() == "sk-chat-xyz789"
+            )
             assert (
                 projects[0].langfuse_base_url == "https://custom.langfuse.example.com"
             )
@@ -89,7 +91,9 @@ class TestFetchProjects:
             assert projects[1].name == "robotsix-mill"
             assert projects[1].slug == "robotsix-mill"
             assert projects[1].langfuse_public_key == "pk-mill-def456"
-            assert projects[1].langfuse_secret_key == "sk-mill-uvw012"
+            assert (
+                projects[1].langfuse_secret_key.get_secret_value() == "sk-mill-uvw012"
+            )
             assert (
                 projects[1].langfuse_base_url == "https://custom.langfuse.example.com"
             )

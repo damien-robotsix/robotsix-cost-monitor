@@ -121,7 +121,7 @@ class CostService:
         self._clients = {
             p.slug: LangfuseClient(
                 public_key=p.langfuse_public_key,
-                secret_key=p.langfuse_secret_key,
+                secret_key=p.langfuse_secret_key.get_secret_value(),
                 base_url=p.langfuse_base_url,
             )
             for p in registry_projects
