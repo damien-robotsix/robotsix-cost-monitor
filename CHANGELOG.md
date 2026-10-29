@@ -65,6 +65,18 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
+## [0.9.0](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.8.3...v0.9.0) (2026-10-29)
+
+
+### Features
+
+* Migrate robotsix-cost-monitor's hand-rolled no-op /readyz to robotsix-http create_health_router readiness checks (and stop auth-gating the probe) (20261029T083031Z-migrate-robotsix-cost-monitor-s-hand-rol-2821) ([#609](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/609)) ([f097910](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/f0979107a71d88a28d53dc1e035430be63743ddc))
+
+
+### Bug Fixes
+
+* Add the check-secret-str pre-commit hook (robotsix-standards v0.10.0) to robotsix-cost-monitor (20261029T115634Z-add-the-check-secret-str-pre-commit-hook-58e3) ([#612](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/612)) ([1a7f81e](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/1a7f81e320d980a50c329702e11684b338f90ce1))
+
 ## [0.8.3](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.8.2...v0.8.3) (2026-10-28)
 
 
