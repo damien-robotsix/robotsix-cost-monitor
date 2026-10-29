@@ -16,6 +16,7 @@ constraints = [
     { name = "httpx2", specifier = ">=2.12.0" },
     { name = "pydantic-settings", specifier = ">=2.14.2" },
 ]
+overrides = [{ name = "robotsix-http", extras = ["fastapi"], git = "https://github.com/damien-robotsix/robotsix-http.git?rev=ce95e2e0e95dcb5e586af82b71142ec362cdbae2" }]
 
 [[package]]
 name = "annotated-doc"
@@ -1407,7 +1408,7 @@ requires-dist = [
     { name = "prometheus-fastapi-instrumentator", specifier = ">=7.1" },
     { name = "pydantic", specifier = ">=2.10" },
     { name = "robotsix-config", git = "https://github.com/damien-robotsix/robotsix-config.git?rev=feabed320883760ec0f449469870d45f73d87194" },
-    { name = "robotsix-http", extras = ["fastapi"], git = "https://github.com/damien-robotsix/robotsix-http.git?rev=4bf6c1e317ccdf4f2e2764ad05c97a456b1ca0a1" },
+    { name = "robotsix-http", extras = ["fastapi"], git = "https://github.com/damien-robotsix/robotsix-http.git?rev=ce95e2e0e95dcb5e586af82b71142ec362cdbae2" },
     { name = "robotsix-llmio", git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=e5fab362fcb77780778ede87290c721013c9086d" },
     { name = "secure", specifier = ">=2.0.1" },
     { name = "structlog", specifier = ">=24.1" },
@@ -1438,8 +1439,8 @@ lint = [
 
 [[package]]
 name = "robotsix-http"
-version = "0.6.0"
-source = { git = "https://github.com/damien-robotsix/robotsix-http.git?rev=4bf6c1e317ccdf4f2e2764ad05c97a456b1ca0a1#4bf6c1e317ccdf4f2e2764ad05c97a456b1ca0a1" }
+version = "0.9.0"
+source = { git = "https://github.com/damien-robotsix/robotsix-http.git?rev=ce95e2e0e95dcb5e586af82b71142ec362cdbae2#ce95e2e0e95dcb5e586af82b71142ec362cdbae2" }
 dependencies = [
     { name = "httpcore" },
     { name = "httpx" },
@@ -1448,6 +1449,7 @@ dependencies = [
 [package.optional-dependencies]
 fastapi = [
     { name = "fastapi" },
+    { name = "structlog" },
 ]
 
 [[package]]
@@ -1461,7 +1463,7 @@ dependencies = [
     { name = "openai" },
     { name = "pydantic" },
     { name = "pydantic-ai-slim", extra = ["openrouter"] },
-    { name = "robotsix-http" },
+    { name = "robotsix-http", extra = ["fastapi"] },
     { name = "starlette" },
     { name = "structlog" },
 ]

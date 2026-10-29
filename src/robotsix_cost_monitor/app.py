@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import os
 from collections.abc import AsyncIterator
 from pathlib import Path
 from typing import Any, cast
@@ -13,6 +14,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 from robotsix_http.fastapi import (
     DomainError,
+    HealthCheck,
     create_health_router,
     domain_error_handler,
     register_exception_handlers,
@@ -23,7 +25,7 @@ from robotsix_cost_monitor import __version__
 
 from .clients.mill import MillAPIError, MillClient
 from .clients.registry import RegistryClient
-from .config import Config, load_config, resolve_registry_api_key
+from .config import Config, data_dir, load_config, resolve_registry_api_key
 from .exceptions import CostMonitorError
 from .metrics import cache_warm_failure, cache_warm_success
 from .reconcile import reconcile_all
@@ -173,6 +175,42 @@ async def _stuck_ticket_loop(mill: MillClient, interval_s: int) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Readiness checks (mounted on /readyz via create_health_router)
+# ---------------------------------------------------------------------------
+
+#: Paths that bypass HTTP Basic auth: the shared liveness/readiness probes and
+#: the Prometheus scrape must never be auth-gated by orchestrators/gateways.
+_AUTH_EXEMPT_PATHS = ("/health", "/health/live", "/readyz", "/metrics")
+
+
+def _readiness_checks(cfg: Config, service: CostService) -> dict[str, HealthCheck]:
+    """Build the named readiness checks for the shared health router.
+
+    * ``projects`` — the registry has yielded at least one Langfuse project
+      (in-memory; populated by ``refresh_projects`` at startup and on poll).
+      Without it every cost endpoint serves empty data.
+    * ``data_dir`` — the reconciliation snapshot directory exists and is
+      writable (reconcile persists snapshots there before comparing).
+    """
+
+    async def _projects() -> None:
+        if not service.projects():
+            raise RuntimeError("no projects discovered from the registry")
+
+    async def _data_dir() -> None:
+        d = data_dir(cfg.settings) / "reconcile"
+        # The failure text is served unauthenticated: never echo the path.
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            raise RuntimeError("reconcile data directory cannot be created") from None
+        if not os.access(d, os.W_OK):
+            raise RuntimeError("reconcile data directory is not writable")
+
+    return {"projects": _projects, "data_dir": _data_dir}
+
+
+# ---------------------------------------------------------------------------
 # App factory
 # ---------------------------------------------------------------------------
 
@@ -304,8 +342,9 @@ def create_app(config: Config | None = None) -> FastAPI:
     # HTTP Basic auth — the dashboard has no other access control, so it must
     # be protected whenever it is reachable beyond loopback (e.g. via the
     # central-deploy gateway, which is an unauthenticated reverse proxy). When
-    # unconfigured the check is a no-op (local dev / SSH tunnel). /health is
-    # always exempt so the container healthcheck keeps working.
+    # unconfigured the check is a no-op (local dev / SSH tunnel). The probe
+    # paths (/health, /health/live, /readyz) and /metrics are always exempt so
+    # the container healthcheck and orchestrator/gateway probes keep working.
     _auth = cfg.settings.auth
     _auth_user = _auth.username
     _auth_pass = _auth.password.get_secret_value()
@@ -320,7 +359,7 @@ def create_app(config: Config | None = None) -> FastAPI:
 
         @app.middleware("http")
         async def _basic_auth(request: Request, call_next: Any) -> Any:
-            if request.url.path in ("/health", "/metrics"):
+            if request.url.path in _AUTH_EXEMPT_PATHS:
                 return await call_next(request)
             header = request.headers.get("authorization", "")
             if header.startswith("Basic "):
@@ -345,7 +384,11 @@ def create_app(config: Config | None = None) -> FastAPI:
         )
 
     register_error_handlers(app)
-    app.include_router(create_health_router())
+    app.include_router(
+        create_health_router(
+            ready_path="/readyz", checks=_readiness_checks(cfg, service)
+        )
+    )
     app.include_router(router)
     app.include_router(config_router)
 

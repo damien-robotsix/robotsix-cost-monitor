@@ -15,7 +15,7 @@ dependencies = [
     "pydantic>=2.10",
     "structlog>=24.1",
     "robotsix-config @ git+https://github.com/damien-robotsix/robotsix-config.git@feabed320883760ec0f449469870d45f73d87194",
-    "robotsix-http[fastapi] @ git+https://github.com/damien-robotsix/robotsix-http.git@4bf6c1e317ccdf4f2e2764ad05c97a456b1ca0a1",
+    "robotsix-http[fastapi] @ git+https://github.com/damien-robotsix/robotsix-http.git@ce95e2e0e95dcb5e586af82b71142ec362cdbae2",
     "robotsix-llmio @ git+https://github.com/damien-robotsix/robotsix-llmio.git@e5fab362fcb77780778ede87290c721013c9086d",
 ]
 
@@ -58,6 +58,12 @@ allow-direct-references = true
 robotsix-modules = { git = "https://github.com/damien-robotsix/robotsix-modules.git" }
 
 [tool.uv]
+# robotsix-llmio pins robotsix-http at 0.6.0 via its own [tool.uv.sources];
+# force the probe-stack release (create_health_router readiness checks) that
+# the direct dependency above requires.
+override-dependencies = [
+    "robotsix-http[fastapi] @ git+https://github.com/damien-robotsix/robotsix-http.git@ce95e2e0e95dcb5e586af82b71142ec362cdbae2",
+]
 constraint-dependencies = [
     "pydantic-settings>=2.14.2",
     # Transitive via genai-prices (robotsix-llmio); pin above the versions

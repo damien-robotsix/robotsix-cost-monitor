@@ -70,6 +70,61 @@ def test_auth_health_is_exempt() -> None:
     assert r.status_code == 200
 
 
+def _probe_app(tmp_path: Path, *, with_project: bool) -> TestClient:
+    """Auth-enabled app with data_dir under *tmp_path* (lifespan not run)."""
+    from robotsix_cost_monitor.config import AuthConfig
+
+    cfg = Config(
+        settings=Settings(
+            data_dir=tmp_path,
+            auth=AuthConfig(
+                username="admin",
+                password=SecretStr("s3cret"),  # pragma: allowlist secret
+            ),
+        ),
+    )
+    app = create_app(cfg)
+    if with_project:
+        app.state.service._project_map = {"p": Mock()}
+    return TestClient(app)
+
+
+def test_auth_readyz_exempt_and_ready(tmp_path: Path) -> None:
+    # Orchestrator/gateway probes hit /readyz without credentials.
+    r = _probe_app(tmp_path, with_project=True).get("/readyz")
+    assert r.status_code == 200
+    assert r.json() == {"status": "ok"}
+
+
+def test_auth_liveness_is_exempt(tmp_path: Path) -> None:
+    r = _probe_app(tmp_path, with_project=False).get("/health/live")
+    assert r.status_code == 200
+
+
+def test_readyz_503_when_no_projects(tmp_path: Path) -> None:
+    r = _probe_app(tmp_path, with_project=False).get("/readyz")
+    assert r.status_code == 503
+    body = r.json()
+    assert body["status"] == "unready"
+    assert any(f.startswith("projects:") for f in body["failures"])
+
+
+def test_readyz_503_when_data_dir_unwritable(tmp_path: Path) -> None:
+    client = _probe_app(tmp_path, with_project=True)
+    with patch("robotsix_cost_monitor.app.os.access", return_value=False):
+        r = client.get("/readyz")
+    assert r.status_code == 503
+    failures = r.json()["failures"]
+    assert failures == ["data_dir: reconcile data directory is not writable"]
+    assert str(tmp_path) not in r.text
+
+
+def test_no_hand_rolled_readyz_in_routes() -> None:
+    from robotsix_cost_monitor.routes import router
+
+    assert "/readyz" not in {getattr(r, "path", None) for r in router.routes}
+
+
 def test_auth_disabled_when_unconfigured() -> None:
     # No username/password -> dashboard is open (loopback/dev).
     r = _empty_app().get("/")
