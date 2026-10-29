@@ -42,6 +42,11 @@ repos:
         language: system
         pass_filenames: false
 
+  - repo: https://github.com/damien-robotsix/robotsix-standards
+    rev: v0.10.0
+    hooks:
+      - id: check-secret-str
+
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.12
     hooks:

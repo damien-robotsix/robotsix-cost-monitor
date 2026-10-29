@@ -13,7 +13,7 @@ provide mypy-visible attribute access — replacing the previous
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 
 class LangfuseMetricsRow(BaseModel):
@@ -83,6 +83,6 @@ class RegistryProject(BaseModel):
         description="Owning component (registry `component_id`); '' when unknown",
     )
     langfuse_public_key: str
-    langfuse_secret_key: str
+    langfuse_secret_key: SecretStr
     langfuse_base_url: str = "https://cloud.langfuse.com"
     openrouter_key: str | None = None

@@ -209,7 +209,7 @@ async def reconcile_project(
 
     lf = LangfuseClient(
         public_key=project.langfuse_public_key,
-        secret_key=project.langfuse_secret_key,
+        secret_key=project.langfuse_secret_key.get_secret_value(),
         base_url=project.langfuse_base_url,
     )
     # Traced cost over the SAME interval as the provider delta (both since the
