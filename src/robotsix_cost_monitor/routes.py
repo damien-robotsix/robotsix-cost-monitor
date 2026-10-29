@@ -4,8 +4,9 @@ All route handlers that were previously inline inside ``create_app`` now live
 here, using FastAPI dependency injection to obtain ``Config`` and ``CostService``
 from ``app.state``.
 
-Exception handling and the ``/health`` route are provided by the shared
-:mod:`robotsix_http.fastapi` bootstrap and wired up in :mod:`.app`.
+Exception handling and the ``/health``, ``/health/live`` and ``/readyz`` probe
+routes are provided by the shared :mod:`robotsix_http.fastapi` bootstrap and
+wired up in :mod:`.app`.
 """
 
 from __future__ import annotations
@@ -102,12 +103,6 @@ def project_window(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/readyz")
-def readyz() -> dict[str, Any]:
-    """GET /readyz — readiness probe returning status."""
-    return {"status": "ok"}
-
-
 # ---------------------------------------------------------------------------
 # Chat skill (robotsix-chat agent access point)
 # ---------------------------------------------------------------------------
@@ -125,7 +120,8 @@ http://cost-monitor:8080
 
 HTTP Basic auth **may** be required (configured at deploy time — ask the
 operator for credentials).  All endpoints return 401 when auth is enabled
-and no valid credentials are supplied.  `/health` is always exempt.
+and no valid credentials are supplied.  The probes (`/health`,
+`/health/live`, `/readyz`) are always exempt.
 
 ## Read endpoints
 
@@ -225,8 +221,9 @@ means the mill board is unreachable: the stuck-ticket state is
 
 | Endpoint | Description |
 |---|---|
-| `GET /health` | Health check (status + project names). Always unauthenticated. |
-| `GET /readyz` | Readiness probe (dependency checks). Always unauthenticated. |
+| `GET /health` | Health check (`{"status": "ok"}`). Always unauthenticated. |
+| `GET /health/live` | Liveness probe (no dependency checks). Always unauthenticated. |
+| `GET /readyz` | Readiness probe (`projects`, `data_dir` checks); 503 if any fail. |
 
 ## Safety
 
