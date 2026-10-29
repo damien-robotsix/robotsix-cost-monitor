@@ -14,26 +14,6 @@ permissions:
   contents: read
 
 jobs:
-  lockfile-check:
-    name: Lockfile integrity check
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    env:
-      UV_CACHE_DIR: .cache/uv
-    steps:
-      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
-        with:
-          egress-policy: audit
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
-        with:
-          enable-cache: true
-          cache-python: true
-          python-version: "3.14"
-      - run: uv lock --check
-
   dependency-review:
     name: Dependency review
     if: github.event_name == 'pull_request'
@@ -52,7 +32,7 @@ jobs:
     # inside a reusable workflow resolves against the CALLER's checkout, so
     # pins in the 042c0c2..#77 range fail with "Can't find 'action.yml' ...
     # under .github/actions/python-setup" for every consumer repo.
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-ci.yml@271b8509760efe549183cb5d1735d3cd754dafd1 # main 2026-10-28
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-ci.yml@86a722f2938c1dda343bbf8d3c5989613cbf1794 # v1.5.0
     with:
       python-version: "3.14"
       install-extras: ""
@@ -61,6 +41,9 @@ jobs:
       run-deptry: true
       run-audit: true
       run-bandit: true
+      check-lock: true
+      run-vulture: true
+      vulture-args: '--min-confidence 80 --ignore-decorators "@field_validator,@model_validator" src/ tests/ vulture_whitelist.py'
 
   module-validation:
     name: Module taxonomy validation
@@ -125,28 +108,6 @@ jobs:
         with:
           persist-credentials: false
       - run: python3 scripts/validate_chat_skill_table.py
-
-  dead-code:
-    name: Dead code detection
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    env:
-      UV_CACHE_DIR: .cache/uv
-      UV_MALWARE_CHECK: "1"
-    steps:
-      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
-        with:
-          egress-policy: audit
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
-        with:
-          enable-cache: true
-          cache-python: true
-          python-version: "3.14"
-      - run: uv sync --locked --group lint
-      - run: uv run vulture --min-confidence 80 --ignore-decorators "@field_validator,@model_validator" src/ tests/ vulture_whitelist.py
 
   pre-commit:
     name: Pre-commit hooks
