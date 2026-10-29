@@ -125,6 +125,11 @@ jobs:
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           enable-cache: true
+          # The remote check-secret-str hook (language: script) runs under the
+          # PATH `python3` and uses Python 3.14 syntax (PEP 758); activate a
+          # 3.14 venv so it does not fall back to the runner's older python3.
+          python-version: "3.14"
+          activate-environment: true
       - run: uvx pre-commit run --all-files --show-diff-on-failure
 
   security:
