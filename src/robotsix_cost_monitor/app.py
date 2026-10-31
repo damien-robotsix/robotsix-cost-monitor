@@ -306,37 +306,18 @@ def create_app(config: Config | None = None) -> FastAPI:
 
     app.add_middleware(CorrelationIdMiddleware)
 
-    from secure import (
-        ContentSecurityPolicy,
-        PermissionsPolicy,
-        ReferrerPolicy,
-        Secure,
-        Server,
-        StrictTransportSecurity,
-        XContentTypeOptions,
-        XFrameOptions,
-    )
+    from secure import CacheControl, ContentSecurityPolicy, Secure
     from secure.middleware import SecureASGIMiddleware
 
-    csp = (
-        ContentSecurityPolicy()
-        .default_src("'self'")
-        .script_src("'self'", "'unsafe-inline'")
-        .style_src("'self'", "'unsafe-inline'")
-        .img_src("'self'", "data:")
-        .object_src("'none'")
-        .base_uri("'self'")
-        .form_action("'self'")
+    # Start from the fleet baseline (Preset.BALANCED) and only relax on top.
+    secure_headers = Secure.with_default_headers()
+    csp = next(
+        h for h in secure_headers.headers_list if isinstance(h, ContentSecurityPolicy)
     )
-    secure_headers = Secure(
-        csp=csp,
-        server=Server().set(""),
-        hsts=StrictTransportSecurity().max_age(31536000).include_subdomains(),
-        referrer=ReferrerPolicy().strict_origin_when_cross_origin(),
-        xcto=XContentTypeOptions().nosniff(),
-        xfo=XFrameOptions().sameorigin(),
-        permissions=PermissionsPolicy().geolocation().microphone().camera(),
-    )
+    # The server-rendered dashboard uses inline <script>/<style> blocks.
+    csp.script_src("'self'", "'unsafe-inline'").style_src("'self'", "'unsafe-inline'")
+    # Authenticated, cost/config-bearing responses must never hit disk cache.
+    secure_headers.headers_list.append(CacheControl().no_store().max_age(0))
     app.add_middleware(SecureASGIMiddleware, secure=secure_headers)
 
     # HTTP Basic auth — the dashboard has no other access control, so it must

@@ -160,3 +160,9 @@ manager in `create_app()`) and cancelled on shutdown:
 - **The dashboard has no built-in auth.** In production, a host nginx
   terminates TLS + basic auth and proxies to `127.0.0.1:8080` inside the
   container.
+- **Security headers follow the fleet baseline.** The `Secure` object is built
+  from `Secure.with_default_headers()` (`Preset.BALANCED`) in `create_app()`,
+  with only the inline-script/style CSP relaxations applied on top. Every
+  response also carries `Cache-Control: no-store`, so authenticated dashboard,
+  API and config responses are never written to a browser disk cache. Do not
+  hand-assemble the header set or relax the default for an API or HTML route.

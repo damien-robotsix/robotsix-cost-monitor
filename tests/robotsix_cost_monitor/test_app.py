@@ -153,6 +153,29 @@ def test_security_headers_on_json_api() -> None:
     assert "content-security-policy" in r.headers
 
 
+def test_security_headers_follow_balanced_preset() -> None:
+    """Headers come from the BALANCED preset plus Cache-Control: no-store."""
+    r = _empty_app().get("/api/summary?hours=24")
+    assert r.status_code == 200
+    assert r.headers["cross-origin-opener-policy"] == "same-origin"
+    assert r.headers["cross-origin-resource-policy"] == "same-origin"
+    assert r.headers["strict-transport-security"] == (
+        "max-age=31536000; includeSubDomains"
+    )
+    assert r.headers["x-frame-options"] == "SAMEORIGIN"
+    assert "no-store" in r.headers["cache-control"]
+    csp = r.headers["content-security-policy"]
+    assert "script-src 'self' 'unsafe-inline'" in csp
+    assert "object-src 'none'" in csp
+
+
+def test_html_page_not_cacheable() -> None:
+    """The authenticated dashboard HTML carries Cache-Control: no-store."""
+    r = _empty_app().get("/")
+    assert r.status_code == 200
+    assert "no-store" in r.headers["cache-control"]
+
+
 def test_summary_empty_is_zero() -> None:
     r = _empty_app().get("/api/summary?hours=24")
     assert r.status_code == 200
