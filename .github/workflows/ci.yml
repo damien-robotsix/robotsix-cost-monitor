@@ -138,7 +138,7 @@ jobs:
     permissions:
       contents: read
       security-events: write  # upload SARIF scan results to the Security tab
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-security.yml@6d737634940626eed0bec995c8e462892730e610 # main
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/python-security.yml@86a722f2938c1dda343bbf8d3c5989613cbf1794 # v1.5.0
     with:
       install-extras: ""
       trufflehog-pr-diff: true
@@ -150,7 +150,7 @@ jobs:
     # Minimal permissions: only need to read the repository
     permissions:
       contents: read
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/baseline-check.yml@a6378accaf26c75b12fac324c3056255647c107b # main
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/baseline-check.yml@86a722f2938c1dda343bbf8d3c5989613cbf1794 # v1.5.0
     with:
       has-docker: true
 
@@ -162,7 +162,7 @@ jobs:
     permissions:
       contents: read
       security-events: write  # upload Trivy SARIF results to Code Scanning
-    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/docker-pr-scan.yml@92c11fd2be7a9ce80bd60208616271326e0fb08a # main
+    uses: damien-robotsix/robotsix-github-workflows/.github/workflows/docker-pr-scan.yml@86a722f2938c1dda343bbf8d3c5989613cbf1794 # v1.5.0
 
   # Static Dockerfile lint (hadolint) on every PR and push. This is the CI
   # gate for Dockerfile lint; the pre-commit hadolint hook stays in the
