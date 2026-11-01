@@ -65,6 +65,14 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
+## [0.9.1](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.9.0...v0.9.1) (2026-11-01)
+
+
+### Bug Fixes
+
+* ci_fix: out-of-scope CI failure — JavaScript tests (20261031T162518Z-ci-fix-out-of-scope-ci-failure-javascrip-3caa) ([#621](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/621)) ([6cb8294](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/6cb8294448dffefaa714410b5927610f356e62f6))
+* Component security audit: Secure headers not built from BALANCED preset; no Cache-Control: no-store on authenticated dashboard (20261031T155717Z-component-security-audit-secure-headers-f303) ([#620](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/620)) ([8728a4c](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/8728a4c76a6555278c12133b9d53f6b4e2c9ff4d))
+
 ## [0.9.0](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.8.3...v0.9.0) (2026-10-29)
 
 
