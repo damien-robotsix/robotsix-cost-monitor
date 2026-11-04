@@ -167,7 +167,6 @@ modules:
       - uv.lock
       - vitest.config.js
       - vulture_whitelist.py
-      - checklist_results.md
       - docs/modules.yaml
       - tests/conftest.py
 
