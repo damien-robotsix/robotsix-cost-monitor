@@ -289,6 +289,8 @@ def create_app(config: Config | None = None) -> FastAPI:
             for t in tasks:
                 with contextlib.suppress(asyncio.CancelledError):
                     await t
+            for c in service._caches:
+                await c.aclose()
             await mill.close()
 
     app = FastAPI(title="robotsix-cost-monitor", version=__version__, lifespan=lifespan)

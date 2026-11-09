@@ -71,6 +71,9 @@ class TTLCache[K, V]:
         # (value, freshness_deadline, last_updated_monotonic), LRU-ordered
         self._store: OrderedDict[K, tuple[V, float, float]] = OrderedDict()
         self._pending: set[K] = set()
+        # Strong references to in-flight background refreshes: asyncio only
+        # keeps weak references, so an unreferenced task could be GC'd mid-run.
+        self._tasks: set[asyncio.Task[None]] = set()
 
     def _store_entry(self, key: K, value: V, now: float) -> None:
         """Insert/refresh *key* as most-recently-used, then evict any overflow."""
@@ -92,7 +95,9 @@ class TTLCache[K, V]:
             # Stale — serve immediately, refresh in background
             if key not in self._pending:
                 self._pending.add(key)
-                asyncio.create_task(self._background_refresh(key, fetch_fn))
+                task = asyncio.create_task(self._background_refresh(key, fetch_fn))
+                self._tasks.add(task)
+                task.add_done_callback(self._tasks.discard)
             return _value
         # Cold miss — block on fetch
         result = await fetch_fn()
@@ -114,6 +119,15 @@ class TTLCache[K, V]:
             logger.debug("background refresh failed for key %s", key, exc_info=True)
         finally:
             self._pending.discard(key)
+
+    async def aclose(self) -> None:
+        """Cancel all in-flight background refreshes and wait for them to finish."""
+        tasks = list(self._tasks)
+        for t in tasks:
+            t.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        self._tasks.clear()
 
     def invalidate(self, key: K | None = None) -> None:
         """Remove *key* from the cache; when *key* is ``None`` clear all entries."""
