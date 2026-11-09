@@ -676,6 +676,7 @@ def _make_mock_service(*, with_projects: bool = True) -> Mock:
     svc = Mock()
     svc._project_map = {"proj-a": Mock()} if with_projects else {}
     svc.refresh_projects = AsyncMock()
+    svc._caches = []
     svc.summary = AsyncMock(return_value=[])
     svc.by_model = AsyncMock(return_value=[])
     svc.trend = AsyncMock(return_value=[])
@@ -881,6 +882,27 @@ def test_lifespan_teardown_closes_mill_client() -> None:
             pass
 
     mock_mill.close.assert_awaited_once()
+
+
+def test_lifespan_teardown_closes_caches() -> None:
+    """Each service cache's ``aclose()`` is awaited during lifespan teardown so
+    in-flight background refreshes are cancelled rather than left untracked.
+    """
+    cfg = Config(settings=Settings())
+    mock_service = _make_mock_service()
+    caches = [Mock(aclose=AsyncMock()), Mock(aclose=AsyncMock())]
+    mock_service._caches = caches
+
+    with (
+        patch("robotsix_cost_monitor.app.CostService", return_value=mock_service),
+        patch("robotsix_cost_monitor.app._warm_cache", AsyncMock()),
+    ):
+        app = create_app(cfg)
+        with TestClient(app) as _client:
+            pass
+
+    for c in caches:
+        c.aclose.assert_awaited_once()
 
 
 def test_lifespan_teardown_releases_real_httpx_client() -> None:

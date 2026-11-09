@@ -241,3 +241,62 @@ async def test_background_refresh_respects_max_entries() -> None:
         await asyncio.sleep(0)
 
     assert len(cache._store) <= 2
+
+
+# ---------------------------------------------------------------------------
+# Background refresh task tracking
+# ---------------------------------------------------------------------------
+
+
+async def test_aclose_cancels_pending_background_refresh() -> None:
+    """A stale refresh is strongly referenced and aclose() cancels it cleanly."""
+    cache: TTLCache[str, int] = TTLCache(ttl=10.0)
+    started = asyncio.Event()
+
+    async def _initial() -> int:
+        return 1
+
+    async def _slow() -> int:
+        started.set()
+        await asyncio.Event().wait()  # never completes on its own
+        return 2
+
+    with patch("robotsix_cost_monitor.cache.time.monotonic") as mono:
+        mono.return_value = 1000.0
+        assert await cache.get_or_fetch("k", _initial) == 1
+
+        mono.return_value = 1020.0  # past TTL — stale
+        assert await cache.get_or_fetch("k", _slow) == 1
+        await started.wait()
+
+        assert len(cache._tasks) == 1
+        assert "k" in cache._pending
+        task = next(iter(cache._tasks))
+
+        await cache.aclose()
+
+    assert task.cancelled()
+    assert not cache._tasks
+    assert "k" not in cache._pending
+    # Stale value is retained; the refresh never overwrote it.
+    assert cache._store["k"][0] == 1
+
+
+async def test_completed_background_refresh_releases_task_reference() -> None:
+    """Finished refresh tasks are dropped from the tracking set."""
+    cache: TTLCache[str, int] = TTLCache(ttl=10.0)
+
+    async def _fetch() -> int:
+        return 1
+
+    with patch("robotsix_cost_monitor.cache.time.monotonic") as mono:
+        mono.return_value = 1000.0
+        await cache.get_or_fetch("k", _fetch)
+        mono.return_value = 1020.0
+        await cache.get_or_fetch("k", _fetch)
+        assert len(cache._tasks) == 1
+        for _ in range(4):
+            await asyncio.sleep(0)
+
+    assert not cache._tasks
+    assert "k" not in cache._pending
