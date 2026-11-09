@@ -14,9 +14,9 @@ dependencies = [
     "httpx>=0.28",
     "pydantic>=2.10",
     "structlog>=24.1",
-    "robotsix-config @ git+https://github.com/damien-robotsix/robotsix-config.git@feabed320883760ec0f449469870d45f73d87194",
-    "robotsix-http[fastapi] @ git+https://github.com/damien-robotsix/robotsix-http.git@ce95e2e0e95dcb5e586af82b71142ec362cdbae2",
-    "robotsix-llmio @ git+https://github.com/damien-robotsix/robotsix-llmio.git@e5fab362fcb77780778ede87290c721013c9086d",
+    "robotsix-config @ git+https://github.com/damien-robotsix/robotsix-config.git@5fc9c65449ac7f6dbba3a55f53917339e6230be5",
+    "robotsix-http[fastapi] @ git+https://github.com/damien-robotsix/robotsix-http.git@eb3d00244236bc187ea0cc842b1649d8e26adad9",
+    "robotsix-llmio @ git+https://github.com/damien-robotsix/robotsix-llmio.git@2d19f2bc2e2db9d2fa5726e3977974d382e6e3ce",
 ]
 
 [project.scripts]
@@ -62,7 +62,7 @@ robotsix-modules = { git = "https://github.com/damien-robotsix/robotsix-modules.
 # force the probe-stack release (create_health_router readiness checks) that
 # the direct dependency above requires.
 override-dependencies = [
-    "robotsix-http[fastapi] @ git+https://github.com/damien-robotsix/robotsix-http.git@ce95e2e0e95dcb5e586af82b71142ec362cdbae2",
+    "robotsix-http[fastapi] @ git+https://github.com/damien-robotsix/robotsix-http.git@eb3d00244236bc187ea0cc842b1649d8e26adad9",
 ]
 constraint-dependencies = [
     "pydantic-settings>=2.14.2",

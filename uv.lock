@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.14"
 resolution-markers = [
     "python_full_version >= '3.15'",
@@ -16,7 +16,7 @@ constraints = [
     { name = "httpx2", specifier = ">=2.12.0" },
     { name = "pydantic-settings", specifier = ">=2.14.2" },
 ]
-overrides = [{ name = "robotsix-http", extras = ["fastapi"], git = "https://github.com/damien-robotsix/robotsix-http.git?rev=ce95e2e0e95dcb5e586af82b71142ec362cdbae2" }]
+overrides = [{ name = "robotsix-http", extras = ["fastapi"], git = "https://github.com/damien-robotsix/robotsix-http.git?rev=eb3d00244236bc187ea0cc842b1649d8e26adad9" }]
 
 [[package]]
 name = "annotated-doc"
@@ -1352,8 +1352,8 @@ wheels = [
 
 [[package]]
 name = "robotsix-config"
-version = "0.1.0"
-source = { git = "https://github.com/damien-robotsix/robotsix-config.git?rev=feabed320883760ec0f449469870d45f73d87194#feabed320883760ec0f449469870d45f73d87194" }
+version = "0.7.5"
+source = { git = "https://github.com/damien-robotsix/robotsix-config.git?rev=5fc9c65449ac7f6dbba3a55f53917339e6230be5#5fc9c65449ac7f6dbba3a55f53917339e6230be5" }
 dependencies = [
     { name = "pydantic" },
 ]
@@ -1407,9 +1407,9 @@ requires-dist = [
     { name = "prometheus-client", specifier = ">=0.21" },
     { name = "prometheus-fastapi-instrumentator", specifier = ">=7.1" },
     { name = "pydantic", specifier = ">=2.10" },
-    { name = "robotsix-config", git = "https://github.com/damien-robotsix/robotsix-config.git?rev=feabed320883760ec0f449469870d45f73d87194" },
-    { name = "robotsix-http", extras = ["fastapi"], git = "https://github.com/damien-robotsix/robotsix-http.git?rev=ce95e2e0e95dcb5e586af82b71142ec362cdbae2" },
-    { name = "robotsix-llmio", git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=e5fab362fcb77780778ede87290c721013c9086d" },
+    { name = "robotsix-config", git = "https://github.com/damien-robotsix/robotsix-config.git?rev=5fc9c65449ac7f6dbba3a55f53917339e6230be5" },
+    { name = "robotsix-http", extras = ["fastapi"], git = "https://github.com/damien-robotsix/robotsix-http.git?rev=eb3d00244236bc187ea0cc842b1649d8e26adad9" },
+    { name = "robotsix-llmio", git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=2d19f2bc2e2db9d2fa5726e3977974d382e6e3ce" },
     { name = "secure", specifier = ">=2.0.1" },
     { name = "structlog", specifier = ">=24.1" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.52.0" },
@@ -1439,8 +1439,8 @@ lint = [
 
 [[package]]
 name = "robotsix-http"
-version = "0.9.0"
-source = { git = "https://github.com/damien-robotsix/robotsix-http.git?rev=ce95e2e0e95dcb5e586af82b71142ec362cdbae2#ce95e2e0e95dcb5e586af82b71142ec362cdbae2" }
+version = "0.9.4"
+source = { git = "https://github.com/damien-robotsix/robotsix-http.git?rev=eb3d00244236bc187ea0cc842b1649d8e26adad9#eb3d00244236bc187ea0cc842b1649d8e26adad9" }
 dependencies = [
     { name = "httpcore" },
     { name = "httpx" },
@@ -1454,8 +1454,8 @@ fastapi = [
 
 [[package]]
 name = "robotsix-llmio"
-version = "0.9.0"
-source = { git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=e5fab362fcb77780778ede87290c721013c9086d#e5fab362fcb77780778ede87290c721013c9086d" }
+version = "0.12.0"
+source = { git = "https://github.com/damien-robotsix/robotsix-llmio.git?rev=2d19f2bc2e2db9d2fa5726e3977974d382e6e3ce#2d19f2bc2e2db9d2fa5726e3977974d382e6e3ce" }
 dependencies = [
     { name = "anyio" },
     { name = "httpx" },
