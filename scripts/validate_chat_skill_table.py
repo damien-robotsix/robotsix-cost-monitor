@@ -2,7 +2,7 @@
 """Validate that query parameters in route handlers are documented in _CHAT_SKILL.
 
 Parses @router.get(...) decorators and function signatures from
-src/robotsix_cost_monitor/routes.py, extracts per-route query parameters
+src/robotsix_cost_monitor/routes/__init__.py, extracts per-route query parameters
 (via ``name: type = Query(...)`` defaults), and checks that each
 parameter is mentioned in the corresponding _CHAT_SKILL Markdown table
 row.
@@ -18,7 +18,7 @@ import re
 import sys
 from pathlib import Path
 
-ROUTES_PATH = Path("src/robotsix_cost_monitor/routes.py")
+ROUTES_PATH = Path("src/robotsix_cost_monitor/routes/__init__.py")
 
 # Query parameters that are documented globally in the _CHAT_SKILL
 # section preamble rather than on each individual table row.

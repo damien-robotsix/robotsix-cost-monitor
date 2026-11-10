@@ -84,7 +84,7 @@ ignore = ["S101"]
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S", "E501", "D"]
 "vulture_whitelist.py" = ["B018", "F821"]
-"src/robotsix_cost_monitor/routes.py" = ["B008"]
+"src/robotsix_cost_monitor/routes/__init__.py" = ["B008"]
 
 [tool.mypy]
 python_version = "3.14"

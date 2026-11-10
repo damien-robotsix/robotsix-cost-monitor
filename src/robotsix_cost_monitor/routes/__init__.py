@@ -17,13 +17,13 @@ from typing import Any, NamedTuple, cast
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse
 
-from .aggregations import BackendKind
-from .clients.mill import MillAPIError, MillClient
-from .config import Config
-from .reconcile import load_last_reconcile, reconcile_all, reconcile_project
-from .service import CostService
+from ..aggregations import BackendKind
+from ..clients.mill import MillAPIError, MillClient
+from ..config import Config
+from ..reconcile import load_last_reconcile, reconcile_all, reconcile_project
+from ..service import CostService
 
-_WEB = Path(__file__).resolve().parent / "web"
+_WEB = Path(__file__).resolve().parent.parent / "web"
 
 router = APIRouter()
 

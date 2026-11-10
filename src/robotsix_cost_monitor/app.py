@@ -30,7 +30,7 @@ from .exceptions import CostMonitorError
 from .metrics import cache_warm_failure, cache_warm_success
 from .reconcile import reconcile_all
 from .routes import router
-from .routes_config import router as config_router
+from .routes.config import router as config_router
 from .service import CostService
 
 _WEB = Path(__file__).resolve().parent / "web"
