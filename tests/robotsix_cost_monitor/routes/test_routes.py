@@ -1,5 +1,5 @@
 """Unit tests for route helpers, dependency providers, and route-handler edge
-cases from ``src/robotsix_cost_monitor/routes.py``.
+cases from ``src/robotsix_cost_monitor/routes/__init__.py``.
 
 These tests avoid importing ``create_app`` (which transitively requires the
 optional ``robotsix-llmio`` package). Instead, they build a minimal FastAPI

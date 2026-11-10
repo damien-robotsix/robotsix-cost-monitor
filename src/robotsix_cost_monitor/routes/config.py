@@ -30,7 +30,7 @@ from robotsix_config import (
     rollback,
 )
 
-from .config import Config
+from ..config import Config
 
 router = APIRouter()
 
