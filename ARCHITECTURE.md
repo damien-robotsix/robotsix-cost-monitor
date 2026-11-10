@@ -15,7 +15,9 @@
 │   ├── config.py               #   Pydantic settings models + JSON config loader (robotsix-config)
 │   ├── cache.py                #   Generic TTL cache with stale-while-revalidate (SWR) semantics
 │   ├── metrics.py              #   Custom Prometheus counters/gauges for background loops
-│   ├── service.py              #   Cross-project cost aggregation layer
+│   ├── service/                #   Cross-project cost aggregation layer
+│   │   ├── __init__.py         #     Re-exports CostService, DASHBOARD_WINDOW_PRESETS
+│   │   └── core.py             #     CostService implementation
 │   ├── reconcile.py            #   OpenRouter ↔ Langfuse reconciliation engine
 │   ├── aggregations.py         #   Pure cost-aggregation functions (no I/O)
 │   ├── clients/

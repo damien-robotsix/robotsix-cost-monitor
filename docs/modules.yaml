@@ -65,7 +65,8 @@ modules:
   - id: service
     description: Cross-project cost aggregation with TTL cache
     paths:
-      - src/robotsix_cost_monitor/service.py
+      - src/robotsix_cost_monitor/service/__init__.py
+      - src/robotsix_cost_monitor/service/core.py
       - tests/robotsix_cost_monitor/service/test_service.py
       - tests/robotsix_cost_monitor/service/test_service_by_agent.py
       - tests/robotsix_cost_monitor/service/test_service_components.py
