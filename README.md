@@ -65,9 +65,8 @@ uv run robotsix-cost-monitor reconcile [--project SLUG]
 | GET | `/api/backend-trend` | `?project=<slug\|all>&hours=<N>&backend=<all\|backend>` | Cost trend per backend |
 | GET | `/api/trend` | `?project=<slug\|all>&hours=<N>&buckets=<1-200>` | Bucketed cost-over-time trend series |
 | GET | `/api/highlights` | `?project=<slug\|all>&hours=<N>&backend=<all\|backend>` | Most expensive trace and session for the window |
-| GET | `/api/reconcile` | `?project=<slug\|all>` | OpenRouter↔Langfuse reconciliation result |
-| GET | `/api/reconcile/last` | — | Most recent reconciliation result (powers the dashboard warning banner) |
-| POST | `/api/reconcile/run` | `?project=<slug>` | Run reconciliation for a specific project (returns JSON result) |
+| GET | `/api/reconcile` | `?project=<slug\|all>` | Run OpenRouter↔Langfuse reconciliation (writes per-project snapshots) and return the result |
+| GET | `/api/reconcile/last` | — | Most recent reconciliation result, read-only (powers the dashboard warning banner) |
 | GET | `/api/stuck-tickets` | — | Tickets stuck in non-terminal states longer than the configured threshold (503 when mill API unreachable) |
 
 ## Architecture
