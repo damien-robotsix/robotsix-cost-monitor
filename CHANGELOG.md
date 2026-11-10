@@ -65,6 +65,19 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
+## [0.9.2](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.9.1...v0.9.2) (2026-11-10)
+
+
+### Bug Fixes
+
+* Track and cancel cache background-refresh tasks so shutdown is clean and refreshes cannot be GC'd (20261109T133106Z-track-and-cancel-cache-background-refres-8196) ([#628](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/628)) ([39dda95](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/39dda95d9a8cec49b55bad4d02ed0cc0acaf0fae))
+
+
+### Documentation
+
+* README documents non-existent POST /api/reconcile/run endpoint (20261110T020658Z-readme-documents-non-existent-post-api-r-fdfd) ([#630](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/630)) ([5710ad3](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/5710ad3476a4ea906c8f024598670dded7cbcdf5))
+* Verify per-module layout integrity for service, routes, and config after reorganization (20261110T031210Z-verify-per-module-layout-integrity-for-s-d067) ([#634](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/634)) ([7b78dcb](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/7b78dcb2d8144da13d8a8f615dcbf49a68c2cd25))
+
 ## [0.9.1](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.9.0...v0.9.1) (2026-11-01)
 
 
