@@ -44,9 +44,9 @@ template is `config/config.example.json`. Top-level keys:
   `reconcile_tolerance_usd`, `reconcile_schedule_hours`.
 
 New fields added to the config MUST flow through the Pydantic models in
-`src/robotsix_cost_monitor/config.py` and be reflected in the example file.
+`src/robotsix_cost_monitor/config/__init__.py` and be reflected in the example file.
 
-### Model hierarchy (`src/robotsix_cost_monitor/config.py`)
+### Model hierarchy (`src/robotsix_cost_monitor/config/__init__.py`)
 
 ```text
 Config                       # top-level: settings
@@ -83,7 +83,7 @@ from robotsix_config import load_config
 config = load_config(Config, path=path)
 ```
 
-Called in `config.py:load_config()`. Never add a second config loader.
+Called in `config/__init__.py:load_config()`. Never add a second config loader.
 
 ### Langfuse
 

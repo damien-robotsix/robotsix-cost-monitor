@@ -18,6 +18,10 @@ from pathlib import Path
 from pydantic import BaseModel, Field, SecretStr
 from robotsix_config import load_config as _load_config
 
+# Repo root: this file lives at src/robotsix_cost_monitor/config/__init__.py,
+# so the root is three levels up. Update if the module moves again.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+
 
 class AuthConfig(BaseModel):
     """HTTP Basic auth for the dashboard.
@@ -229,11 +233,9 @@ def data_dir(settings: Settings | None = None) -> Path:
     if settings is not None:
         path = Path(settings.data_dir)
         if not path.is_absolute():
-            path = Path(__file__).resolve().parents[2] / path
+            path = _REPO_ROOT / path
         return Path(os.path.abspath(path)).resolve()
-    return Path(
-        os.path.abspath(Path(__file__).resolve().parents[2] / ".data")
-    ).resolve()
+    return Path(os.path.abspath(_REPO_ROOT / ".data")).resolve()
 
 
 def load_config(path: Path | None = None) -> Config:
