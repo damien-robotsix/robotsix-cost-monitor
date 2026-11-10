@@ -10,9 +10,12 @@
 ├── docs/                       # MkDocs documentation source
 ├── src/robotsix_cost_monitor/  # Python package (the application)
 │   ├── app.py                  #   FastAPI app factory + lifespan (background loops)
-│   ├── routes.py               #   Route handlers, exception handlers, dependency providers
+│   ├── routes/                 #   HTTP layer
+│   │   ├── __init__.py         #     Route handlers, exception handlers, dependency providers
+│   │   └── config.py           #     Standard config HTTP surface (GET/PUT config, history)
 │   ├── cli.py                  #   CLI entrypoint (serve / summary / reconcile)
-│   ├── config.py               #   Pydantic settings models + JSON config loader (robotsix-config)
+│   ├── config/                 #   Configuration
+│   │   └── __init__.py         #     Pydantic settings models + JSON config loader (robotsix-config)
 │   ├── cache.py                #   Generic TTL cache with stale-while-revalidate (SWR) semantics
 │   ├── metrics.py              #   Custom Prometheus counters/gauges for background loops
 │   ├── service/                #   Cross-project cost aggregation layer

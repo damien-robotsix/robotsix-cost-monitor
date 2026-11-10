@@ -14,7 +14,7 @@ reconcile_last
 index
 _basic_auth  # FastAPI middleware registered via @app.middleware decorator
 
-# routes.py — FastAPI route handlers (registered via router decorators)
+# routes/__init__.py — FastAPI route handlers (registered via router decorators)
 chat_skill
 refresh_cache
 

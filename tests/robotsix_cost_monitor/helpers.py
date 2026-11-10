@@ -133,7 +133,7 @@ def _mock_client(**overrides: object) -> Mock:
 
 
 # ---------------------------------------------------------------------------
-# CostService factory (file-local to test_service.py — moved here for reuse)
+# CostService factory (file-local to service/test_service.py — moved here for reuse)
 # ---------------------------------------------------------------------------
 
 

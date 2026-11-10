@@ -1,4 +1,4 @@
-"""Unit tests for config.py I/O helpers."""
+"""Unit tests for config/__init__.py I/O helpers."""
 
 # mypy: disable-error-code="arg-type"
 
