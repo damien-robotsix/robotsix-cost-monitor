@@ -158,7 +158,7 @@ to report on:
   message naming the limit. `hours` below `0` is rejected the same way.
 - **Config-default clamping** — only the *server-side* default is clamped to
   the 168 h ceiling if an operator misconfigures it; a client-supplied value
-  is always either honoured (0–168) or rejected.
+  is always either honoured (0-168) or rejected.
 
 To remove any ambiguity about which window was applied, every windowed
 response advertises the resolved value:

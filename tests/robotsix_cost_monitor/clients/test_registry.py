@@ -14,7 +14,7 @@ from robotsix_cost_monitor.clients.registry import RegistryClient
 def _mock_response(status_code: int, json_body: object) -> httpx.Response:
     """Build an httpx.Response with a JSON body."""
     resp = httpx.Response(status_code=status_code, json=json_body)
-    resp._request = MagicMock()  # noqa: SLF001 — needed by raise_for_status
+    resp._request = MagicMock()
     return resp
 
 

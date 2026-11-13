@@ -23,10 +23,10 @@ def _mock_response(status_code: int, text: str = "") -> httpx.Response:
     """Build a minimal httpx.Response for testing."""
     resp = httpx.Response(status_code=status_code)
     if text:
-        resp._content = text.encode()  # noqa: SLF001
+        resp._content = text.encode()
     # robotsix-http RetryClient calls response.raise_for_status() which
     # requires _request to be set on the response.
-    resp._request = MagicMock()  # noqa: SLF001
+    resp._request = MagicMock()
     return resp
 
 

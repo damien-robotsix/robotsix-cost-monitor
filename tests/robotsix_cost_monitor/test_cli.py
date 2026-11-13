@@ -6,7 +6,6 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pytest import CaptureFixture
 
 from robotsix_cost_monitor.cli import main
 
@@ -170,7 +169,7 @@ def test_summary_custom_hours() -> None:
     mock_svc.summary.assert_called_once_with("all", 24)
 
 
-def test_summary_prints_json(capsys: CaptureFixture[str]) -> None:
+def test_summary_prints_json(capsys: pytest.CaptureFixture[str]) -> None:
     """``summary`` prints the JSON output returned by CostService.summary()."""
     expected = {"demo": 12.5, "total": 12.5}
     mock_svc = MagicMock()
@@ -234,7 +233,7 @@ def test_reconcile_project_specific_slug() -> None:
     assert mock_rp.call_args[0][0].slug == "y"
 
 
-def test_reconcile_prints_json(capsys: CaptureFixture[str]) -> None:
+def test_reconcile_prints_json(capsys: pytest.CaptureFixture[str]) -> None:
     """``reconcile`` prints JSON result."""
     cfg = _cfg()
     cfg.settings.registry_base_url = ""

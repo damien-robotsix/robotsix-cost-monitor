@@ -56,9 +56,12 @@ def _extract_query_params(node: ast.FunctionDef | ast.AsyncFunctionDef) -> set[s
         if i < num_no_default:
             continue
         default = defaults[i - num_no_default]
-        if isinstance(default, ast.Call):
-            if isinstance(default.func, ast.Name) and default.func.id == "Query":
-                params.add(arg.arg)
+        if (
+            isinstance(default, ast.Call)
+            and isinstance(default.func, ast.Name)
+            and default.func.id == "Query"
+        ):
+            params.add(arg.arg)
 
     return params
 
