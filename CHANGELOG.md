@@ -65,6 +65,13 @@ Everything below predates the release-please migration and was
 maintained by hand or by towncrier. It is kept verbatim; new entries
 are added above by release-please.
 
+## [0.9.3](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.9.2...v0.9.3) (2026-11-13)
+
+
+### Documentation
+
+* AGENT.md: Testing conventions — Silence vulture findings on intentional test stubs through `vulture_whitelist.p… (20261113T104613Z-agent-md-testing-conventions-silence-vul-5881) ([#640](https://github.com/damien-robotsix/robotsix-cost-monitor/issues/640)) ([8601cf0](https://github.com/damien-robotsix/robotsix-cost-monitor/commit/8601cf06c32644401b1b4bc128ecf3b7c3f11c2d))
+
 ## [0.9.2](https://github.com/damien-robotsix/robotsix-cost-monitor/compare/v0.9.1...v0.9.2) (2026-11-10)
 
 
