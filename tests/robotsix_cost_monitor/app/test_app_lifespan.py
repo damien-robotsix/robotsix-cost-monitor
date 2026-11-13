@@ -306,9 +306,11 @@ def test_lifespan_teardown_releases_httpx_client_on_error() -> None:
         patch("robotsix_cost_monitor.app._warm_cache", AsyncMock()),
     ):
         app = create_app(cfg)
-        with pytest.raises(RuntimeError, match="boom"):
-            with TestClient(app) as _client:
-                raise RuntimeError("boom")
+        with (
+            pytest.raises(RuntimeError, match="boom"),
+            TestClient(app) as _client,
+        ):
+            raise RuntimeError("boom")
 
     assert http.is_closed, "underlying httpx.AsyncClient leaked on error path"
     assert mill._http is None

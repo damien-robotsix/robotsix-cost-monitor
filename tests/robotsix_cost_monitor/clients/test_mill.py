@@ -29,7 +29,7 @@ class TestMillClient:
         """Build Settings with stuck-ticket detection enabled."""
         return Settings(
             mill_base_url=mill_base_url,
-            mill_api_key=SecretStr("test-key"),  # noqa: S106
+            mill_api_key=SecretStr("test-key"),
             stuck_ticket_threshold_hours=threshold,
         )
 

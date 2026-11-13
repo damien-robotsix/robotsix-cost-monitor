@@ -68,7 +68,8 @@ class TTLCache[K, V]:
         self._ttl = ttl
         self._on_refresh = on_refresh
         self._max_entries = max(1, max_entries)
-        # (value, freshness_deadline, last_updated_monotonic), LRU-ordered
+        # Each entry holds the value, its freshness deadline and the monotonic
+        # last-updated time; entries are kept in LRU order.
         self._store: OrderedDict[K, tuple[V, float, float]] = OrderedDict()
         self._pending: set[K] = set()
         # Strong references to in-flight background refreshes: asyncio only
