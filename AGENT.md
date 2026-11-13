@@ -20,6 +20,10 @@ This repo follows the [robotsix stack standards](https://github.com/damien-robot
     `Mock` with `AsyncMock` fetch methods returning empty results — prefer this
     when adding new tests that need a LangfuseClient seam.
 - Use `pytest-asyncio` for async tests.
+- **Rule:** Silence vulture findings on intentional test stubs through
+  `vulture_whitelist.py`, not with a bare `# noqa` comment: RUF100
+  (enabled by the Tier 2 ruff baseline) removes noqa comments it
+  considers unused, which re-breaks the vulture CI gate.
 
 ## Configuration invariants
 
