@@ -4,7 +4,7 @@
 # Builder stage: resolve and install the locked dependency set + the project
 # into a self-contained virtual environment the runtime stage simply COPYies.
 # ---------------------------------------------------------------------------
-FROM python:3.14-slim AS builder
+FROM python:3.15-slim AS builder
 
 # Bring in the uv static binary (pinned to a released version for reproducibility).
 COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /usr/local/bin/uv
@@ -64,7 +64,7 @@ RUN uv export --frozen --no-emit-project --no-hashes > requirements.txt \
 # Runtime stage: minimal image with only the prebuilt virtual environment,
 # running as a non-root user.
 # ---------------------------------------------------------------------------
-FROM python:3.14-slim AS runtime
+FROM python:3.15-slim AS runtime
 
 # Apply available OS security updates on top of the pinned base tag. The tag
 # can lag behind Debian point releases that patch fixable CRITICAL CVEs in
