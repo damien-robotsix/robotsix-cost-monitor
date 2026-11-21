@@ -1,13 +1,18 @@
 # syntax=docker/dockerfile:1
 
+# Digest-pin the python:3.14-slim base so the builder and the runtime's
+# apt-get upgrade both run against a fixed image snapshot (the mutable
+# python:3.14-slim tag can be repointed at any time).
+ARG BASE_DIGEST=sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f
+
 # ---------------------------------------------------------------------------
 # Builder stage: resolve and install the locked dependency set + the project
 # into a self-contained virtual environment the runtime stage simply COPYies.
 # ---------------------------------------------------------------------------
-FROM python:3.14-slim AS builder
+FROM python:3.14-slim@${BASE_DIGEST} AS builder
 
 # Bring in the uv static binary (pinned to a released version for reproducibility).
-COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.12.5@sha256:e85be844203885286c60ffad8a858d48afb6c5a5c237ca0e67f12e74b8f174b1 /uv /usr/local/bin/uv
 
 # git is needed to install git dependencies (robotsix-llmio, etc.)
 # during the uv pip install below. Versions are pinned for the Debian trixie
@@ -64,10 +69,10 @@ RUN uv export --frozen --no-emit-project --no-hashes > requirements.txt \
 # Runtime stage: minimal image with only the prebuilt virtual environment,
 # running as a non-root user.
 # ---------------------------------------------------------------------------
-FROM python:3.14-slim AS runtime
+FROM python:3.14-slim@${BASE_DIGEST} AS runtime
 
-# Apply available OS security updates on top of the pinned base tag. The tag
-# can lag behind Debian point releases that patch fixable CRITICAL CVEs in
+# Apply available OS security updates on top of the digest-pinned base image.
+# The tag can lag behind Debian point releases that patch fixable CRITICAL CVEs in
 # base packages (e.g. perl-base CVE-2026-13221 / CVE-2026-42496 / CVE-2026-8376,
 # fixed in 5.40.1-6+deb13u1). The Release pipeline's Trivy gate fails the build
 # on fixable CRITICALs (severity=CRITICAL, ignore-unfixed), so refresh the
