@@ -11,6 +11,7 @@ exactly as ``create_app`` does.
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from typing import cast
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
@@ -108,6 +109,7 @@ async def _cost_monitor_error_handler(request: Request, exc: Exception) -> Respo
 
 
 def _client(
+    make_client: Callable[..., TestClient],
     cfg: Config | None = None,
     service: object | None = None,
     **test_client_kwargs: object,
@@ -130,7 +132,7 @@ def _client(
     app.add_exception_handler(CostMonitorError, _cost_monitor_error_handler)
     app.include_router(create_health_router())
     app.include_router(router)
-    return TestClient(app, **test_client_kwargs)  # type: ignore[arg-type]
+    return make_client(app=app, **test_client_kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -195,7 +197,7 @@ def test_window_clamps_oversized_config_default() -> None:
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client(make_client: Callable[..., TestClient]) -> TestClient:
     """A TestClient against an app with one demo project and a mock service."""
     demo = _proj("Demo")
     cfg = _config()
@@ -218,7 +220,7 @@ def client() -> TestClient:
     svc.backend_trend = AsyncMock(return_value=[])
     svc.trend = AsyncMock(return_value=[])
     svc.highlights = AsyncMock(return_value={})
-    return _client(cfg, svc)
+    return _client(make_client, cfg, svc)
 
 
 def test_health_returns_ok(client: TestClient) -> None:
@@ -531,7 +533,9 @@ def test_chat_skill_documents_time_window(client: TestClient) -> None:
     assert "effective_hours" in body
 
 
-def test_reconcile_unknown_project_returns_404() -> None:
+def test_reconcile_unknown_project_returns_404(
+    make_client: Callable[..., TestClient],
+) -> None:
     """Unknown project slug returns 404 with PROJECT_NOT_FOUND."""
     from robotsix_cost_monitor.exceptions import ProjectNotFoundError
 
@@ -539,14 +543,14 @@ def test_reconcile_unknown_project_returns_404() -> None:
     svc._projects = Mock(
         side_effect=ProjectNotFoundError("Project 'nonexistent' not found")
     )
-    r = _client(service=svc).get("/api/reconcile?project=nonexistent")
+    r = _client(make_client, service=svc).get("/api/reconcile?project=nonexistent")
     assert r.status_code == 404
     body = r.json()
     assert body["error"]["code"] == "PROJECT_NOT_FOUND"
 
 
-def test_index_returns_html() -> None:
-    r = _client().get("/")
+def test_index_returns_html(make_client: Callable[..., TestClient]) -> None:
+    r = _client(make_client).get("/")
     assert r.status_code == 200
     assert r.headers["content-type"].startswith("text/html")
 
@@ -556,9 +560,11 @@ def test_index_returns_html() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_invalid_query_param_type_validation_envelope() -> None:
+def test_invalid_query_param_type_validation_envelope(
+    make_client: Callable[..., TestClient],
+) -> None:
     """Pass a string where an integer is expected → 422 with validation_error."""
-    r = _client().get("/api/summary?hours=abc")
+    r = _client(make_client).get("/api/summary?hours=abc")
     assert r.status_code == 422
     body = r.json()
     assert body["error"]["code"] == "validation_error"
@@ -568,7 +574,9 @@ def test_invalid_query_param_type_validation_envelope() -> None:
     assert any("hours" in loc for loc in locs)
 
 
-def test_unknown_project_returns_404() -> None:
+def test_unknown_project_returns_404(
+    make_client: Callable[..., TestClient],
+) -> None:
     """Unknown project slug returns 404 with PROJECT_NOT_FOUND."""
     from robotsix_cost_monitor.exceptions import ProjectNotFoundError
 
@@ -576,17 +584,19 @@ def test_unknown_project_returns_404() -> None:
     svc.summary = AsyncMock(
         side_effect=ProjectNotFoundError("Project 'nonexistent' not found")
     )
-    r = _client(service=svc).get("/api/summary?project=nonexistent")
+    r = _client(make_client, service=svc).get("/api/summary?project=nonexistent")
     assert r.status_code == 404
     body = r.json()
     assert body["error"]["code"] == "PROJECT_NOT_FOUND"
 
 
-def test_internal_error_returns_sanitized_envelope() -> None:
+def test_internal_error_returns_sanitized_envelope(
+    make_client: Callable[..., TestClient],
+) -> None:
     """Force a 500 via a mock service that raises an unhandled exception."""
     svc = Mock()
     svc.summary = AsyncMock(side_effect=RuntimeError("crash"))
-    r = _client(_config(), svc, raise_server_exceptions=False).get(
+    r = _client(make_client, _config(), svc, raise_server_exceptions=False).get(
         "/api/summary?hours=24"
     )
     assert r.status_code == 500
@@ -812,7 +822,9 @@ def test_highlights_response_shape(client: TestClient) -> None:
     assert isinstance(body["session_cost_scope"], str)
 
 
-def test_reconcile_all_response_shape() -> None:
+def test_reconcile_all_response_shape(
+    make_client: Callable[..., TestClient],
+) -> None:
     """GET /api/reconcile?project=all — response matches ``ReconcileRow`` typedef."""
     svc = Mock()
     svc._project_map = {}
@@ -839,7 +851,7 @@ def test_reconcile_all_response_shape() -> None:
             ],
         }
 
-        r = _client(service=svc).get("/api/reconcile?project=all")
+        r = _client(make_client, service=svc).get("/api/reconcile?project=all")
         assert r.status_code == 200
         body = r.json()
         assert isinstance(body, list)
@@ -852,7 +864,9 @@ def test_reconcile_all_response_shape() -> None:
                 assert isinstance(row["within_tolerance"], bool)
 
 
-def test_reconcile_single_project_response_shape() -> None:
+def test_reconcile_single_project_response_shape(
+    make_client: Callable[..., TestClient],
+) -> None:
     """GET /api/reconcile?project=demo — response matches ``ReconcileRow`` typedef."""
     svc = Mock()
     demo = _proj("Demo")
@@ -879,7 +893,7 @@ def test_reconcile_single_project_response_shape() -> None:
             "tolerance_usd": 1.0,
         }
 
-        r = _client(service=svc).get("/api/reconcile?project=demo")
+        r = _client(make_client, service=svc).get("/api/reconcile?project=demo")
         assert r.status_code == 200
         body = r.json()
         assert isinstance(body, list)
@@ -895,7 +909,9 @@ def test_reconcile_single_project_response_shape() -> None:
         assert isinstance(row["low_balance"], bool)
 
 
-def test_reconcile_last_response_shape() -> None:
+def test_reconcile_last_response_shape(
+    make_client: Callable[..., TestClient],
+) -> None:
     """GET /api/reconcile/last — response matches ``ReconLast`` typedef."""
     with patch(
         "robotsix_cost_monitor.routes.load_last_reconcile",
@@ -915,7 +931,7 @@ def test_reconcile_last_response_shape() -> None:
             ],
         }
 
-        r = _client().get("/api/reconcile/last")
+        r = _client(make_client).get("/api/reconcile/last")
         assert r.status_code == 200
         body = r.json()
         assert isinstance(body, dict)
@@ -926,7 +942,9 @@ def test_reconcile_last_response_shape() -> None:
             assert isinstance(row["project"], str)
 
 
-def test_reconcile_last_defaults_when_no_data() -> None:
+def test_reconcile_last_defaults_when_no_data(
+    make_client: Callable[..., TestClient],
+) -> None:
     """GET /api/reconcile/last — returns defaults before any reconcile has run."""
     with patch(
         "robotsix_cost_monitor.routes.load_last_reconcile",
@@ -937,7 +955,7 @@ def test_reconcile_last_defaults_when_no_data() -> None:
             "results": [],
         }
 
-        r = _client().get("/api/reconcile/last")
+        r = _client(make_client).get("/api/reconcile/last")
         assert r.status_code == 200
         body = r.json()
         assert body["status"] == "unknown"

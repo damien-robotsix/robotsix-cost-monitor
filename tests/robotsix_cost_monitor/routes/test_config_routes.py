@@ -12,6 +12,7 @@ with the mask a client echoed back.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import cast
 
@@ -19,14 +20,17 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from robotsix_cost_monitor.app import create_app
 from robotsix_cost_monitor.config import Config
 
 AUTH = ("ops", "s3cret")
 
 
 @pytest.fixture
-def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
+def client(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    make_client: Callable[..., TestClient],
+) -> TestClient:
     cfg_file = tmp_path / "config.json"
     cfg_file.write_text(
         json.dumps(
@@ -40,9 +44,7 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
         encoding="utf-8",
     )
     monkeypatch.setenv("ROBOTSIX_CONFIG_FILE", str(cfg_file))
-    client = TestClient(
-        create_app(Config.model_validate(json.loads(cfg_file.read_text())))
-    )
+    client = make_client(config=Config.model_validate(json.loads(cfg_file.read_text())))
     # The dashboard is behind HTTP Basic auth whenever it is exposed, so
     # exercise the surface the way it is actually reached.
     client.auth = AUTH
@@ -145,8 +147,12 @@ class TestConfigSurfaceRequiresAuth:
     """The config surface reads and writes credentials, so it must never be
     reachable unauthenticated when auth is configured."""
 
-    def test_all_routes_401_when_anon(self, client: TestClient) -> None:
-        anon = TestClient(cast("FastAPI", client.app))
+    def test_all_routes_401_when_anon(
+        self,
+        client: TestClient,
+        make_client: Callable[..., TestClient],
+    ) -> None:
+        anon = make_client(app=client.app)
         assert anon.get("/config").status_code == 401
         assert anon.put("/config", json={}).status_code == 401
         assert anon.get("/config/versions").status_code == 401
