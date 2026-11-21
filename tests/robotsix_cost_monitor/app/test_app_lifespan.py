@@ -5,9 +5,9 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from unittest.mock import AsyncMock, Mock, patch
 
-import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -34,7 +34,9 @@ def _make_mock_service(*, with_projects: bool = True) -> Mock:
     return svc
 
 
-def test_lifespan_skips_background_loops_when_intervals_zero() -> None:
+def test_lifespan_skips_background_loops_when_intervals_zero(
+    make_client: Callable[..., TestClient],
+) -> None:
     """When all schedule intervals are zero only ``_warm_cache`` runs (one-shot)."""
     cfg = Config(
         settings=Settings(
@@ -53,7 +55,7 @@ def test_lifespan_skips_background_loops_when_intervals_zero() -> None:
         patch("robotsix_cost_monitor.app._warm_cache", mock_warm),
     ):
         app = create_app(cfg)
-        with TestClient(app) as _client:
+        with make_client(app=app) as _client:
             pass
 
     mock_reconcile.assert_not_called()
@@ -61,7 +63,9 @@ def test_lifespan_skips_background_loops_when_intervals_zero() -> None:
     mock_warm.assert_called_once()
 
 
-def test_lifespan_starts_reconcile_loop_when_positive_and_projects() -> None:
+def test_lifespan_starts_reconcile_loop_when_positive_and_projects(
+    make_client: Callable[..., TestClient],
+) -> None:
     """A positive ``reconcile_schedule_hours`` with projects starts the reconcile loop."""
     cfg = Config(settings=Settings(reconcile_schedule_hours=24))
     mock_reconcile = AsyncMock()
@@ -74,13 +78,15 @@ def test_lifespan_starts_reconcile_loop_when_positive_and_projects() -> None:
         patch("robotsix_cost_monitor.app._warm_cache", AsyncMock()),
     ):
         app = create_app(cfg)
-        with TestClient(app) as _client:
+        with make_client(app=app) as _client:
             pass
 
     mock_reconcile.assert_called_once()
 
 
-def test_lifespan_skips_reconcile_when_no_projects() -> None:
+def test_lifespan_skips_reconcile_when_no_projects(
+    make_client: Callable[..., TestClient],
+) -> None:
     """A positive ``reconcile_schedule_hours`` with an empty project map
     does NOT start the reconcile loop.
     """
@@ -95,13 +101,15 @@ def test_lifespan_skips_reconcile_when_no_projects() -> None:
         patch("robotsix_cost_monitor.app._warm_cache", AsyncMock()),
     ):
         app = create_app(cfg)
-        with TestClient(app) as _client:
+        with make_client(app=app) as _client:
             pass
 
     mock_reconcile.assert_not_called()
 
 
-def test_lifespan_starts_cache_refresh_when_positive_and_projects() -> None:
+def test_lifespan_starts_cache_refresh_when_positive_and_projects(
+    make_client: Callable[..., TestClient],
+) -> None:
     """A positive ``dashboard_refresh_interval_seconds`` with projects starts
     the cache-refresh loop.
     """
@@ -116,13 +124,15 @@ def test_lifespan_starts_cache_refresh_when_positive_and_projects() -> None:
         patch("robotsix_cost_monitor.app._warm_cache", AsyncMock()),
     ):
         app = create_app(cfg)
-        with TestClient(app) as _client:
+        with make_client(app=app) as _client:
             pass
 
     mock_cache_refresh.assert_called_once()
 
 
-def test_lifespan_starts_registry_poll_when_interval_positive() -> None:
+def test_lifespan_starts_registry_poll_when_interval_positive(
+    make_client: Callable[..., TestClient],
+) -> None:
     """A positive ``registry_poll_interval_seconds`` starts a poll loop that
     calls ``service.refresh_projects``.
     """
@@ -141,7 +151,7 @@ def test_lifespan_starts_registry_poll_when_interval_positive() -> None:
         patch("robotsix_cost_monitor.app.asyncio.sleep", fast_sleep),
     ):
         app = create_app(cfg)
-        with TestClient(app) as _client:
+        with make_client(app=app) as _client:
             pass
 
     # The poll loop should have called refresh_projects at least once
@@ -149,7 +159,9 @@ def test_lifespan_starts_registry_poll_when_interval_positive() -> None:
     assert mock_service.refresh_projects.call_count >= 1
 
 
-def test_lifespan_warm_cache_always_runs() -> None:
+def test_lifespan_warm_cache_always_runs(
+    make_client: Callable[..., TestClient],
+) -> None:
     """``_warm_cache`` is always started even when all loops are disabled."""
     cfg = Config(
         settings=Settings(
@@ -162,7 +174,7 @@ def test_lifespan_warm_cache_always_runs() -> None:
 
     with patch("robotsix_cost_monitor.app._warm_cache", mock_warm):
         app = create_app(cfg)
-        with TestClient(app) as _client:
+        with make_client(app=app) as _client:
             pass
 
     mock_warm.assert_called_once()
@@ -173,7 +185,9 @@ def test_lifespan_warm_cache_always_runs() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_lifespan_teardown_cancels_all_tasks() -> None:
+def test_lifespan_teardown_cancels_all_tasks(
+    make_client: Callable[..., TestClient],
+) -> None:
     """After the ``TestClient`` context manager exits every background task
     has been cancelled and awaited (``task.done()`` is True).
     """
@@ -205,7 +219,7 @@ def test_lifespan_teardown_cancels_all_tasks() -> None:
         patch("robotsix_cost_monitor.app.asyncio.create_task", tracking_create_task),
     ):
         app = create_app(cfg)
-        with TestClient(app) as _client:
+        with make_client(app=app) as _client:
             pass
 
     # reconcile, cache_refresh, warm_cache, registry_poll → ≥ 4 tasks
@@ -214,7 +228,9 @@ def test_lifespan_teardown_cancels_all_tasks() -> None:
         assert task.done(), f"task {task.get_name()!r} was not done after teardown"
 
 
-def test_lifespan_teardown_closes_mill_client() -> None:
+def test_lifespan_teardown_closes_mill_client(
+    make_client: Callable[..., TestClient],
+) -> None:
     """The ``MillClient`` is explicitly closed during lifespan teardown so the
     underlying ``httpx.AsyncClient`` is released rather than left to the GC.
     """
@@ -229,13 +245,15 @@ def test_lifespan_teardown_closes_mill_client() -> None:
         patch("robotsix_cost_monitor.app._warm_cache", AsyncMock()),
     ):
         app = create_app(cfg)
-        with TestClient(app) as _client:
+        with make_client(app=app) as _client:
             pass
 
     mock_mill.close.assert_awaited_once()
 
 
-def test_lifespan_teardown_closes_caches() -> None:
+def test_lifespan_teardown_closes_caches(
+    make_client: Callable[..., TestClient],
+) -> None:
     """Each service cache's ``aclose()`` is awaited during lifespan teardown so
     in-flight background refreshes are cancelled rather than left untracked.
     """
@@ -249,14 +267,17 @@ def test_lifespan_teardown_closes_caches() -> None:
         patch("robotsix_cost_monitor.app._warm_cache", AsyncMock()),
     ):
         app = create_app(cfg)
-        with TestClient(app) as _client:
+        with make_client(app=app) as _client:
             pass
 
     for c in caches:
         c.aclose.assert_awaited_once()
 
 
-def test_lifespan_teardown_releases_real_httpx_client() -> None:
+def test_lifespan_teardown_releases_real_httpx_client(
+    make_client: Callable[..., TestClient],
+    http_client,
+) -> None:
     """Integration: a *real* ``MillClient``'s underlying ``httpx.AsyncClient``
     is actually released during lifespan teardown.
 
@@ -270,7 +291,7 @@ def test_lifespan_teardown_releases_real_httpx_client() -> None:
     mill = MillClient(cfg.settings)
     # Force the lazy HTTP transport into existence so we have something to
     # observe being closed. ``httpx.AsyncClient.__init__`` needs no event loop.
-    mill._http = httpx.AsyncClient(timeout=30.0)
+    mill._http = http_client
     http = mill._http
     assert not http.is_closed
 
@@ -280,14 +301,17 @@ def test_lifespan_teardown_releases_real_httpx_client() -> None:
         patch("robotsix_cost_monitor.app._warm_cache", AsyncMock()),
     ):
         app = create_app(cfg)
-        with TestClient(app) as _client:
+        with make_client(app=app) as _client:
             pass
 
     assert http.is_closed, "underlying httpx.AsyncClient was not released"
     assert mill._http is None
 
 
-def test_lifespan_teardown_releases_httpx_client_on_error() -> None:
+def test_lifespan_teardown_releases_httpx_client_on_error(
+    make_client: Callable[..., TestClient],
+    http_client,
+) -> None:
     """The underlying ``httpx.AsyncClient`` is released even when the app
     context exits via an exception — cleanup lives in a ``finally`` block, so
     an error path must not leak the transport.
@@ -296,7 +320,7 @@ def test_lifespan_teardown_releases_httpx_client_on_error() -> None:
     mock_service = _make_mock_service()
 
     mill = MillClient(cfg.settings)
-    mill._http = httpx.AsyncClient(timeout=30.0)
+    mill._http = http_client
     http = mill._http
     assert not http.is_closed
 
@@ -308,7 +332,7 @@ def test_lifespan_teardown_releases_httpx_client_on_error() -> None:
         app = create_app(cfg)
         with (
             pytest.raises(RuntimeError, match="boom"),
-            TestClient(app) as _client,
+            make_client(app=app) as _client,
         ):
             raise RuntimeError("boom")
 

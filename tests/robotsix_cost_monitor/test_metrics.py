@@ -6,13 +6,6 @@ from fastapi.testclient import TestClient
 from prometheus_client import REGISTRY
 
 from robotsix_cost_monitor import metrics as m
-from robotsix_cost_monitor.app import create_app
-from robotsix_cost_monitor.config import Config
-
-
-def _empty_app() -> TestClient:
-    return TestClient(create_app(Config()))
-
 
 # ---------------------------------------------------------------------------
 # Module-level: metric declarations exist with the expected names
@@ -84,14 +77,12 @@ def test_cache_warm_failure_increment() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_metrics_endpoint_returns_200() -> None:
-    client = _empty_app()
+def test_metrics_endpoint_returns_200(client: TestClient) -> None:
     r = client.get("/metrics")
     assert r.status_code == 200
 
 
-def test_metrics_endpoint_contains_custom_metric_names() -> None:
-    client = _empty_app()
+def test_metrics_endpoint_contains_custom_metric_names(client: TestClient) -> None:
     r = client.get("/metrics")
     body = r.text
     assert "robotsix_cost_monitor_reconcile_runs_total" in body
