@@ -29,13 +29,21 @@ export const esc = (s) =>
     (c) => /** @type {string} */ ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]),
   );
 
+const FETCH_TIMEOUT_MS = 15_000; // align with backend/slow-path latency (reconcile fetch can exceed default)
+
 /**
  * Fetch JSON from a relative path.
+ *
+ * A timeout is attached via `AbortSignal.timeout` so a hung backend request
+ * rejects with `TimeoutError` instead of leaving the caller stuck on a
+ * `loading…` status indefinitely; callers' existing catch blocks surface the
+ * error via `setStatus`.
+ *
  * @param {string} path
  * @returns {Promise<any>}
  */
 export async function getJSON(path) {
-  const r = await fetch(path);
+  const r = await fetch(path, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   if (!r.ok) throw new Error(`${path} → ${r.status}`);
   return r.json();
 }
