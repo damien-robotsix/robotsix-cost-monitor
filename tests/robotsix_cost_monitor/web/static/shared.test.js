@@ -88,7 +88,27 @@ describe('getJSON', () => {
     try {
       const result = await getJSON('/api/test');
       expect(result).toEqual({ a: 1 });
-      expect(globalThis.fetch).toHaveBeenCalledWith('/api/test');
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/test',
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it('passes an AbortSignal timeout as the fetch signal', async () => {
+    const origFetch = globalThis.fetch;
+    let init;
+    globalThis.fetch = vi.fn().mockImplementation(async (_url, opts) => {
+      init = opts;
+      return { ok: true, json: async () => ({}) };
+    });
+
+    try {
+      await getJSON('/api/timeout-check');
+      expect(init.signal).toBeInstanceOf(AbortSignal);
+      expect(init.signal.aborted).toBe(false);
     } finally {
       globalThis.fetch = origFetch;
     }
