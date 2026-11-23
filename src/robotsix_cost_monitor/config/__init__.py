@@ -222,20 +222,16 @@ class Config(BaseModel):
     settings: Settings = Field(default_factory=Settings)
 
 
-def data_dir(settings: Settings | None = None) -> Path:
+def data_dir(settings: Settings) -> Path:
     """Resolve the runtime-state directory for persistence.
 
-    When *settings* is given, the ``settings.data_dir`` field is used (relative
-    paths are resolved against the repo root).  Without *settings* the legacy
-    default ``.data`` relative to the repo root is returned for backward
-    compatibility.
+    The ``settings.data_dir`` field is used (relative paths are resolved
+    against the repo root).
     """
-    if settings is not None:
-        path = Path(settings.data_dir)
-        if not path.is_absolute():
-            path = _REPO_ROOT / path
-        return Path(os.path.abspath(path)).resolve()
-    return Path(os.path.abspath(_REPO_ROOT / ".data")).resolve()
+    path = Path(settings.data_dir)
+    if not path.is_absolute():
+        path = _REPO_ROOT / path
+    return Path(os.path.abspath(path)).resolve()
 
 
 def load_config(path: Path | None = None) -> Config:
