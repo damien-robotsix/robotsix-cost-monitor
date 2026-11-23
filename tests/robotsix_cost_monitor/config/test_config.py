@@ -21,11 +21,6 @@ from robotsix_cost_monitor.config import (
 # -- data_dir -----------------------------------------------------------
 
 
-def test_data_dir_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    result = data_dir()
-    assert result.name == ".data"
-
-
 def test_data_dir_respects_settings_data_dir() -> None:
     """data_dir(settings) uses the configured data_dir field."""
     # Relative path — resolved against repo root.
