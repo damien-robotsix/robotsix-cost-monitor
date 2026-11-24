@@ -39,8 +39,9 @@ Data directory is configured via `settings.data_dir` in the config file
 
 ### JSON config shape
 
-The real config lives at `config/config.json` (gitignored). The committed
-template is `config/config.example.json`. Top-level keys:
+`config/config.json` is committed with secrets left empty (safe
+defaults) and serves as the dev/runtime default; `config/config.example.json`
+is the template for new deployments. Top-level keys:
 
 - **`projects`** — list of Langfuse projects to monitor. Each entry: `name`,
   `public_key`, `secret_key`, `base_url`, optional `openrouter_key`.
