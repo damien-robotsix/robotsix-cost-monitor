@@ -130,11 +130,7 @@ class TTLCache[K, V]:
             await asyncio.gather(*tasks, return_exceptions=True)
         self._tasks.clear()
 
-    def invalidate(self, key: K | None = None) -> None:
-        """Remove *key* from the cache; when *key* is ``None`` clear all entries."""
-        if key is None:
-            self._store.clear()
-            self._pending.clear()
-        else:
-            self._store.pop(key, None)
-            self._pending.discard(key)
+    def invalidate(self) -> None:
+        """Clear all cached entries, including any pending background-refresh keys."""
+        self._store.clear()
+        self._pending.clear()
