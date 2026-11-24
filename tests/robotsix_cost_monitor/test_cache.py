@@ -300,3 +300,21 @@ async def test_completed_background_refresh_releases_task_reference() -> None:
 
     assert not cache._tasks
     assert "k" not in cache._pending
+
+
+async def test_invalidate_clears_all_entries() -> None:
+    """invalidate() drops every cached entry and any pending refresh key."""
+    cache: TTLCache[str, int] = TTLCache(ttl=10.0)
+
+    async def _fetch() -> int:
+        return 1
+
+    await cache.get_or_fetch("a", _fetch)
+    await cache.get_or_fetch("b", _fetch)
+    assert set(cache._store) == {"a", "b"}
+    cache._pending.add("a")  # simulate an in-flight background refresh
+
+    cache.invalidate()
+
+    assert not cache._store
+    assert not cache._pending
