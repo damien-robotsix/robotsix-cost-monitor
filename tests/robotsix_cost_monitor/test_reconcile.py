@@ -636,3 +636,14 @@ def test_atomic_write_text_replaces_content(tmp_path: Path) -> None:
     _atomic_write_text(target, json.dumps({"status": "ok"}))
     assert json.loads(target.read_text()) == {"status": "ok"}
     assert list(tmp_path.glob("*.tmp")) == []
+
+
+def test_atomic_write_text_refuses_escape_from_root(tmp_path: Path) -> None:
+    from robotsix_cost_monitor.reconcile import _atomic_write_text
+
+    root = tmp_path / "state"
+    root.mkdir()
+    with pytest.raises(ValueError, match="refusing to write outside"):
+        _atomic_write_text(root / "../escape.json", "{}", root=root)
+    # The guard fires before any temp file is created.
+    assert list(tmp_path.rglob("*.tmp")) == []
